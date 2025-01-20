@@ -1,0 +1,55 @@
+[package]
+name = "rust-mir-sketches"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ansi_term = "0.12.1"
+anyhow = "1.0.95"
+clap = "4.5.23"
+ctor = "0.2.9"
+log = "0.4.22"
+once_cell = "1.20.2"
+regex = "1.11.1"
+rust-analyzer = "0.0.1"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_yaml = "0.9.34"
+tempfile = "3.14.0"
+termize = "0.1.1"
+
+#
+# These bits are just to keep rust rover happy.
+# Remove them at some point ...
+# 
+  rustc_driver = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_driver", optional = true}
+  rustc_hir = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_hir", optional = true}
+  rustc_interface = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_interface", optional = true}
+  rustc_middle = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_middle", optional = true}
+  rustc_session = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_session", optional = true}
+  rustc_span = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_span", optional = true}
+md5 = "0.7.0"
+toml = "0.8.19"
+which = "7.0.1"
+rustup-toolchain = "0.1.8"
+
+
+[dev-dependencies]
+rustc_version = "0.4"
+
+
+[package.metadata.rust-analyzer]
+rustc_private=true
+
+# cargo build output isn't runnable. We probably need to play around with
+# rustflags ....
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "prefer-dynamic=no"]
+# 
+# 
+[[bin]]
+name = "cargo-gsr"  # This enables it to be invoked as `cargo gsr`
+path = "src/main.rs"
+
+[[bin]]
+name = "gsr-driver"
+path = "src/gsr_driver.rs"
