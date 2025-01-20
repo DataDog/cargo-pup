@@ -92,10 +92,10 @@ fn find_sysroot() -> String {
 
 fn print_help() {
     println!(
-        "Golden Span Retriever Driver: Lints your Rust code for golden spans.
+        "Pretty Useful Pup: Checks your architecture against your architecture lint file.
 
 Usage:
-    gsr-driver [OPTIONS] INPUT
+    pup-driver [OPTIONS] INPUT
 
 Options:
     -h, --help        Print this message
@@ -104,7 +104,7 @@ Options:
     --sysroot PATH    Specify the sysroot directory
 
 Example:
-    gsr-driver --sysroot /path/to/sysroot -- my_crate.rs
+    pup-driver --sysroot /path/to/sysroot -- my_crate.rs
 "
     );
 }
@@ -116,8 +116,8 @@ fn print_version() {
 fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
     use std::fs;
 
-    // Attempt to load configuration from `gsr.yaml`
-    let yaml_content = fs::read_to_string("gsr.yaml")?;
+    // Attempt to load configuration from `pup.yaml`
+    let yaml_content = fs::read_to_string("pup.yaml")?;
     let lint_rules =
         LintConfigurationFactory::from_yaml(&yaml_content).map_err(anyhow::Error::msg)?;
 
@@ -141,12 +141,12 @@ mod tests {
     use crate::lints::register_all_lints;
 
     ///
-    /// This project should have its own loadable gsr.yaml
+    /// This project should have its own loadable pup.yaml
     ///
     #[test]
     pub fn load_own_configuration() {
         register_all_lints();
 
-        LintConfigurationFactory::from_yaml(include_str!("../gsr.yaml")).unwrap();
+        LintConfigurationFactory::from_yaml(include_str!("../pup.yaml")).unwrap();
     }
 }

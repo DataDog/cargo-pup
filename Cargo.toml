@@ -47,9 +47,9 @@ rustflags = ["-C", "prefer-dynamic=no"]
 # 
 # 
 [[bin]]
-name = "cargo-gsr"  # This enables it to be invoked as `cargo gsr`
+name = "cargo-pup"  # This enables it to be invoked as `cargo pup`
 path = "src/main.rs"
 
 [[bin]]
-name = "gsr-driver"
-path = "src/gsr_driver.rs"
+name = "pup-driver"
+path = "src/pup_driver.rs"

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 # Define binary names and paths
-BINARIES=("gsr-driver" "cargo-gsr")
+BINARIES=("pup-driver" "cargo-pup")
 TARGET_DIR="target/debug"
 TOOLCHAIN_LIB_DIR=$(rustc --print sysroot)/lib
 
