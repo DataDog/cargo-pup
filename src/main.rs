@@ -1,21 +1,3 @@
-#![feature(rustc_private)]
-#![warn(rust_2018_idioms, unused_lifetimes)]
-
-use std::io::Read;
-use std::path::PathBuf;
-use std::process::{self, exit, Command};
-use std::{env, fs};
-
-#[allow(dead_code)]
-fn show_help() {
-    println!("{}", help_message());
-}
-
-#[allow(dead_code)]
-fn show_version() {
-    println!("Golden Span Retriever version 0.1.0");
-}
-
 //!
 //! cargo-gsr
 //! This is the entry point for our cargo extension, and what is ultimately run
@@ -75,6 +57,24 @@ fn show_version() {
 //!
 //!
 
+#![feature(rustc_private)]
+#![warn(rust_2018_idioms, unused_lifetimes)]
+
+use std::io::Read;
+use std::path::PathBuf;
+use std::process::{self, exit, Command};
+use std::{env, fs};
+
+#[allow(dead_code)]
+fn show_help() {
+    println!("{}", help_message());
+}
+
+#[allow(dead_code)]
+fn show_version() {
+    println!("Golden Span Retriever version 0.1.0");
+}
+
 pub fn main() {
     // Check for version and help flags
     if env::args().any(|a| a == "--help" || a == "-h") {
@@ -124,7 +124,6 @@ fn config_hash() -> String {
     DEFAULT_HASH.to_string()
 }
 
-
 ///
 /// Generates our trampoline command. This trampolines straight
 /// back to this executable, cargo-gsr.
@@ -141,8 +140,7 @@ fn generate_trampoline_cmd(args: env::Args) -> Command {
     let terminal_width = termize::dimensions().map_or(0, |(w, _)| w);
 
     // Construct a path back to ourselves
-    let mut path = env::current_exe()
-        .expect("current executable path invalid");
+    let mut path = env::current_exe().expect("current executable path invalid");
 
     // But, we'll use RUSTC_WORKSPACE_WRAPPER, so that when the nested cargo runs, it kicks
     // the invocation back to us
@@ -166,7 +164,7 @@ fn generate_trampoline_cmd(args: env::Args) -> Command {
 /// Trampolines back through cargo-gsr using us as RUSTC_WORKSPACE_WRAPPER. This'll return to us with
 /// the `rustc` invocation that cargo wants, which we can than wrap up and pass off to gsr-driver.
 ///
-fn run_trampoline() -> Result<(), i32>  {
+fn run_trampoline() -> Result<(), i32> {
     let mut cmd = generate_trampoline_cmd(env::args());
 
     let exit_status = cmd
@@ -182,14 +180,12 @@ fn run_trampoline() -> Result<(), i32>  {
     }
 }
 
-
 ///
 /// The second time we come through, when we are being invoekd as the wrapper,
 /// we call off with all of our arguments to gsr-driver, using rustup to wrap
 /// the invocation.
 ///
 fn generate_gsr_cmd(args: env::Args) -> anyhow::Result<Command> {
-
     // First, construct the executable path to gsr-driver.
     let mut gsr_driver_path = env::current_exe()
         .expect("current executable path invalid")
@@ -202,8 +198,7 @@ fn generate_gsr_cmd(args: env::Args) -> anyhow::Result<Command> {
     // with the dynamic-linking-against-librustc_driver piece, but _will_ add that toolchain
     // to the user's local rustup installs.
     let toolchain_config = include_str!("../rust-toolchain.toml");
-    let toml = toml::from_str::<toml::Value>(&toolchain_config)
-        .unwrap();
+    let toml = toml::from_str::<toml::Value>(&toolchain_config).unwrap();
 
     // Locate rustup
     let which_rustup = which::which("rustup").unwrap();
@@ -220,7 +215,11 @@ fn generate_gsr_cmd(args: env::Args) -> anyhow::Result<Command> {
     rustup_toolchain::install(toolchain)?;
 
     // Compose our arguments
-    let mut final_args: Vec<String> = vec!["run".into(), toolchain.into(), gsr_driver_path.to_str().unwrap().into()];
+    let mut final_args: Vec<String> = vec![
+        "run".into(),
+        toolchain.into(),
+        gsr_driver_path.to_str().unwrap().into(),
+    ];
     for arg in args.skip(1) {
         let arg = arg.to_string();
         final_args.push(arg);
@@ -242,19 +241,18 @@ fn run_gsr_cmd() -> Result<(), i32> {
     match generate_gsr_cmd(env::args()) {
         Ok(mut cmd) => {
             let exit_status = cmd
-            .spawn()
-            .expect("could not run gsr-driver")
-            .wait()
-            .expect("failed to wait for gsr-driver?");
+                .spawn()
+                .expect("could not run gsr-driver")
+                .wait()
+                .expect("failed to wait for gsr-driver?");
 
             if exit_status.success() {
                 Ok(())
             } else {
                 Err(exit_status.code().unwrap_or(-1))
-            }}
-        Err(_) => {
-            Err(-1)
+            }
         }
+        Err(_) => Err(-1),
     }
 }
 
