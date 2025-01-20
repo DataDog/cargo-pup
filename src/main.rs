@@ -62,7 +62,7 @@
 
 use std::io::Read;
 use std::path::PathBuf;
-use std::process::{self, exit, Command};
+use std::process::{exit, Command};
 use std::{env, fs};
 
 #[allow(dead_code)]
@@ -94,10 +94,8 @@ pub fn main() {
         if let Err(code) = run_gsr_cmd() {
             exit(code);
         }
-    } else {
-        if let Err(code) = run_trampoline() {
-            exit(code);
-        }
+    } else if let Err(code) = run_trampoline() {
+        exit(code);
     }
 }
 
@@ -140,7 +138,7 @@ fn generate_trampoline_cmd(args: env::Args) -> Command {
     let terminal_width = termize::dimensions().map_or(0, |(w, _)| w);
 
     // Construct a path back to ourselves
-    let mut path = env::current_exe().expect("current executable path invalid");
+    let path = env::current_exe().expect("current executable path invalid");
 
     // But, we'll use RUSTC_WORKSPACE_WRAPPER, so that when the nested cargo runs, it kicks
     // the invocation back to us
@@ -198,7 +196,7 @@ fn generate_gsr_cmd(args: env::Args) -> anyhow::Result<Command> {
     // with the dynamic-linking-against-librustc_driver piece, but _will_ add that toolchain
     // to the user's local rustup installs.
     let toolchain_config = include_str!("../rust-toolchain.toml");
-    let toml = toml::from_str::<toml::Value>(&toolchain_config).unwrap();
+    let toml = toml::from_str::<toml::Value>(toolchain_config).unwrap();
 
     // Locate rustup
     let which_rustup = which::which("rustup").unwrap();

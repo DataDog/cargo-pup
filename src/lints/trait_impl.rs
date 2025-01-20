@@ -250,6 +250,7 @@ pub mod tests {
             .contains("Struct 'test::MyStruct' is public, but should be private"));
     }
 
+    #[test]
     pub fn enforce_visibility_public_only() {
         let function_length_rules = TraitImplLintProcessor::new(
             "trait_name".into(),

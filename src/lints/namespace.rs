@@ -4,7 +4,6 @@ use rustc_middle::hir::map::{self};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Span;
 use serde::Deserialize;
-use std::collections::HashMap;
 
 use super::{ArchitectureLintRule, LintResult, Severity};
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
@@ -24,14 +23,6 @@ pub enum NamespaceUsageLintRule {
     },
 }
 
-/// Root configuration item from YAML
-/// Takes a map of multiple names -> NamespaceUsageRuleConfiguration
-/// Each NamespaceUsageRuleConfiguration will result in one instance of the LintProcessor
-#[derive(Deserialize)]
-pub struct NamespaceUsageConfiguration {
-    pub rules: HashMap<String, NamespaceUsageRuleConfiguration>,
-}
-
 /// Represents a set of namespace usage lint rules for a module
 #[derive(Debug, Deserialize, Clone)]
 pub struct NamespaceUsageRuleConfiguration {
@@ -47,14 +38,6 @@ pub struct NamespaceUsageLintProcessor {
 }
 
 impl NamespaceUsageLintProcessor {
-    /// Configure multiple processors from a set of rules
-    pub fn configure(rules: HashMap<String, NamespaceUsageRuleConfiguration>) -> Vec<Self> {
-        rules
-            .into_iter()
-            .map(|(name, rule)| Self::new(name, rule))
-            .collect()
-    }
-
     /// Create a new processor for a single rule configuration
     pub fn new(name: String, config: NamespaceUsageRuleConfiguration) -> Self {
         NamespaceUsageLintProcessor { name, config }
