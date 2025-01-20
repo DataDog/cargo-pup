@@ -1,9 +1,21 @@
+//! Namespace usage lints
+//! 
+//! The module provides tools to lint namespace usage. 
+//! 
+//! ## Features
+//! 
+//! - Allow or deny specific namespaces or namespace paths
+//! - Deny usage of wildcard imports (e.g., `use std::io::*`)
+//!   Inspired by Canonical's [import discpline best-practice](https://canonical.github.io/rust-best-practices/import-discipline.html)
+//! 
+
 use ctor::ctor;
-use rustc_hir::{Item, ItemKind};
+use rustc_hir::{Item, ItemKind, UseKind};
 use rustc_middle::hir::map::{self};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Span;
 use serde::Deserialize;
+use std::collections::HashMap;
 
 use super::{ArchitectureLintRule, LintResult, Severity};
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
@@ -13,14 +25,34 @@ use anyhow::Result;
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum NamespaceUsageLintRule {
+    ///
+    /// Only allows the specified namespaces to be used.
+    /// 
+    /// If a namespace is not listed in `allowed_namespaces`, it will be denied.
+    /// Wildcards are supported.
+    /// 
     AllowOnly {
         allowed_namespaces: Vec<String>,
         severity: Severity,
     },
+
+    ///
+    /// Denies the use of specific namespaces.
+    /// 
+    /// If a namespace matches any in `denied_namespaces`, it will be denied.
+    /// Wildcards are supported.
+    /// 
     Deny {
         denied_namespaces: Vec<String>,
         severity: Severity,
     },
+
+    ///
+    /// Denies usage of wildcard imports, e.g., `std::collections::*`.
+    /// 
+    DenyWildcard {
+        severity: Severity
+    }
 }
 
 /// Represents a set of namespace usage lint rules for a module
@@ -58,14 +90,19 @@ impl NamespaceUsageLintProcessor {
                     .iter()
                     .flat_map(|&item_id| {
                         let item = hir.item(item_id);
-                        if let ItemKind::Use(path, _) = &item.kind {
+                        if let ItemKind::Use(path, use_kind) = &item.kind {
                             let import_path: Vec<_> = path
                                 .segments
                                 .iter()
                                 .map(|segment| segment.ident.as_str().to_string())
                                 .collect();
                             let import_namespace = import_path.join("::");
-                            self.check_rules(&self.config.rules, &import_namespace, item.span)
+                            self.check_rules(
+                                &self.config.rules,
+                                &import_namespace,
+                                &use_kind,
+                                item.span,
+                            )
                         } else {
                             vec![]
                         }
@@ -84,6 +121,7 @@ impl NamespaceUsageLintProcessor {
         &self,
         rules: &[NamespaceUsageLintRule],
         import_namespace: &str,
+        use_kind: &UseKind,
         span: Span,
     ) -> Vec<LintResult> {
         rules
@@ -129,6 +167,23 @@ impl NamespaceUsageLintProcessor {
                             ),
                             severity: *severity,
                         })
+                    } else {
+                        None
+                    }
+                }
+                NamespaceUsageLintRule::DenyWildcard { 
+                    severity
+                } => {
+                    if use_kind == &UseKind::Glob {
+                        Some(LintResult {
+                            lint: "namespace".into(),
+                            lint_name: self.name.clone(),
+                            span,
+                            message: format!(
+                                "Use of wildcard imports in '{}' is denied.",
+                                import_namespace),                            
+                            severity: *severity
+                            })
                     } else {
                         None
                     }
@@ -204,7 +259,8 @@ mod tests {
         mod test { 
             use std::collections::HashMap;
             use std::env;
-
+            use std::io::*;
+            
             pub fn _test_fn() -> usize { 
                 let mut map = HashMap::new(); // Allowed
                 map.insert(\"key\", \"value\");
@@ -262,7 +318,23 @@ mod tests {
 
         let lints = lints_for_code(TEST_FN, namespace_rules);
         eprintln!("{}", lints.to_string());
-        assert_eq!(lints.lint_results().len(), 2);
+        assert_eq!(lints.lint_results().len(), 3);
+    }
+
+    #[test]
+    pub fn denied_wildcard_error() {
+        let namespace_rules = NamespaceUsageLintProcessor::new(
+            "Deny wildcards".into(),
+            NamespaceUsageRuleConfiguration { 
+                namespaces: vec!["test".to_string()], 
+                rules:  vec![NamespaceUsageLintRule::DenyWildcard {
+                    severity: Severity::Warn
+                }]
+            });
+
+        let lints = lints_for_code(TEST_FN, namespace_rules);
+        eprintln!("{}", lints.to_string());
+        assert_eq!(lints.lint_results().len(), 1);
     }
 
     const CONFIGURATION_YAML: &str = "
