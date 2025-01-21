@@ -13,7 +13,7 @@ use ctor::ctor;
 use rustc_hir::{Item, ItemKind, UseKind};
 use rustc_middle::hir::map::{self};
 use rustc_middle::ty::TyCtxt;
-use rustc_span::Span;
+use rustc_span::{FileName, RealFileName, Span};
 use serde::Deserialize;
 
 use super::{ArchitectureLintRule, LintResult, Severity};
@@ -51,6 +51,15 @@ pub enum NamespaceUsageLintRule {
     /// 
     DenyWildcard {
         severity: Severity
+    },
+
+    ///
+    /// Requires that mod.rs does not contain any definitions, only
+    /// uses and re-exports.
+    /// https://canonical.github.io/rust-best-practices/structural-discipline.html
+    ///
+    RequireEmptyMod {
+        severity: Severity
     }
 }
 
@@ -77,14 +86,14 @@ impl NamespaceUsageLintProcessor {
     /// Process a module and its imports to apply namespace usage lint rules
     pub fn process_module<'tcx>(
         &self,
-        hir: map::Map<'tcx>,
+        ctx: TyCtxt<'tcx>,
         module: &Item<'tcx>,
     ) -> Vec<LintResult> {
+        let hir = ctx.hir();
         if let ItemKind::Mod(module_data) = module.kind {
             let module_name = module.ident.as_str();
-
             if self.config.namespaces.contains(&module_name.to_string()) {
-                module_data
+                let mut namespace_results = module_data
                     .item_ids
                     .iter()
                     .flat_map(|&item_id| {
@@ -96,7 +105,7 @@ impl NamespaceUsageLintProcessor {
                                 .map(|segment| segment.ident.as_str().to_string())
                                 .collect();
                             let import_namespace = import_path.join("::");
-                            self.check_rules(
+                            self.check_namespace_import_rules(
                                 &self.config.rules,
                                 &import_namespace,
                                 use_kind,
@@ -106,7 +115,22 @@ impl NamespaceUsageLintProcessor {
                             vec![]
                         }
                     })
-                    .collect()
+                    .collect();
+
+                    // Do we have the "require empty module" rule, and, are we in a
+                    // mod.rs?
+                    let filename = ctx.sess.source_map().span_to_filename(module.span);
+                    if let FileName::Real(filename) = filename &&
+                        filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local).ends_with("mod.rs") {
+                            // Do we have the empty mod rule ?
+                            if let Some(NamespaceUsageLintRule::RequireEmptyMod { severity }) = 
+                                self.config.rules.iter().find(|rule| matches!(rule, NamespaceUsageLintRule::RequireEmptyMod { .. }))
+                            {
+                                let empty_mod_results = self.check_empty_module(severity, module_data.item_ids.iter());
+                                eprintln!("{:?}", filename);
+                            }
+                    }
+                    namespace_results
             } else {
                 vec![]
             }
@@ -115,8 +139,17 @@ impl NamespaceUsageLintProcessor {
         }
     }
 
+    /// Check the empty module rule
+    fn check_empty_module(
+        &self,
+        severity: &Severity,
+        item_ids: std::slice::Iter<'_, rustc_hir::ItemId>) -> Vec<LintResult> {
+        vec![]
+    }
+        
+    
     /// Check namespace usage rules against a specific import
-    fn check_rules(
+    fn check_namespace_import_rules(
         &self,
         rules: &[NamespaceUsageLintRule],
         import_namespace: &str,
@@ -187,6 +220,8 @@ impl NamespaceUsageLintProcessor {
                         None
                     }
                 }
+                // Empty module rule is applied elsewhere
+                NamespaceUsageLintRule::RequireEmptyMod { .. } => None 
             })
             .collect()
     }
@@ -201,7 +236,7 @@ impl ArchitectureLintRule for NamespaceUsageLintProcessor {
             .filter_map(|owner| owner.as_owner())
             .flat_map(|owner| {
                 if let rustc_hir::OwnerNode::Item(item) = owner.node() {
-                    self.process_module(ctx.hir(), item)
+                    self.process_module(ctx, item)
                 } else {
                     vec![]
                 }

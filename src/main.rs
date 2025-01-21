@@ -120,7 +120,6 @@ fn config_hash() -> String {
             return hash;
         }
     }
-
     DEFAULT_HASH.to_string()
 }
 
