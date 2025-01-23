@@ -21,49 +21,26 @@ that cannot be enforced simply through traits:
 
 
 ## Usage
+
+> [!NOTE]
+> Long term, this should work as one of those classic `curl https://sh.cargopup.sh | sh` deployments. For now while we're private,
+> this will have to do.
+
 **Pretty Useful Pup** is installed as a [cargo](TODO) subcommand. This simply means that it needs to be in your `$PATH`, 
 optimally, in your `~/.local/bin` directory (following the so-called [XDG basedir](https://specifications.freedesktop.org/basedir-spec/latest/) specification).
 
-**Step 1**: 
-Install [rustup](https://rustup.rs/) to manage your local rust installs and provide the tooling required for Pretty Useful Pup, if you haven't already.
+First up, make sure to install [rustup](https://rustup.rs/) to manage your local rust installs and provide the tooling required for Pretty Useful Pup, if you haven't already.
 
-**Step 2**:
-Download `cargo-tt` and `tt-driver` from the [releases](TODO) page for your platform and drop them in your `~/.local/bin` directory. 
-Run `cargo tt` to make sure everythings working; you should get a typical help page back. 
+Next, run [install.sh](https://github.com/DataDog/cargo-pup/raw/refs/heads/main/scripts/install.sh). While this repository is private, you'll have to
+download this manually!
 
-Alternatively, run [tt-up.sh](TODO) to download the latest release and install it automatically. As with any scripts run blindly from
-the internet, have a quick read through first!
+If you want to make changes to the repository you can also `git clone` the whole thing, then run `install.sh` from within the clone to build and install
+the local state.
 
-**Step 3**: 
+# Scratch / Development Notes
 
-
-
-
-
-
-
-# Compilation
-We want something that runs without having to have exactly the same nightly rustup'd version available on the `rpath`.
-The rustc nightly's themselves do not contain static libraries for `librustc_driver`, only `dylib`s. Likewise, if you
-build rust from the rust repo, by default you only get dylibs. 
-
-Here are the options:
-
-* Include the `dylib`s from the compiler in the distribution package, in the same dir (TODO - check if this works)
-The `dylib` is about 145 MiB.
-This works if you set `DYLD_LIBRARY_PATH` to contain the bin dir. 
-We could probably also do it by using `install_tool`: 
-
-<!-- this doesn't work !! --> 
-`install_name_tool -add_rpath `.` target/debug/cargo-gsr`
-
-<!-- this does work! --> 
-install_name_tool -add_rpath @executable_path target/debug/cargo-gsr
-
-* Build rustc with `compiler/rust_driver/Cargo.toml` modified to set `cratetype` to `staticlib` (note - the lib is about 400 MiB) 
-* Somehow make the project link dynamically against the `librustc_driver.dylib` available in the user's distribution
-
-# Code Processing
+> [!NOTE]
+> This is just a scratchpad of links, is unlikely to be relevant to you, the reader, and will be removed soon!
 
 Type definitions for HIR, MIR, and THIR are in the [rustc_middle](https://doc.rust-lang.org/stable/nightly-rustc/rustc_middle/) crate.
 [intermediate representations summary](https://rustc-dev-guide.rust-lang.org/overview.html#intermediate-representations)
