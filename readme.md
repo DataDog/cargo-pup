@@ -1,7 +1,7 @@
 # `cargo pup`
 ## aka, Pretty Useful Pup
 
-In the tradition of [ArchUnit](https://www.archunit.org/) and [ArchUnitNet](https://github.com/TNG/ArchUnitNET), **Pretty Useful Pup** (_pup_) lets you to write assertions about the architecture of your Rust project, allowing you to continuously validate them locally and in your CI pipelines. Perhaps more significantly, it also introduces a fresh new naming convention for architectural linting tools. 
+In the tradition of [ArchUnit](https://www.archunit.org/) and [ArchUnitNet](https://github.com/TNG/ArchUnitNET), **Pretty Useful Pup** (_pup_) lets you write assertions about the architecture of your Rust project, allowing you to continuously validate them locally and in your CI pipelines. Perhaps more significantly, it also introduces a fresh new naming convention for architectural linting tools. 
 
 Pup lets you enforce your mental model of how your system should be structured, ensuring that consistency is maintained automatically rather than relying on all of the people submitting PRs to share a perfectly consistent understanding of the system. As systems and the number of contributors grow and it becomes increasingly hard to manually police consistency across a codebase. Lack of architectural consistency increases the cognitive load required to do work, and everyone is worse off for it.
 

@@ -15,7 +15,6 @@ use rustc_middle::hir::map::{self};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Span;
 use serde::Deserialize;
-use std::collections::HashMap;
 
 use super::{ArchitectureLintRule, LintResult, Severity};
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
@@ -100,7 +99,7 @@ impl NamespaceUsageLintProcessor {
                             self.check_rules(
                                 &self.config.rules,
                                 &import_namespace,
-                                &use_kind,
+                                use_kind,
                                 item.span,
                             )
                         } else {
