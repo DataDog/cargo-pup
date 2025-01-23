@@ -1,0 +1,21 @@
+name: PR Build
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+
+env:
+  # Faster from-scratch builds
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - run: . $HOME/.cargo/env && rustup update
+      - run: . $HOME/.cargo/env && cargo build --release --all
+      
