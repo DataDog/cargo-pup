@@ -9,9 +9,9 @@
 //!   Inspired by Canonical's [import discpline best-practice](https://canonical.github.io/rust-best-practices/import-discipline.html)
 //! 
 
+
 use ctor::ctor;
 use rustc_hir::{Item, ItemKind, UseKind};
-use rustc_middle::hir::map::{self};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{FileName, RealFileName, Span};
 use serde::Deserialize;
@@ -93,7 +93,8 @@ impl NamespaceUsageLintProcessor {
         if let ItemKind::Mod(module_data) = module.kind {
             let module_name = module.ident.as_str();
             if self.config.namespaces.contains(&module_name.to_string()) {
-                let mut namespace_results = module_data
+                eprintln!("Considering rules for {} in {:?}", &module_name.to_string(), ctx.sess.source_map().span_to_filename(module.span));
+                let mut lint_results: Vec<LintResult> = module_data
                     .item_ids
                     .iter()
                     .flat_map(|&item_id| {
@@ -116,21 +117,14 @@ impl NamespaceUsageLintProcessor {
                         }
                     })
                     .collect();
-
-                    // Do we have the "require empty module" rule, and, are we in a
-                    // mod.rs?
-                    let filename = ctx.sess.source_map().span_to_filename(module.span);
-                    if let FileName::Real(filename) = filename &&
-                        filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local).ends_with("mod.rs") {
                             // Do we have the empty mod rule ?
                             if let Some(NamespaceUsageLintRule::RequireEmptyMod { severity }) = 
                                 self.config.rules.iter().find(|rule| matches!(rule, NamespaceUsageLintRule::RequireEmptyMod { .. }))
                             {
-                                let empty_mod_results = self.check_empty_module(severity, module_data.item_ids.iter());
-                                eprintln!("{:?}", filename);
+                                let mut empty_mod_results = self.check_empty_module(&ctx, severity, module_data);
+                                lint_results.append(&mut empty_mod_results);
                             }
-                    }
-                    namespace_results
+                    lint_results
             } else {
                 vec![]
             }
@@ -142,9 +136,47 @@ impl NamespaceUsageLintProcessor {
     /// Check the empty module rule
     fn check_empty_module(
         &self,
+        ctx: &TyCtxt<'_>,
         severity: &Severity,
-        item_ids: std::slice::Iter<'_, rustc_hir::ItemId>) -> Vec<LintResult> {
-        vec![]
+        module: &rustc_hir::Mod) -> Vec<LintResult> {
+        eprintln!("{:?}", module);
+        let hir = ctx.hir();
+        let lints = module.item_ids.iter().filter_map(|item_id| -> Option<LintResult> {
+
+               let item = hir.item(*item_id);
+           let span = item.span;
+           let item_name = hir.name(item.hir_id()).to_ident_string();
+
+// Validate file
+                    let filename = ctx.sess.source_map().span_to_filename(span);
+                    if let FileName::Real(filename) = filename &&
+                        filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local).ends_with("mod.rs") {
+                            eprintln!("Filename: {:?}", filename);
+                            
+
+           match &item.kind {
+            ItemKind::Static(..) |
+            ItemKind::Struct(..) |
+            ItemKind::Union(..) |
+            ItemKind::Trait(..) |
+            ItemKind::Impl(..) |
+            ItemKind::Const(..) => Some(LintResult {
+                lint: "namespace".into(),
+                lint_name: self.name.clone(),
+                span: ctx.def_span(item_id.owner_id.def_id),
+                message: format!("Item {} disallowed in mod.rs due to empty-module policy", item_name),
+                severity: *severity,
+            }),
+            _ => None
+            // ItemKind::Fn { sig, generics, body, has_body } => todo!(),
+            }
+        } else {
+            None
+        }
+               
+        });
+
+       lints.collect()
     }
         
     

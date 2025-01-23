@@ -39,3 +39,13 @@ configuration_factories:
   name_must_match: ".*LintFactory$"
   enforce_visibility: "Private"
   severity: Error
+
+empty_mods:
+  type: namespace_usage
+  namespaces:
+    - "lints"
+    - "utils"
+  rules:
+    - type: RequireEmptyMod
+      severity: Warn
+
