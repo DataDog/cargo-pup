@@ -160,8 +160,10 @@ impl ArchitectureLintRule for FunctionLengthLintProcessor {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::configuration_factory::LintConfigurationFactory;
-    use crate::utils::lints_for_code;
+    use crate::utils::{
+        configuration_factory::LintConfigurationFactory,
+        test_helper::{assert_lint_results, lints_for_code},
+    };
 
     use super::*;
 
@@ -188,7 +190,7 @@ mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_eq!(lints.lint_results().len(), 0);
+        assert_lint_results(0, &lints);
     }
 
     #[test]
@@ -203,7 +205,7 @@ mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_eq!(lints.lint_results().len(), 1);
+        assert_lint_results(1, &lints);
     }
 
     const CONFIGURATION_YAML: &str = "

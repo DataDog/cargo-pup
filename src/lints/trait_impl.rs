@@ -170,9 +170,12 @@ impl ArchitectureLintRule for TraitImplLintProcessor {
 
 #[cfg(test)]
 pub mod tests {
+
     use super::*;
-    use crate::lints::Severity;
-    use crate::utils::lints_for_code;
+    use crate::{
+        lints::Severity,
+        utils::test_helper::{assert_lint_results, lints_for_code},
+    };
 
     const TEST_FN: &str = "
             mod test {
@@ -206,8 +209,7 @@ pub mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
-        eprintln!("RESULTS: {}", lints.to_string());
-        assert_eq!(lints.lint_results().len(), 1);
+        assert_lint_results(1, &lints);
         assert!(lints.to_string().contains(
             "Implementation name 'MyStruct' does not match the required pattern '.*MyTraitImpl'"
         ));
@@ -226,8 +228,7 @@ pub mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
-        eprintln!("RESULTS: {}", lints.to_string());
-        assert_eq!(lints.lint_results().len(), 0);
+        assert_lint_results(0, &lints);
     }
 
     #[test]
@@ -243,8 +244,7 @@ pub mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
-        eprintln!("RESULTS: {}", lints.to_string());
-        assert_eq!(lints.lint_results().len(), 1);
+        assert_lint_results(1, &lints);
         assert!(lints
             .to_string()
             .contains("Struct 'test::MyStruct' is public, but should be private"));
@@ -263,7 +263,6 @@ pub mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
-        eprintln!("RESULTS: {}", lints.to_string());
-        assert_eq!(lints.lint_results().len(), 0);
+        assert_lint_results(0, &lints);
     }
 }
