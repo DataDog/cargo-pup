@@ -12,7 +12,7 @@
 use ctor::ctor;
 use rustc_hir::{Item, ItemKind, UseKind};
 use rustc_middle::ty::TyCtxt;
-use rustc_span::{FileName, RealFileName, Span};
+use rustc_span::{FileName, Span};
 use serde::Deserialize;
 
 use super::{ArchitectureLintRule, LintResult, Severity};
