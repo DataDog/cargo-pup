@@ -1,5 +1,4 @@
 name: PR Build
-permissions: {}
 
 on:
   pull_request:
