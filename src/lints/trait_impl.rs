@@ -171,8 +171,7 @@ impl ArchitectureLintRule for TraitImplLintProcessor {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::lints::Severity;
-    use crate::utils::lints_for_code;
+    use crate::{lints::Severity, utils::test_helper::lints_for_code};
 
     const TEST_FN: &str = "
             mod test {
