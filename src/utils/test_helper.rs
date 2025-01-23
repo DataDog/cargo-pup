@@ -8,6 +8,20 @@ use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
 
 static INIT: Once = Once::new();
 
+/// Confirm that the expected set of lint results was returned. If it wasn't, print all the
+/// lint results out to stderr.
+pub fn assert_lint_results(expected_count: usize, collection: &ArchitectureLintCollection) {
+    if collection.lint_results().len() != expected_count {
+        eprintln!(
+            "Expected {} lint results, got {}. Dumping results:\n {}",
+            expected_count,
+            collection.lint_results().len(),
+            collection.to_string()
+        );
+        assert_eq!(expected_count, collection.lint_results().len());
+    }
+}
+
 pub fn lints_for_code(
     code: &str,
     lint: impl ArchitectureLintRule + Send + 'static,

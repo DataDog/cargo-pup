@@ -135,47 +135,54 @@ impl NamespaceUsageLintProcessor {
         module: &rustc_hir::Mod,
     ) -> Vec<LintResult> {
         let hir = ctx.hir();
-        let lints = module.item_ids.iter().filter_map(|item_id| -> Option<LintResult> {
+        let lints = module
+            .item_ids
+            .iter()
+            .filter_map(|item_id| -> Option<LintResult> {
+                let item = hir.item(*item_id);
+                let span = item.span;
+                let item_name = hir.name(item.hir_id()).to_ident_string();
 
-               let item = hir.item(*item_id);
-           let span = item.span;
-           let item_name = hir.name(item.hir_id()).to_ident_string();
-
-// Validate file
-                    let filename = ctx.sess.source_map().span_to_filename(span);
-                    if let FileName::Real(filename) = filename &&
-                        filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local).ends_with("mod.rs") {
-                            
-
-           match &item.kind {
-            ItemKind::Static(..) |
-            ItemKind::Struct(..) |
-            ItemKind::Union(..) |
-            ItemKind::Trait(..) |
-            ItemKind::Enum(..) 
-            // ItemKind::Const(..)
-            => Some(LintResult {
-                lint: "namespace".into(),
-                lint_name: self.name.clone(),
-                span: ctx.def_span(item_id.owner_id.def_id),
-                message: format!("Item {} disallowed in mod.rs due to empty-module policy", item_name),
-                severity: *severity,
-            }),
-            ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => Some(LintResult {
-                lint: "namespace".into(),
-                lint_name: self.name.clone(),
-                span: ctx.def_span(item_id.owner_id.def_id),
-                message: format!("Item {} disallowed in mod.rs due to empty-module policy", item_name),
-                severity: *severity,
-                }),
-            _ => None
-            // ItemKind::Fn { sig, generics, body, has_body } => todo!(),
-            }
-        } else {
-            None
-        }
-               
-        });
+                // Validate file
+                let filename = ctx.sess.source_map().span_to_filename(span);
+                if let FileName::Real(filename) = filename
+                    && filename
+                        .to_string_lossy(rustc_span::FileNameDisplayPreference::Local)
+                        .ends_with("mod.rs")
+                {
+                    match &item.kind {
+                        ItemKind::Static(..)
+                        | ItemKind::Struct(..)
+                        | ItemKind::Union(..)
+                        | ItemKind::Trait(..)
+                        | ItemKind::Enum(..) => Some(LintResult {
+                            lint: "namespace".into(),
+                            lint_name: self.name.clone(),
+                            span: ctx.def_span(item_id.owner_id.def_id),
+                            message: format!(
+                                "Item {} disallowed in mod.rs due to empty-module policy",
+                                item_name
+                            ),
+                            severity: *severity,
+                        }),
+                        ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => {
+                            Some(LintResult {
+                                lint: "namespace".into(),
+                                lint_name: self.name.clone(),
+                                span: ctx.def_span(item_id.owner_id.def_id),
+                                message: format!(
+                                    "Item {} disallowed in mod.rs due to empty-module policy",
+                                    item_name
+                                ),
+                                severity: *severity,
+                            })
+                        }
+                        _ => None, // ItemKind::Fn { sig, generics, body, has_body } => todo!(),
+                    }
+                } else {
+                    None
+                }
+            });
 
         lints.collect()
     }
@@ -235,7 +242,7 @@ impl NamespaceUsageLintProcessor {
                         None
                     }
                 }
-                NamespaceUsageLintRule::DenyWildcard { 
+                NamespaceUsageLintRule::DenyWildcard {
                     severity
                 } => {
                     if use_kind == &UseKind::Glob {
@@ -245,7 +252,7 @@ impl NamespaceUsageLintProcessor {
                             span,
                             message: format!(
                                 "Use of wildcard imports in '{}' is denied.",
-                                import_namespace),                            
+                                import_namespace),
                             severity: *severity
                             })
                     } else {
@@ -253,7 +260,7 @@ impl NamespaceUsageLintProcessor {
                     }
                 }
                 // Empty module rule is applied elsewhere
-                NamespaceUsageLintRule::RequireEmptyMod { .. } => None 
+                NamespaceUsageLintRule::RequireEmptyMod { .. } => None
             })
             .collect()
     }
@@ -317,7 +324,7 @@ fn register_namespace_lint_factory() {
 #[cfg(test)]
 mod tests {
 
-    use crate::utils::test_helper::lints_for_code;
+    use crate::utils::test_helper::{assert_lint_results, lints_for_code};
 
     use super::*;
 
@@ -349,7 +356,7 @@ mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_eq!(lints.lint_results().len(), 0);
+        assert_lint_results(0, &lints);
     }
 
     #[test]
@@ -366,7 +373,7 @@ mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_eq!(lints.lint_results().len(), 1);
+        assert_lint_results(1, &lints);
     }
 
     #[test]
@@ -383,8 +390,7 @@ mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, namespace_rules);
-        eprintln!("{}", lints.to_string());
-        assert_eq!(lints.lint_results().len(), 3);
+        assert_lint_results(3, &lints);
     }
 
     #[test]
@@ -400,8 +406,7 @@ mod tests {
         );
 
         let lints = lints_for_code(TEST_FN, namespace_rules);
-        eprintln!("{}", lints.to_string());
-        assert_eq!(lints.lint_results().len(), 1);
+        assert_lint_results(1, &lints);
     }
 
     const CONFIGURATION_YAML: &str = "

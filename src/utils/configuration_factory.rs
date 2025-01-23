@@ -98,17 +98,4 @@ impl LintConfigurationFactory {
 
         Ok(rules)
     }
-
-    // Serialize the current configuration to YAML
-    // pub fn to_yaml(&self) -> Result<String> {
-    //     let mut mapping = Mapping::new();
-
-    //     for (name, factory) in &self.factories {
-    //         let yaml_value = factory.to_yaml()?;
-    //         mapping.insert(Value::String(name.clone()), yaml_value);
-    //     }
-
-    //     serde_yaml::to_string(&Value::Mapping(mapping))
-    //         .map_err(|e| anyhow!("Failed to serialize to YAML: {}", e))
-    // }
 }
