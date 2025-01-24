@@ -9,8 +9,8 @@
 
 set -e
 
-if [ ! -d ~/.local/bin ] ; then
-  echo "You need to create an XDG bin directory at ~/.local/bin and put it in your shell path!"
+if [ ! -d ~/.cargo/bin ] ; then
+  echo "Your cargo home directory ~/.cargo/bin directory is missing. Cowardly refusing to do anything!"
   exit 1
 fi
 

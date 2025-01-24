@@ -61,7 +61,7 @@
 #![warn(rust_2018_idioms, unused_lifetimes)]
 
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{exit, Command};
 use std::{env, fs};
 
@@ -87,14 +87,22 @@ pub fn main() {
         return;
     }
 
+    // Check if we have a `pup.yaml` in the directory we're in
+    if !Path::exists(Path::new("./pup.yaml")) {
+        println!("Missing pup.yaml - nothing to do!");
+        exit(-1)
+    }
+
+    let toolchain = get_toolchain();
+
     // Are we first-iteration, or, are we being called back by cargo?
     // If we're first iteration, we redirect cargo back to us.
     if env::var("PUP_TRAMPOLINE_MODE").is_ok() {
         // Ask us for a callback
-        if let Err(code) = run_pup_cmd() {
+        if let Err(code) = run_pup_cmd(&toolchain) {
             exit(code);
         }
-    } else if let Err(code) = run_trampoline() {
+    } else if let Err(code) = run_trampoline(&toolchain) {
         exit(code);
     }
 }
@@ -125,9 +133,10 @@ fn config_hash() -> String {
 /// Generates our trampoline command. This trampolines straight
 /// back to this executable, cargo-pup.
 ///
-fn generate_trampoline_cmd(args: env::Args) -> Command {
+fn generate_trampoline_cmd(args: env::Args, toolchain: &str) -> Command {
     // we want to invoke cargo
-    let mut cmd = Command::new(env::var("CARGO").unwrap_or("cargo".into()));
+    // let mut cmd = Command::new(env::var("CARGO").unwrap_or("cargo".into()));
+    let mut cmd = Command::new("rustup");
     let terminal_width = termize::dimensions().map_or(0, |(w, _)| w);
 
     // Construct a path back to ourselves
@@ -144,7 +153,12 @@ fn generate_trampoline_cmd(args: env::Args) -> Command {
             "RUSTFLAGS",
             format!("--cfg=pup_config_hash=\"{}\"", config_hash()),
         )
+        .arg("run")
+        .arg(toolchain)
+        .arg("cargo")
         .arg("build")
+        .arg("--target-dir")
+        .arg(".pup")
         .args(args.skip(2));
 
     cmd
@@ -154,8 +168,8 @@ fn generate_trampoline_cmd(args: env::Args) -> Command {
 /// Trampolines back through cargo-pup using us as RUSTC_WORKSPACE_WRAPPER. This'll return to us with
 /// the `rustc` invocation that cargo wants, which we can than wrap up and pass off to pup-driver.
 ///
-fn run_trampoline() -> Result<(), i32> {
-    let mut cmd = generate_trampoline_cmd(env::args());
+fn run_trampoline(toolchain: &str) -> Result<(), i32> {
+    let mut cmd = generate_trampoline_cmd(env::args(), toolchain);
 
     let exit_status = cmd
         .spawn()
@@ -175,7 +189,7 @@ fn run_trampoline() -> Result<(), i32> {
 /// we call off with all of our arguments to pup-driver, using rustup to wrap
 /// the invocation.
 ///
-fn generate_pup_cmd(args: env::Args) -> anyhow::Result<Command> {
+fn generate_pup_cmd(args: env::Args, toolchain: &String) -> anyhow::Result<Command> {
     // First, construct the executable path to pup-driver.
     let mut pup_driver_path = env::current_exe()
         .expect("current executable path invalid")
@@ -184,24 +198,10 @@ fn generate_pup_cmd(args: env::Args) -> anyhow::Result<Command> {
         pup_driver_path.set_extension("exe");
     }
 
-    // We want to run with the same toolchain we were built with. This deals
-    // with the dynamic-linking-against-librustc_driver piece, but _will_ add that toolchain
-    // to the user's local rustup installs.
-    let toolchain_config = include_str!("../rust-toolchain.toml");
-    let toml = toml::from_str::<toml::Value>(toolchain_config).unwrap();
-
     // Locate rustup
     let which_rustup = which::which("rustup").unwrap();
     let rustup = which_rustup.to_str().unwrap();
 
-    // Work out which toolchain we want to run against
-    let toolchain = toml
-        .get("toolchain")
-        .unwrap()
-        .get("channel")
-        .unwrap()
-        .as_str()
-        .unwrap();
     rustup_toolchain::install(toolchain)?;
 
     // Compose our arguments
@@ -221,14 +221,31 @@ fn generate_pup_cmd(args: env::Args) -> anyhow::Result<Command> {
     Ok(cmd)
 }
 
+fn get_toolchain() -> String {
+    // We want to run with the same toolchain we were built with. This deals
+    // with the dynamic-linking-against-librustc_driver piece, but _will_ add that toolchain
+    // to the user's local rustup installs.
+    let toolchain_config = include_str!("../rust-toolchain.toml");
+    let toml = toml::from_str::<toml::Value>(toolchain_config).unwrap();
+
+    // Work out which toolchain we want to run against
+    toml.get("toolchain")
+        .unwrap()
+        .get("channel")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
 ///
 /// Runs pup-driver. This is the bit that does the actual work of starting
 /// the rustc compilation with all of the args we've been given by cargo.
 ///
 /// This is launched once we've trampolined back through ourselves.
 ///
-fn run_pup_cmd() -> Result<(), i32> {
-    match generate_pup_cmd(env::args()) {
+fn run_pup_cmd(toolchain: &String) -> Result<(), i32> {
+    match generate_pup_cmd(env::args(), toolchain) {
         Ok(mut cmd) => {
             let exit_status = cmd
                 .spawn()
