@@ -100,8 +100,8 @@ impl ArchitectureLintRule for TraitImplLintProcessor {
                             // is implementing it so we point at the right thing for naming / visibility errors.
                             if let TyKind::Path(QPath::Resolved(_, path)) = &impl_item.self_ty.kind
                                 && let Res::Def(DefKind::Struct, struct_def_id) = path.res
-                                && let struct_def_span = ctx.tcx().def_span(struct_def_id)
                             {
+                                let struct_def_span = ctx.tcx().def_span(struct_def_id);
                                 // Visibility check
                                 if let Some(expected_visibility) = &self.rule.enforce_visibility {
                                     let struct_visibility = ctx.tcx().visibility(struct_def_id);

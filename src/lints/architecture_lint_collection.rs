@@ -65,6 +65,10 @@ impl ArchitectureLintCollection {
     /// Returns all the lint results as a collection
     ///
     pub fn lint_results(&self) -> &Vec<LintResult> {
+        // This shows up as dead because we only use it for tests.
+        // It's not!
+        #![allow(dead_code)]
+
         &self.lint_results
     }
 

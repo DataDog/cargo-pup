@@ -8,7 +8,6 @@ extern crate rustc_session;
 extern crate rustc_span;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand, command};
 use cli::{PupCli, PupCliCommands};
 use lints::Mode;
 
@@ -16,9 +15,6 @@ use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, register_al
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{env, path::Path, process, process::Command};
 use utils::configuration_factory::LintConfigurationFactory;
-
-struct DefaultCallbacks;
-impl rustc_driver::Callbacks for DefaultCallbacks {}
 
 mod cli;
 mod example;
@@ -88,29 +84,6 @@ fn find_sysroot() -> String {
     }
 
     panic!("Could not determine sysroot.");
-}
-
-fn print_help() {
-    println!(
-        "Pretty Useful Pup: Checks your architecture against your architecture lint file.
-
-Usage:
-    pup-driver [OPTIONS] INPUT
-
-Options:
-    -h, --help        Print this message
-    -V, --version     Print version info and exit
-    --rustc           Pass all arguments directly to rustc
-    --sysroot PATH    Specify the sysroot directory
-
-Example:
-    pup-driver --sysroot /path/to/sysroot -- my_crate.rs
-"
-    );
-}
-
-fn print_version() {
-    println!("Golden Span Retriever Driver version 0.1.0");
 }
 
 fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {

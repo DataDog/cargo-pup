@@ -17,6 +17,10 @@ pub enum PupCliCommands {
 }
 
 impl PupCli {
+    // This shows up as dead for one of our bins. It's not, so
+    // we silence it.
+    #![allow(dead_code)]
+
     pub fn to_env_str(&self) -> String {
         serde_json::to_string(self).expect("Failed serializing CLI args")
     }

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use test_me::my_fn;
 
 mod test_me;

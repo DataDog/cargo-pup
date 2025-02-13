@@ -34,19 +34,19 @@
 //!
 //!   1. User types `cargo pup`.
 //!   2. Cargo runs `cargo-pup` from the user's path.
-//!       At this point, cargo has no "intent" apart from invoking us. E.g., it's not doing a 'build' or
-//!       any other explicit goal. It's only task is to run cargo-pup.
+//!      At this point, cargo has no "intent" apart from invoking us. E.g., it's not doing a 'build' or
+//!      any other explicit goal. It's only task is to run cargo-pup.
 //!   3. cargo-pup starts, and sees that it is _not_ in trampoline mode (PUP_TRAMPOLINE_MODE not set)
 //!   4. cargo-pup ensures that the rustup toolchain needed to invoke pup-driver is installed,
 //!      and installs it if it is not.
 //!   4. cargo-pup forks a `cargo check`, whilst setting PUP_TRAMPOLINE_MODE=true and
-//!       RUSTC_WORKSPACE_WRAPPER to point back to itself - e.g., the cargo-pup executable path.
+//!      RUSTC_WORKSPACE_WRAPPER to point back to itself - e.g., the cargo-pup executable path.
 //!
 //!   ## Trampoline execution
 //!
 //!   5. Cargo runs again, and sees that it needs to run rustc, and that it needs to do so with a
-//!       RUSTC_WORKSPACE_WRAPPER. Rather than invoking `rustc` directly, it invokes `cargo-pup` again,
-//!       passing all the arguments it needs to pass to `rustc` normally. PUP_TRAMPOLINE_MODE is propagated
+//!      RUSTC_WORKSPACE_WRAPPER. Rather than invoking `rustc` directly, it invokes `cargo-pup` again,
+//!      passing all the arguments it needs to pass to `rustc` normally. PUP_TRAMPOLINE_MODE is propagated
 //!      in the environment.
 //!   6. cargo-pup starts up, and notes it is in trampoline mode. It takes all of the rustc arguments it
 //!      has been given, and forks pup-driver, passing them along.
@@ -63,7 +63,7 @@
 mod cli;
 
 use clap::Parser;
-use cli::{PupCli, PupCliCommands};
+use cli::PupCli;
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -187,7 +187,7 @@ fn generate_trampoline_cmd(toolchain: &str, cli_args: &str) -> Command {
 /// Trampolines back through cargo-pup using us as RUSTC_WORKSPACE_WRAPPER. This'll return to us with
 /// the `rustc` invocation that cargo wants, which we can than wrap up and pass off to pup-driver.
 ///
-fn run_trampoline(toolchain: &str, cli_args: &String) -> Result<(), i32> {
+fn run_trampoline(toolchain: &str, cli_args: &str) -> Result<(), i32> {
     let mut cmd = generate_trampoline_cmd(toolchain, cli_args);
 
     let exit_status = cmd
