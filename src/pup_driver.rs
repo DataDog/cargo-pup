@@ -8,16 +8,19 @@ extern crate rustc_session;
 extern crate rustc_span;
 
 use anyhow::Result;
+use clap::{Parser, Subcommand, command};
+use cli::{PupCli, PupCliCommands};
+use lints::Mode;
 
-use crate::lints::{register_all_lints, ArchitectureLintCollection, ArchitectureLintRule};
-use rustc_driver::RunCompiler;
-use rustc_session::{config::ErrorOutputType, EarlyDiagCtxt};
+use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, register_all_lints};
+use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{env, path::Path, process, process::Command};
 use utils::configuration_factory::LintConfigurationFactory;
 
 struct DefaultCallbacks;
 impl rustc_driver::Callbacks for DefaultCallbacks {}
 
+mod cli;
 mod example;
 mod lints;
 mod utils;
@@ -29,20 +32,6 @@ pub fn main() -> Result<()> {
     rustc_driver::init_rustc_env_logger(&early_dcx);
 
     let mut orig_args: Vec<String> = env::args().collect();
-
-    // Handle `--help` and `--version` early
-    if orig_args.iter().any(|arg| arg == "--help" || arg == "-h") {
-        print_help();
-        process::exit(0);
-    }
-
-    if orig_args
-        .iter()
-        .any(|arg| arg == "--version" || arg == "-V")
-    {
-        print_version();
-        process::exit(0);
-    }
 
     // Handle wrapper mode
     let wrapper_mode =
@@ -56,12 +45,23 @@ pub fn main() -> Result<()> {
         orig_args.extend(vec!["--sysroot".into(), find_sysroot()]);
     }
 
+    // Load our configuration
+    let config = PupCli::from_env_str(
+        std::env::var("PUP_CLI_ARGS")
+            .expect("Missing PUP_CLI_ARGS")
+            .as_str(),
+    );
+    let mode = match config.command.unwrap_or(PupCliCommands::Check) {
+        PupCliCommands::PrintNamespaces => Mode::PrintNamespaces,
+        PupCliCommands::Check => Mode::Check,
+    };
+
     // Suppress rust's own lint output
     orig_args.extend(vec!["-A".into(), "warnings".into()]);
 
     // Forward all arguments to RunCompiler, including `"-"`
-    let mut callbacks = ArchitectureLintCollection::new(setup_lints_yaml()?);
-    RunCompiler::new(&orig_args, &mut callbacks).run();
+    let mut callbacks = ArchitectureLintCollection::new(setup_lints_yaml()?, mode);
+    rustc_driver::run_compiler(&orig_args, &mut callbacks);
 
     // Print out our lints
     eprintln!();

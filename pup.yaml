@@ -9,7 +9,7 @@ test_me_namespace_rule:
   type: namespace_usage
   name: "test_me_namespace_rule"
   namespaces:
-    - "test_me"
+    - "example::.*"
   rules:
     - type: Deny
       denied_namespaces:
@@ -20,7 +20,7 @@ test_me_namespace_rule:
 
 test_me_function_length_rule:
   type: function_length
-  namespace: test_me
+  namespace: example::.*
   max_lines: 10
   severity: Info
 

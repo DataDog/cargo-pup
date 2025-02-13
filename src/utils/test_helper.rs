@@ -1,10 +1,10 @@
 use std::{io::Write, sync::Once};
 use tempfile::TempDir;
 
-use rustc_driver::RunCompiler;
-use rustc_session::{config::ErrorOutputType, EarlyDiagCtxt};
+use rustc_driver;
+use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 
-use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
+use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, Mode};
 
 static INIT: Once = Once::new();
 
@@ -70,10 +70,10 @@ pub fn lints_for_code(
     ];
 
     // Box up our lints
-    let mut callbacks = ArchitectureLintCollection::new(vec![Box::new(lint)]);
+    let mut callbacks = ArchitectureLintCollection::new(vec![Box::new(lint)], Mode::Check);
 
     // Run the compiler
-    RunCompiler::new(&args, &mut callbacks).run();
+    rustc_driver::run_compiler(&args, &mut callbacks);
 
     callbacks
 }

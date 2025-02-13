@@ -60,11 +60,15 @@
 #![feature(rustc_private)]
 #![warn(rust_2018_idioms, unused_lifetimes)]
 
+mod cli;
+
+use clap::Parser;
+use cli::{PupCli, PupCliCommands};
+
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{exit, Command};
+use std::process::{Command, exit};
 use std::{env, fs};
-
 #[allow(dead_code)]
 fn show_help() {
     println!("{}", help_message());
@@ -76,17 +80,6 @@ fn show_version() {
 }
 
 pub fn main() {
-    // Check for version and help flags
-    if env::args().any(|a| a == "--help" || a == "-h") {
-        show_help();
-        return;
-    }
-
-    if env::args().any(|a| a == "--version" || a == "-V") {
-        show_version();
-        return;
-    }
-
     // Check if we have a `pup.yaml` in the directory we're in
     if !Path::exists(Path::new("./pup.yaml")) {
         println!("Missing pup.yaml - nothing to do!");
@@ -98,22 +91,42 @@ pub fn main() {
     // Are we first-iteration, or, are we being called back by cargo?
     // If we're first iteration, we redirect cargo back to us.
     if env::var("PUP_TRAMPOLINE_MODE").is_ok() {
-        // Ask us for a callback
+        // We're in the trampoline - we need to run cargo-pup
+        // with the arguments we've got to do the build.
         if let Err(code) = run_pup_cmd(&toolchain) {
             exit(code);
         }
-    } else if let Err(code) = run_trampoline(&toolchain) {
-        exit(code);
+    } else {
+        // We've not trampolined yet - we're in the initial invocation.
+        // We need to trampoline through using `cargo build` with us as
+        // the workspace wrapper.
+        //
+        // But first, let's check the command line arguments to see if we can
+        // short circuit this.
+        let cmd = PupCli::parse_from(env::args().skip(1));
+        let cli_args = cmd.to_env_str();
+        if let Err(code) = run_trampoline(&toolchain, &cli_args) {
+            exit(code);
+        }
     }
 }
 
+//
+// Calculates a hash of our configuration file and our
+// configuration args together. We can then use that
+// as a define we pass through in RUSTFLAGS, so that
+// changing either of these things invalidates the build cache.
+//
+// This is very heavyweight! It invalidates _far too much_. We should
+// find a better solution.
+//
+fn invalidation_hash(cli_args: &str) -> String {
+    let hash = md5::compute(format!("{} {}", config_hash(), cli_args));
+    format!("{:x}", hash)
+}
+
 ///
-/// Calculates a hash of our configuration file. We can then
-/// add that as a define we pass through in RUSTFLAGS, so that
-/// changing the configuration file invalidates the build cache.
-///
-/// This is very heavyweight! It invalidates _far too much_. We should
-/// find a better solution.
+/// Calculates a hash of our configuration file.
 ///
 fn config_hash() -> String {
     const DEFAULT_HASH: &str = "no_config_file";
@@ -133,33 +146,39 @@ fn config_hash() -> String {
 /// Generates our trampoline command. This trampolines straight
 /// back to this executable, cargo-pup.
 ///
-fn generate_trampoline_cmd(args: env::Args, toolchain: &str) -> Command {
-    // we want to invoke cargo
-    // let mut cmd = Command::new(env::var("CARGO").unwrap_or("cargo".into()));
+fn generate_trampoline_cmd(toolchain: &str, cli_args: &str) -> Command {
+    // we want to invoke cargo via rutup
     let mut cmd = Command::new("rustup");
     let terminal_width = termize::dimensions().map_or(0, |(w, _)| w);
 
     // Construct a path back to ourselves
     let path = env::current_exe().expect("current executable path invalid");
 
+    // We calculate a hash across our CLI arguments and our config, so if either
+    // change the build re-runs. Otherwise cargo agressively caches.
+    // There must be a better way!
+    let invalidation_hash = invalidation_hash(cli_args);
+
     // But, we'll use RUSTC_WORKSPACE_WRAPPER, so that when the nested cargo runs, it kicks
     // the invocation back to us
     cmd.env("RUSTC_WORKSPACE_WRAPPER", path.to_str().unwrap())
         .env("PUP_TRAMPOLINE_MODE", "true")
         .env("PUP_TERMINAL_WIDTH", terminal_width.to_string())
-        .env("PUP_CONFIG_HASH", config_hash())
-        // This serves to invalidate the build _if_ the pup.yaml file has changed
+        .env("PUP_BUILD_INVALIDATION_HASH", &invalidation_hash)
+        .env("PUP_CLI_ARGS", cli_args)
         .env(
             "RUSTFLAGS",
-            format!("--cfg=pup_config_hash=\"{}\"", config_hash()),
+            format!(
+                "--cfg=pup_build_invalidation_hash=\"{}\"",
+                invalidation_hash
+            ),
         )
         .arg("run")
         .arg(toolchain)
         .arg("cargo")
         .arg("build")
         .arg("--target-dir")
-        .arg(".pup")
-        .args(args.skip(2));
+        .arg(".pup");
 
     cmd
 }
@@ -168,8 +187,8 @@ fn generate_trampoline_cmd(args: env::Args, toolchain: &str) -> Command {
 /// Trampolines back through cargo-pup using us as RUSTC_WORKSPACE_WRAPPER. This'll return to us with
 /// the `rustc` invocation that cargo wants, which we can than wrap up and pass off to pup-driver.
 ///
-fn run_trampoline(toolchain: &str) -> Result<(), i32> {
-    let mut cmd = generate_trampoline_cmd(env::args(), toolchain);
+fn run_trampoline(toolchain: &str, cli_args: &String) -> Result<(), i32> {
+    let mut cmd = generate_trampoline_cmd(toolchain, cli_args);
 
     let exit_status = cmd
         .spawn()

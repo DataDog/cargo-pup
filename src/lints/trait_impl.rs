@@ -3,9 +3,9 @@ use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory}
 use regex::Regex;
 use rustc_hir::def::{DefKind, Res};
 use rustc_hir::{Impl, Item, ItemKind, OwnerNode, QPath, TyKind};
-use rustc_middle::ty::layout::HasTyCtxt;
 use rustc_middle::ty::TyCtxt;
 use rustc_middle::ty::Visibility;
+use rustc_middle::ty::layout::HasTyCtxt;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -166,6 +166,14 @@ impl ArchitectureLintRule for TraitImplLintProcessor {
 
         results
     }
+
+    fn name(&self) -> String {
+        self.rule_name.clone()
+    }
+
+    fn applies_to_namespace(&self, _namespace: &str) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]
@@ -245,9 +253,11 @@ pub mod tests {
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
         assert_lint_results(1, &lints);
-        assert!(lints
-            .to_string()
-            .contains("Struct 'test::MyStruct' is public, but should be private"));
+        assert!(
+            lints
+                .to_string()
+                .contains("Struct 'test::MyStruct' is public, but should be private")
+        );
     }
 
     #[test]

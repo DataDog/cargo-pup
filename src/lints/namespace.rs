@@ -10,6 +10,7 @@
 //!
 
 use ctor::ctor;
+use regex::Regex;
 use rustc_hir::{Item, ItemKind, UseKind};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{FileName, Span};
@@ -70,20 +71,39 @@ pub struct NamespaceUsageRuleConfiguration {
 pub struct NamespaceUsageLintProcessor {
     name: String,
     config: NamespaceUsageRuleConfiguration,
+    namespace_regexps: Vec<Regex>,
 }
 
 impl NamespaceUsageLintProcessor {
     /// Create a new processor for a single rule configuration
     pub fn new(name: String, config: NamespaceUsageRuleConfiguration) -> Self {
-        NamespaceUsageLintProcessor { name, config }
+        let namespace_regexps = config
+            .namespaces
+            .iter()
+            .map(|n| {
+                Regex::new(n).unwrap_or_else(|_| {
+                    panic!("Failed creating namespace match regexp from {:?}", n)
+                })
+            })
+            .collect();
+
+        NamespaceUsageLintProcessor {
+            name,
+            config,
+            namespace_regexps,
+        }
+    }
+
+    fn applies_to_namespace(&self, namespace: &str) -> bool {
+        self.namespace_regexps.iter().any(|r| r.is_match(namespace))
     }
 
     /// Process a module and its imports to apply namespace usage lint rules
     pub fn process_module<'tcx>(&self, ctx: TyCtxt<'tcx>, module: &Item<'tcx>) -> Vec<LintResult> {
         let hir = ctx.hir();
         if let ItemKind::Mod(module_data) = module.kind {
-            let module_name = module.ident.as_str();
-            if self.config.namespaces.contains(&module_name.to_string()) {
+            let module_name = ctx.def_path_str(module.owner_id.to_def_id());
+            if self.applies_to_namespace(module_name.as_str()) {
                 let mut lint_results: Vec<LintResult> = module_data
                     .item_ids
                     .iter()
@@ -281,6 +301,14 @@ impl ArchitectureLintRule for NamespaceUsageLintProcessor {
                 }
             })
             .collect()
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn applies_to_namespace(&self, namespace: &str) -> bool {
+        self.applies_to_namespace(namespace)
     }
 }
 

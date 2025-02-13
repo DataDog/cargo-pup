@@ -1,14 +1,15 @@
+use std::collections::BTreeSet;
+
 use ansi_term::Color;
 use rustc_driver::Callbacks;
+use rustc_hir::ItemKind;
 use rustc_middle::ty::TyCtxt;
-use rustc_span::Span;
-use serde::Deserialize;
 
 use crate::utils::configuration_factory::LintFactory;
 
 use super::{
-    function_length::FunctionLengthLintFactory, namespace::NamespaceUsageLintFactory,
-    trait_impl::TraitImplLintFactory, ArchitectureLintRule, LintResult,
+    ArchitectureLintRule, LintResult, function_length::FunctionLengthLintFactory,
+    namespace::NamespaceUsageLintFactory, trait_impl::TraitImplLintFactory,
 };
 
 ///
@@ -21,14 +22,31 @@ pub struct ArchitectureLintCollection {
     lints: Vec<Box<dyn ArchitectureLintRule + Send>>,
     lint_results: Vec<LintResult>,
     lint_results_text: String,
+    mode: Mode,
+}
+
+// The mode the lint collection should
+// be configured into. This controls the
+// action it performs when run through the
+// compiler phase.
+pub enum Mode {
+    // Run the lints
+    Check,
+
+    // Print namespaces, with rule association listed alongside
+    PrintNamespaces,
 }
 
 impl ArchitectureLintCollection {
-    pub fn new(lints: Vec<Box<dyn ArchitectureLintRule + Send>>) -> ArchitectureLintCollection {
+    pub fn new(
+        lints: Vec<Box<dyn ArchitectureLintRule + Send>>,
+        mode: Mode,
+    ) -> ArchitectureLintCollection {
         ArchitectureLintCollection {
             lints,
             lint_results: vec![],
             lint_results_text: String::new(),
+            mode,
         }
     }
 
@@ -53,6 +71,52 @@ impl ArchitectureLintCollection {
     pub fn to_string(&self) -> String {
         self.lint_results_text.clone()
     }
+
+    //
+    // Runs the lints!
+    // This is the main action we can perform
+    //
+    fn check(&mut self, tcx: TyCtxt<'_>) {
+        let lints = &self.lints; // Extract lints to avoid borrowing `self` later
+        let lint_results = lints.iter().flat_map(|lint| lint.lint(tcx)); // Collect results
+        self.lint_results.extend(lint_results); // Mutate `self.lint_results` after iteration
+
+        let source_map = tcx.sess.source_map();
+        self.lint_results_text = self.results_to_text(source_map);
+    }
+
+    //
+    // Prints the namespaces in the project.
+    //
+    fn print_namespaces(&mut self, tcx: TyCtxt<'_>) {
+        let mut namespace_set: BTreeSet<String> = BTreeSet::new();
+
+        for id in tcx.hir().items() {
+            let item = tcx.hir().item(id);
+            if let ItemKind::Mod(..) = item.kind {
+                let namespace = tcx.def_path_str(item.owner_id.to_def_id());
+                namespace_set.insert(namespace);
+            }
+        }
+
+        let mut output = Color::Blue.bold().paint("Namespaces\n\n").to_string();
+        for namespace in &namespace_set {
+            let applicable_lints: Vec<String> = self
+                .lints
+                .iter()
+                .filter(|lint| lint.applies_to_namespace(namespace))
+                .map(|lint| lint.name())
+                .collect();
+
+            output.push_str(&format!(
+                "{} [{}]\n",
+                namespace,
+                Color::Green.paint(applicable_lints.join(", "))
+            ));
+        }
+
+        self.lint_results_text = output;
+    }
 }
 
 ///
@@ -65,13 +129,10 @@ impl Callbacks for ArchitectureLintCollection {
         _compiler: &rustc_interface::interface::Compiler,
         tcx: TyCtxt<'_>,
     ) -> rustc_driver::Compilation {
-        let lints = &self.lints; // Extract lints to avoid borrowing `self` later
-        let lint_results = lints.iter().flat_map(|lint| lint.lint(tcx)); // Collect results
-        self.lint_results.extend(lint_results); // Mutate `self.lint_results` after iteration
-
-        let source_map = tcx.sess.source_map();
-        self.lint_results_text = self.results_to_text(source_map);
-
+        match self.mode {
+            Mode::Check => self.check(tcx),
+            Mode::PrintNamespaces => self.print_namespaces(tcx),
+        }
         rustc_driver::Compilation::Continue
     }
 }

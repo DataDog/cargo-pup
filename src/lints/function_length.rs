@@ -1,10 +1,11 @@
 use super::{ArchitectureLintRule, LintResult, Severity};
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
+use regex::Regex;
 use rustc_hir::{ImplItem, ImplItemKind, Item, ItemKind};
 use rustc_middle::hir::map::{self};
 use rustc_middle::ty::TyCtxt;
-use rustc_span::source_map::SourceMap;
 use rustc_span::Span;
+use rustc_span::source_map::SourceMap;
 use serde::Deserialize;
 
 /// Represents a set of function length lint rules for a module
@@ -19,24 +20,41 @@ pub struct FunctionLengthConfiguration {
 pub struct FunctionLengthLintProcessor {
     name: String,
     rule: FunctionLengthConfiguration,
+    namespace_match: Regex,
 }
 
 impl FunctionLengthLintProcessor {
     pub fn new(name: String, rule: FunctionLengthConfiguration) -> Self {
-        Self { name, rule }
+        let namespace_match = Regex::new(&rule.namespace).unwrap_or_else(|_| {
+            panic!(
+                "Couldn't create regexp for namespace match: {:?}",
+                rule.namespace.as_str()
+            )
+        });
+
+        Self {
+            name,
+            rule,
+            namespace_match,
+        }
+    }
+
+    fn applies_to_namespace(&self, namespace: &str) -> bool {
+        self.namespace_match.is_match(namespace)
     }
 
     /// Process a module and its functions to apply function length lint rules
     pub fn process_module<'tcx>(
         &self,
-        hir: map::Map<'tcx>,
+        tcx: TyCtxt<'tcx>,
         module: &Item<'tcx>,
         source_map: &SourceMap,
     ) -> Vec<LintResult> {
         if let ItemKind::Mod(module_data) = module.kind {
-            let module_name = module.ident.as_str();
+            let module_name = tcx.def_path_str(module.owner_id.to_def_id());
+            let hir = tcx.hir();
 
-            if self.rule.namespace.eq(module_name) {
+            if self.applies_to_namespace(module_name.as_str()) {
                 module_data
                     .item_ids
                     .iter()
@@ -149,12 +167,20 @@ impl ArchitectureLintRule for FunctionLengthLintProcessor {
             .filter_map(|owner| owner.as_owner())
             .flat_map(|owner| {
                 if let rustc_hir::OwnerNode::Item(item) = owner.node() {
-                    self.process_module(ctx.hir(), item, ctx.sess.source_map())
+                    self.process_module(ctx, item, ctx.sess.source_map())
                 } else {
                     vec![]
                 }
             })
             .collect()
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn applies_to_namespace(&self, namespace: &str) -> bool {
+        self.applies_to_namespace(namespace)
     }
 }
 
