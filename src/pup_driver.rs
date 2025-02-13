@@ -61,7 +61,7 @@ pub fn main() -> Result<()> {
 
     // Print out our lints
     eprintln!();
-    eprintln!("{0}", callbacks.to_string());
+    eprintln!("{0}", callbacks);
 
     process::exit(0);
 }

@@ -16,7 +16,7 @@ pub fn assert_lint_results(expected_count: usize, collection: &ArchitectureLintC
             "Expected {} lint results, got {}. Dumping results:\n {}",
             expected_count,
             collection.lint_results().len(),
-            collection.to_string()
+            collection
         );
         assert_eq!(expected_count, collection.lint_results().len());
     }

@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, fmt};
 
 use ansi_term::Color;
 use rustc_driver::Callbacks;
@@ -37,6 +37,12 @@ pub enum Mode {
     PrintNamespaces,
 }
 
+impl fmt::Display for ArchitectureLintCollection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.lint_results_text)
+    }
+}
+
 impl ArchitectureLintCollection {
     pub fn new(
         lints: Vec<Box<dyn ArchitectureLintRule + Send>>,
@@ -70,10 +76,6 @@ impl ArchitectureLintCollection {
         #![allow(dead_code)]
 
         &self.lint_results
-    }
-
-    pub fn to_string(&self) -> String {
-        self.lint_results_text.clone()
     }
 
     //
