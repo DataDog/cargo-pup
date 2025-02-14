@@ -9,7 +9,7 @@ extern crate rustc_span;
 
 use anyhow::Result;
 use cli::{PupCli, PupCliCommands};
-use lints::Mode;
+use lints::{ArchitectureLintRunner, Mode};
 
 use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, register_all_lints};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
@@ -56,12 +56,13 @@ pub fn main() -> Result<()> {
     orig_args.extend(vec!["-A".into(), "warnings".into()]);
 
     // Forward all arguments to RunCompiler, including `"-"`
-    let mut callbacks = ArchitectureLintCollection::new(setup_lints_yaml()?, mode);
-    rustc_driver::run_compiler(&orig_args, &mut callbacks);
+    let lint_collection = ArchitectureLintCollection::new(setup_lints_yaml()?);
+    let mut runner = ArchitectureLintRunner::new(mode, lint_collection);
+    rustc_driver::run_compiler(&orig_args, &mut runner);
 
     // Print out our lints
     eprintln!();
-    eprintln!("{0}", callbacks);
+    eprintln!("{0}", runner.lint_results_text());
 
     process::exit(0);
 }

@@ -218,7 +218,7 @@ pub mod tests {
 
         let lints = lints_for_code(TEST_FN, function_length_rules);
         assert_lint_results(1, &lints);
-        assert!(lints.to_string().contains(
+        assert!(lints.lint_results_text().contains(
             "Implementation name 'MyStruct' does not match the required pattern '.*MyTraitImpl'"
         ));
     }
@@ -255,7 +255,7 @@ pub mod tests {
         assert_lint_results(1, &lints);
         assert!(
             lints
-                .to_string()
+                .lint_results_text()
                 .contains("Struct 'test::MyStruct' is public, but should be private")
         );
     }

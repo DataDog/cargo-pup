@@ -4,19 +4,21 @@ use tempfile::TempDir;
 use rustc_driver;
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 
-use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, Mode};
+use crate::lints::{
+    ArchitectureLintCollection, ArchitectureLintRule, ArchitectureLintRunner, Mode,
+};
 
 static INIT: Once = Once::new();
 
 /// Confirm that the expected set of lint results was returned. If it wasn't, print all the
 /// lint results out to stderr.
-pub fn assert_lint_results(expected_count: usize, collection: &ArchitectureLintCollection) {
+pub fn assert_lint_results(expected_count: usize, collection: &ArchitectureLintRunner) {
     if collection.lint_results().len() != expected_count {
         eprintln!(
             "Expected {} lint results, got {}. Dumping results:\n {}",
             expected_count,
             collection.lint_results().len(),
-            collection
+            collection.lint_results_text()
         );
         assert_eq!(expected_count, collection.lint_results().len());
     }
@@ -25,7 +27,7 @@ pub fn assert_lint_results(expected_count: usize, collection: &ArchitectureLintC
 pub fn lints_for_code(
     code: &str,
     lint: impl ArchitectureLintRule + Send + 'static,
-) -> ArchitectureLintCollection {
+) -> ArchitectureLintRunner {
     // Initialize the Rust compiler's environment logger once
     INIT.call_once(|| {
         let early_dcx = EarlyDiagCtxt::new(ErrorOutputType::default());
@@ -70,10 +72,10 @@ pub fn lints_for_code(
     ];
 
     // Box up our lints
-    let mut callbacks = ArchitectureLintCollection::new(vec![Box::new(lint)], Mode::Check);
+    let lints = ArchitectureLintCollection::new(vec![Box::new(lint)]);
+    let mut runner = ArchitectureLintRunner::new(Mode::Check, lints);
 
     // Run the compiler
-    rustc_driver::run_compiler(&args, &mut callbacks);
-
-    callbacks
+    rustc_driver::run_compiler(&args, &mut runner);
+    runner
 }
