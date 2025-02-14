@@ -13,7 +13,14 @@ use lints::{ArchitectureLintRunner, Mode};
 
 use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, register_all_lints};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
-use std::{env, path::Path, process, process::Command};
+use std::{
+    env,
+    fs::{self, OpenOptions},
+    io::Write,
+    path::Path,
+    process::{self, Command},
+    time::{SystemTime, UNIX_EPOCH},
+};
 use utils::configuration_factory::LintConfigurationFactory;
 
 mod cli;
@@ -56,6 +63,9 @@ pub fn main() -> Result<()> {
     // Suppress rust's own lint output
     orig_args.extend(vec!["-A".into(), "warnings".into()]);
 
+    // Log it, so we can work out what is going on
+    log_invocation(&orig_args)?;
+
     // Forward all arguments to RunCompiler, including `"-"`
     let lint_collection = ArchitectureLintCollection::new(setup_lints_yaml()?);
     let mut runner = ArchitectureLintRunner::new(mode, lint_collection);
@@ -97,6 +107,37 @@ fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
         LintConfigurationFactory::from_yaml(&yaml_content).map_err(anyhow::Error::msg)?;
 
     Ok(lint_rules)
+}
+
+///
+/// Appends the given arguments to `.pup/invocations.txt` in the current working directory
+/// with a timestamp prepended.
+///
+fn log_invocation(orig_args: &[String]) -> std::io::Result<()> {
+    let cwd = std::env::current_dir()?;
+    let log_path = cwd.join(".pup/invocations.txt");
+
+    // Ensure the directory exists
+    if let Some(parent) = log_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    // Get current timestamp as seconds since UNIX epoch
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let args_str = orig_args.join(" ");
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)?;
+
+    writeln!(file, "[{}] {}", timestamp, args_str)?;
+
+    Ok(())
 }
 
 #[cfg(test)]
