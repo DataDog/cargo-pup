@@ -16,6 +16,9 @@ pub enum Mode {
 
     /// Print namespaces
     PrintNamespaces,
+
+    /// Print traits
+    PrintTraits,
 }
 
 ///
@@ -72,6 +75,39 @@ impl ArchitectureLintRunner {
         (lint_results, lint_results_text)
     }
 
+    ///
+    /// Prints traits in the project.
+    ///
+    fn print_traits(
+        &self,
+        tcx: TyCtxt<'_>,
+        _lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
+    ) -> String {
+        let mut trait_set: BTreeSet<(String, String)> = BTreeSet::new();
+
+        for id in tcx.hir().items() {
+            let item = tcx.hir().item(id);
+            if let ItemKind::Trait(..) = item.kind {
+                let trait_name = tcx.def_path_str(item.owner_id.to_def_id());
+                let module = tcx
+                    .crate_name(item.owner_id.to_def_id().krate)
+                    .to_ident_string();
+                trait_set.insert((module, trait_name));
+            }
+        }
+
+        let mut output = String::new();
+        for (module, trait_name) in &trait_set {
+            output.push_str(&format!("{}::{}", Color::Blue.paint(module), trait_name));
+        }
+
+        if !output.is_empty() {
+            format!("{}\n{}", Color::Blue.bold().paint("Traits\n\n"), output)
+        } else {
+            output
+        }
+    }
+
     //
     // Prints the namespaces in the project.
     //
@@ -93,7 +129,7 @@ impl ArchitectureLintRunner {
             }
         }
 
-        let mut output = Color::Blue.bold().paint("Namespaces\n\n").to_string();
+        let mut output = String::new();
         for (module, namespace) in &namespace_set {
             let applicable_lints: Vec<String> = lints
                 .iter()
@@ -108,8 +144,11 @@ impl ArchitectureLintRunner {
                 Color::Green.paint(applicable_lints.join(", "))
             ));
         }
-
-        output
+        if !output.is_empty() {
+            format!("{}\n{}", Color::Blue.bold().paint("Namespaces\n\n"), output)
+        } else {
+            output
+        }
     }
 
     ///
@@ -129,16 +168,18 @@ impl ArchitectureLintRunner {
 
     /// Called back from the compiler
     fn callback(&mut self, tcx: TyCtxt<'_>) {
+        let lints = self.lint_collection.lints();
         match self.mode {
             Mode::Check => {
-                let lints = self.lint_collection.lints();
                 let (lint_results, lint_results_text) = self.check(tcx, lints);
                 self.lint_results = lint_results;
                 self.result_text = lint_results_text;
             }
             Mode::PrintNamespaces => {
-                let lints = self.lint_collection.lints();
                 self.result_text = self.print_namespaces(tcx, lints);
+            }
+            Mode::PrintTraits => {
+                self.result_text = self.print_traits(tcx, lints);
             }
         }
     }

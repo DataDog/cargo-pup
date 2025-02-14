@@ -49,6 +49,7 @@ pub fn main() -> Result<()> {
     );
     let mode = match config.command.unwrap_or(PupCliCommands::Check) {
         PupCliCommands::PrintNamespaces => Mode::PrintNamespaces,
+        PupCliCommands::PrintTraits => Mode::PrintTraits,
         PupCliCommands::Check => Mode::Check,
     };
 

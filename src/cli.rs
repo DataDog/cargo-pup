@@ -13,6 +13,7 @@ pub struct PupCli {
 #[derive(Subcommand, Debug, Serialize, Deserialize)]
 pub enum PupCliCommands {
     PrintNamespaces,
+    PrintTraits,
     Check,
 }
 
