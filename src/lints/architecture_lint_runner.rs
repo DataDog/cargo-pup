@@ -80,18 +80,21 @@ impl ArchitectureLintRunner {
         tcx: TyCtxt<'_>,
         lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
     ) -> String {
-        let mut namespace_set: BTreeSet<String> = BTreeSet::new();
+        let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
 
         for id in tcx.hir().items() {
             let item = tcx.hir().item(id);
             if let ItemKind::Mod(..) = item.kind {
                 let namespace = tcx.def_path_str(item.owner_id.to_def_id());
-                namespace_set.insert(namespace);
+                let module = tcx
+                    .crate_name(item.owner_id.to_def_id().krate)
+                    .to_ident_string();
+                namespace_set.insert((module, namespace));
             }
         }
 
         let mut output = Color::Blue.bold().paint("Namespaces\n\n").to_string();
-        for namespace in &namespace_set {
+        for (module, namespace) in &namespace_set {
             let applicable_lints: Vec<String> = lints
                 .iter()
                 .filter(|lint| lint.applies_to_namespace(namespace))
@@ -99,7 +102,8 @@ impl ArchitectureLintRunner {
                 .collect();
 
             output.push_str(&format!(
-                "{} [{}]\n",
+                "{}::{} [{}]\n",
+                Color::Blue.paint(module),
                 namespace,
                 Color::Green.paint(applicable_lints.join(", "))
             ));
