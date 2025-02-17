@@ -49,11 +49,10 @@ pub fn main() -> Result<()> {
     }
 
     // Load our configuration
-    let config = PupCli::from_env_str(
-        std::env::var("PUP_CLI_ARGS")
-            .expect("Missing PUP_CLI_ARGS")
-            .as_str(),
-    );
+    let binding = std::env::var("PUP_CLI_ARGS").expect("Missing PUP_CLI_ARGS");
+    let cli_args = binding.as_str();
+    let config = PupCli::from_env_str(cli_args);
+
     let mode = match config.command.unwrap_or(PupCliCommands::Check) {
         PupCliCommands::PrintNamespaces => Mode::PrintNamespaces,
         PupCliCommands::PrintTraits => Mode::PrintTraits,
@@ -68,7 +67,8 @@ pub fn main() -> Result<()> {
 
     // Forward all arguments to RunCompiler, including `"-"`
     let lint_collection = ArchitectureLintCollection::new(setup_lints_yaml()?);
-    let mut runner = ArchitectureLintRunner::new(mode, lint_collection);
+    let mut runner = ArchitectureLintRunner::new(mode, cli_args.into(), lint_collection);
+
     rustc_driver::run_compiler(&orig_args, &mut runner);
 
     // Print out our lints

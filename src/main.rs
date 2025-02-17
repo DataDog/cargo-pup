@@ -65,10 +65,9 @@ mod cli;
 use clap::Parser;
 use cli::PupCli;
 
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::env;
+use std::path::Path;
 use std::process::{Command, exit};
-use std::{env, fs};
 #[allow(dead_code)]
 fn show_help() {
     println!("{}", help_message());
@@ -111,37 +110,6 @@ pub fn main() {
     }
 }
 
-//
-// Calculates a hash of our configuration file and our
-// configuration args together. We can then use that
-// as a define we pass through in RUSTFLAGS, so that
-// changing either of these things invalidates the build cache.
-//
-// This is very heavyweight! It invalidates _far too much_. We should
-// find a better solution.
-//
-fn invalidation_hash(cli_args: &str) -> String {
-    let hash = md5::compute(format!("{} {}", config_hash(), cli_args));
-    format!("{:x}", hash)
-}
-
-///
-/// Calculates a hash of our configuration file.
-///
-fn config_hash() -> String {
-    const DEFAULT_HASH: &str = "no_config_file";
-    let config_path = PathBuf::from("pup.yaml");
-
-    if let Ok(mut file) = fs::File::open(&config_path) {
-        let mut contents = String::new();
-        if file.read_to_string(&mut contents).is_ok() {
-            let hash = format!("{:x}", md5::compute(contents));
-            return hash;
-        }
-    }
-    DEFAULT_HASH.to_string()
-}
-
 ///
 /// Generates our trampoline command. This trampolines straight
 /// back to this executable, cargo-pup.
@@ -154,29 +122,16 @@ fn generate_trampoline_cmd(toolchain: &str, cli_args: &str) -> Command {
     // Construct a path back to ourselves
     let path = env::current_exe().expect("current executable path invalid");
 
-    // We calculate a hash across our CLI arguments and our config, so if either
-    // change the build re-runs. Otherwise cargo agressively caches.
-    // There must be a better way!
-    let invalidation_hash = invalidation_hash(cli_args);
-
     // But, we'll use RUSTC_WORKSPACE_WRAPPER, so that when the nested cargo runs, it kicks
     // the invocation back to us
     cmd.env("RUSTC_WORKSPACE_WRAPPER", path.to_str().unwrap())
         .env("PUP_TRAMPOLINE_MODE", "true")
         .env("PUP_TERMINAL_WIDTH", terminal_width.to_string())
-        .env("PUP_BUILD_INVALIDATION_HASH", &invalidation_hash)
         .env("PUP_CLI_ARGS", cli_args)
-        .env(
-            "RUSTFLAGS",
-            format!(
-                "--cfg=pup_build_invalidation_hash=\"{}\"",
-                invalidation_hash
-            ),
-        )
         .arg("run")
         .arg(toolchain)
         .arg("cargo")
-        .arg("build")
+        .arg("check")
         .arg("--target-dir")
         .arg(".pup");
 

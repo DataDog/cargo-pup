@@ -73,7 +73,7 @@ pub fn lints_for_code(
 
     // Box up our lints
     let lints = ArchitectureLintCollection::new(vec![Box::new(lint)]);
-    let mut runner = ArchitectureLintRunner::new(Mode::Check, lints);
+    let mut runner = ArchitectureLintRunner::new(Mode::Check, String::new(), lints);
 
     // Run the compiler
     rustc_driver::run_compiler(&args, &mut runner);

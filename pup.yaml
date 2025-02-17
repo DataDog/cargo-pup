@@ -1,4 +1,3 @@
-
 #
 # Example rules for the test_name namespace that should
 # always fire to show we're working. This is
@@ -23,7 +22,7 @@ test_me_function_length_rule:
   namespace: example::.*
   max_lines: 10
   severity: Info
-
+    
 #
 # Rules for this project, cargo-pup.
 #

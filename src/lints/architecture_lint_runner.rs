@@ -1,9 +1,10 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, path::Path};
 
 use ansi_term::Color;
 use rustc_driver::Callbacks;
 use rustc_hir::ItemKind;
 use rustc_middle::ty::TyCtxt;
+use rustc_span::Symbol;
 
 use super::{ArchitectureLintCollection, ArchitectureLintRule, LintResult};
 
@@ -28,6 +29,12 @@ pub struct ArchitectureLintRunner {
     mode: Mode,
     lint_collection: ArchitectureLintCollection,
 
+    // Arguments to the cargo-pup. We need these
+    // so that we can tie the results of the session
+    // back to them, and invalidate the cache when they
+    // change.
+    cli_args: String,
+
     // Because we gather our output within the compiler
     // Callback mechanism, we need somewhere we can stash our
     // results internally.
@@ -36,12 +43,13 @@ pub struct ArchitectureLintRunner {
 }
 
 impl ArchitectureLintRunner {
-    pub fn new(mode: Mode, lint_collection: ArchitectureLintCollection) -> Self {
+    pub fn new(mode: Mode, cli_args: String, lint_collection: ArchitectureLintCollection) -> Self {
         ArchitectureLintRunner {
             mode,
             lint_collection,
             lint_results: vec![],
             result_text: String::new(),
+            cli_args,
         }
     }
 
@@ -190,6 +198,25 @@ impl ArchitectureLintRunner {
 /// lint results as we go.
 ///
 impl Callbacks for ArchitectureLintRunner {
+    fn config(&mut self, config: &mut rustc_interface::interface::Config) {
+        let cli_args = self.cli_args.clone();
+        config.psess_created = Some(Box::new(move |psess| {
+            // track CLI args
+            psess
+                .env_depinfo
+                .get_mut()
+                .insert((Symbol::intern(""), Some(Symbol::intern(&cli_args))));
+
+            // Track config file
+            if Path::new("pup.yaml").exists() {
+                psess
+                    .file_depinfo
+                    .get_mut()
+                    .insert(Symbol::intern("pup.yaml"));
+            }
+        }));
+    }
+
     fn after_expansion(
         &mut self,
         _compiler: &rustc_interface::interface::Compiler,
