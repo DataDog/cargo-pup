@@ -99,7 +99,36 @@ impl ArchitectureLintRunner {
         lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
     ) -> String {
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
-        let (module, _, _) = tcx.hir_get_module(LocalModDefId::CRATE_DEF_ID);
+        
+        // Start recursive traversal from crate root
+        self.collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
+
+        let mut output = String::new();
+        for (module, path) in &namespace_set {
+            let applicable_lints: Vec<String> = lints
+                .iter()
+                .filter(|lint| lint.applies_to_module(format!("{}::{}", module, path).as_str()))
+                .map(|lint| lint.name())
+                .collect();
+
+            output.push_str(&format!(
+                "{}::{} [{}]\n",
+                Color::Blue.paint(module),
+                path,
+                Color::Green.paint(applicable_lints.join(", "))
+            ));
+        }
+        output
+    }
+
+    // Fetch all the modules from a top-level module down
+    fn collect_modules(
+        &self,
+        tcx: TyCtxt<'_>,
+        mod_id: LocalModDefId,
+        namespace_set: &mut BTreeSet<(String, String)>,
+    ) {
+        let (module, _, _) = tcx.hir_get_module(mod_id);
 
         for id in module.item_ids {
             let item = tcx.hir_item(*id);
@@ -108,29 +137,10 @@ impl ArchitectureLintRunner {
                 let module = tcx
                     .crate_name(item.owner_id.to_def_id().krate)
                     .to_ident_string();
-                namespace_set.insert((module, namespace));
+                namespace_set.insert((module, namespace.clone()));
+                let child_mod_id = LocalModDefId::new_unchecked(item.owner_id.def_id);
+                self.collect_modules(tcx, child_mod_id, namespace_set);
             }
-        }
-
-        let mut output = String::new();
-        for (module, namespace) in &namespace_set {
-            let applicable_lints: Vec<String> = lints
-                .iter()
-                .filter(|lint| lint.applies_to_module(namespace))
-                .map(|lint| lint.name())
-                .collect();
-
-            output.push_str(&format!(
-                "{}::{} [{}]\n",
-                Color::Blue.paint(module),
-                namespace,
-                Color::Green.paint(applicable_lints.join(", "))
-            ));
-        }
-        if !output.is_empty() {
-            format!("{}\n{}", Color::Blue.bold().paint("Namespaces\n\n"), output)
-        } else {
-            output
         }
     }
 

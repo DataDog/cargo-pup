@@ -31,3 +31,22 @@ empty_mods:
     - "lints"
     - "utils"
   severity: Warn
+
+# Keep helpers implementation details private
+helpers_no_structs_or_traits:
+  type: item_type
+  modules:
+    - "^pup_driver::lints::helpers$"
+  denied_items:
+    - struct  
+    - trait 
+  severity: Error
+
+utils_no_structs_or_traits:
+  type: item_type
+  modules:
+    - "^pup_driver::utils$"
+  denied_items:
+    - struct
+    - trait 
+  severity: Error
