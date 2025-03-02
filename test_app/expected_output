@@ -79,6 +79,4 @@ warning: Use of wildcard imports in 'std::io' is denied.
   = help: Avoid wildcard imports.
   = note: Applied by cargo-pup rule 'deny_std_collections'.
 
-
-
 warning: `test_app` (bin "test_app") generated 7 warnings

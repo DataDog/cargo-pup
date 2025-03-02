@@ -18,7 +18,7 @@ pub enum Mode {
     /// Run the lints
     Check,
 
-    /// Print modules
+    /// Print namespaces
     PrintModules,
 
     /// Print traits
@@ -26,10 +26,7 @@ pub enum Mode {
 }
 
 ///
-/// Runs architecture lints. Can run lints in a couple of different
-/// modes - either actual linting, or diagnostic modes that print
-/// out things like the namespace tree within the cate cargo-pup
-/// is being run on.
+/// Runs architecture lints
 ///
 pub struct ArchitectureLintRunner {
     mode: Mode,
@@ -66,7 +63,6 @@ impl ArchitectureLintRunner {
 
     ///
     /// Prints traits in the project.
-    /// TODO - this is broken since we upgraded the rust compiler! 
     ///
     fn print_traits(
         &self,
@@ -75,9 +71,9 @@ impl ArchitectureLintRunner {
     ) -> String {
         let mut trait_set: BTreeSet<(String, String)> = BTreeSet::new();
 
-        let (module, _, _) = tcx.hir_get_module(LocalModDefId::CRATE_DEF_ID);
-        for id in module.item_ids {
-            let item = tcx.hir_item(*id);
+        let module_items = tcx.hir_crate_items(());
+        for item_id in module_items.free_items() {
+            let item = tcx.hir_item(item_id);
             if let ItemKind::Trait(..) = item.kind {
                 let trait_name = tcx.def_path_str(item.owner_id.to_def_id());
                 let module = tcx
@@ -91,14 +87,13 @@ impl ArchitectureLintRunner {
         for (module, trait_name) in &trait_set {
             output.push_str(&format!("{}::{}\n", Color::Blue.paint(module), trait_name));
         }
-
         output
     }
 
     //
-    // Prints the modules in the project.
+    // Prints the namespaces in the project.
     //
-    fn print_modules(
+    fn print_namespaces(
         &self,
         tcx: TyCtxt<'_>,
         lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
@@ -132,7 +127,11 @@ impl ArchitectureLintRunner {
                 Color::Green.paint(applicable_lints.join(", "))
             ));
         }
-        output
+        if !output.is_empty() {
+            format!("{}\n{}", Color::Blue.bold().paint("Namespaces\n\n"), output)
+        } else {
+            output
+        }
     }
 
     /// Called back from the compiler
@@ -143,7 +142,7 @@ impl ArchitectureLintRunner {
                 // Do nothing. Checking happens as part of the lints.
             }
             Mode::PrintModules => {
-                self.result_text = self.print_modules(tcx, lints);
+                self.result_text = self.print_namespaces(tcx, lints);
             }
             Mode::PrintTraits => {
                 self.result_text = self.print_traits(tcx, lints);
