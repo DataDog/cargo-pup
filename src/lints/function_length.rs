@@ -1,7 +1,6 @@
 use super::{ArchitectureLintRule, Severity};
 use crate::declare_variable_severity_lint;
 use crate::lints::helpers::clippy_utils::span_lint_and_help;
-use crate::lints::helpers::get_full_module_name;
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
 use regex::Regex;
 use rustc_hir::{ImplItem, ImplItemKind, Item, ItemKind, OwnerId};
@@ -9,6 +8,7 @@ use rustc_lint::{LateContext, LateLintPass, Lint, LintContext};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
+use crate::lints::helpers::queries::get_full_module_name;
 
 /// Represents a set of function length lint rules for a module
 #[derive(Debug, Deserialize, Clone)]
@@ -54,10 +54,6 @@ impl FunctionLengthLintProcessor {
     fn applies_to_module(&self, tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> bool {
         let full_name = get_full_module_name(tcx, module_def_id);
         let the_match = self.namespace_match.is_match(full_name.as_str());
-        // eprintln!(
-        //     "full_name: {} match: {} ? {}",
-        //     full_name, self.rule.namespace, the_match
-        // );
         the_match
     }
 }
@@ -227,9 +223,7 @@ mod tests {
             },
         );
 
-        eprintln!("LENGTH: RUNNING");
         let lints = lints_for_code(TEST_FN, function_length_rules);
-        eprintln!("LENGTH: GOT LINTS");
         assert_lint_results(1, &lints);
     }
 

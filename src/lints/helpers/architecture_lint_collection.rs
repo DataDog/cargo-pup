@@ -10,8 +10,7 @@ use crate::lints::{
 ///
 /// Collects a set of architecture lints configured
 /// and ready to run.
-/// Provides an implementation of Callbacks and adapts the
-/// rustc compiler expectations to what the lints need.
+///
 ///
 pub struct ArchitectureLintCollection {
     lints: Vec<Box<dyn ArchitectureLintRule + Send>>,

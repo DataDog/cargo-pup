@@ -58,7 +58,7 @@ pub fn main() -> Result<()> {
     let config = PupCli::from_env_str(cli_args);
 
     let mode = match config.command.unwrap_or(PupCliCommands::Check) {
-        PupCliCommands::PrintNamespaces => Mode::PrintNamespaces,
+        PupCliCommands::PrintModules => Mode::PrintModules,
         PupCliCommands::PrintTraits => Mode::PrintTraits,
         PupCliCommands::Check => Mode::Check,
     };
@@ -77,8 +77,10 @@ pub fn main() -> Result<()> {
     rustc_driver::run_compiler(&orig_args, &mut runner);
 
     // Print out our lints
-    eprintln!();
-    eprintln!("{0}", runner.lint_results_text());
+    let results_text = runner.lint_results_text();
+    if !results_text.is_empty() {
+        eprintln!("{0}", runner.lint_results_text());
+    }
 
     process::exit(0);
 }

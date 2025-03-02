@@ -18,15 +18,18 @@ pub enum Mode {
     /// Run the lints
     Check,
 
-    /// Print namespaces
-    PrintNamespaces,
+    /// Print modules
+    PrintModules,
 
     /// Print traits
     PrintTraits,
 }
 
 ///
-/// Runs architecture lints
+/// Runs architecture lints. Can run lints in a couple of different
+/// modes - either actual linting, or diagnostic modes that print
+/// out things like the namespace tree within the cate cargo-pup
+/// is being run on.
 ///
 pub struct ArchitectureLintRunner {
     mode: Mode,
@@ -63,6 +66,7 @@ impl ArchitectureLintRunner {
 
     ///
     /// Prints traits in the project.
+    /// TODO - this is broken since we upgraded the rust compiler! 
     ///
     fn print_traits(
         &self,
@@ -88,17 +92,13 @@ impl ArchitectureLintRunner {
             output.push_str(&format!("{}::{}\n", Color::Blue.paint(module), trait_name));
         }
 
-        if !output.is_empty() {
-            format!("{}\n{}", Color::Blue.bold().paint("Traits\n\n"), output)
-        } else {
-            output
-        }
+        output
     }
 
     //
-    // Prints the namespaces in the project.
+    // Prints the modules in the project.
     //
-    fn print_namespaces(
+    fn print_modules(
         &self,
         tcx: TyCtxt<'_>,
         lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
@@ -132,11 +132,7 @@ impl ArchitectureLintRunner {
                 Color::Green.paint(applicable_lints.join(", "))
             ));
         }
-        if !output.is_empty() {
-            format!("{}\n{}", Color::Blue.bold().paint("Namespaces\n\n"), output)
-        } else {
-            output
-        }
+        output
     }
 
     /// Called back from the compiler
@@ -146,8 +142,8 @@ impl ArchitectureLintRunner {
             Mode::Check => {
                 // Do nothing. Checking happens as part of the lints.
             }
-            Mode::PrintNamespaces => {
-                self.result_text = self.print_namespaces(tcx, lints);
+            Mode::PrintModules => {
+                self.result_text = self.print_modules(tcx, lints);
             }
             Mode::PrintTraits => {
                 self.result_text = self.print_traits(tcx, lints);
