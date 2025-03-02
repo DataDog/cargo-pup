@@ -4,6 +4,7 @@ mod trait_impl;
 mod empty_mod;
 mod helpers;
 mod module_usage;
+mod item_type;
 mod lint_result;
 
 // Re-export our public API

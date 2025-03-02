@@ -5,7 +5,9 @@ use crate::utils::configuration_factory::LintFactory;
 use crate::lints::{
     ArchitectureLintRule, function_length::FunctionLengthLintFactory,
     trait_impl::TraitImplLintFactory,
+    item_type::ItemTypeLintFactory
 };
+
 
 ///
 /// Collects a set of architecture lints configured
@@ -34,4 +36,5 @@ pub fn register_all_lints() {
     TraitImplLintFactory::register();
     EmptyModLintFactory::register();
     ModuleUsageLintFactory::register();
+    ItemTypeLintFactory::register();
 }

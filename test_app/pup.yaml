@@ -14,7 +14,6 @@ deny_long_functions:
 deny_std_collections:
   type: module_usage
   name: "test_me_namespace_rule_new"
-  # TODO - this doesn't match if you include the crate name. Fix lint.
   modules:
     - "^test_app::module_usage$"
   rules:
@@ -46,4 +45,16 @@ test_trait_constraint:
   name_must_match: ".*MyTraitImpl$"
   # ... and must be private
   enforce_visibility: "Private"
+  severity: Warn
+
+# Block certain item types in specific modules
+deny_item_types:
+  type: item_type
+  modules:
+    - "^test_app::item_type$"
+  denied_items:
+    - struct
+    - enum
+    - trait
+    - module
   severity: Warn
