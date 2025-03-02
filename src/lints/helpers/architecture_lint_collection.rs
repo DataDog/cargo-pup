@@ -1,8 +1,10 @@
+use crate::lints::empty_mod::EmptyModLintFactory;
+use crate::lints::module_usage::ModuleUsageLintFactory;
 use crate::utils::configuration_factory::LintFactory;
 
-use super::{
+use crate::lints::{
     ArchitectureLintRule, function_length::FunctionLengthLintFactory,
-    namespace::NamespaceUsageLintFactory, trait_impl::TraitImplLintFactory,
+    trait_impl::TraitImplLintFactory,
 };
 
 ///
@@ -29,7 +31,8 @@ impl ArchitectureLintCollection {
 /// Should be called once at startup to register
 /// all the lints with the configuration factory.
 pub fn register_all_lints() {
-    NamespaceUsageLintFactory::register();
     FunctionLengthLintFactory::register();
     TraitImplLintFactory::register();
+    EmptyModLintFactory::register();
+    ModuleUsageLintFactory::register();
 }

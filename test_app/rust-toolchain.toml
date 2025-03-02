@@ -1,0 +1,5 @@
+[toolchain]
+channel = "stable"
+version = "1.85"
+components = ["rust-analyzer"]
+

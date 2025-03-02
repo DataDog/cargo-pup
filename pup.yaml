@@ -1,40 +1,15 @@
 #
-# Example rules for the test_name namespace that should
-# always fire to show we're working. This is
-# a namespace we throw into our build just so that running
-# `cargo pup` on ourselves always produces some output!
-# 
-test_me_namespace_rule:
-  type: namespace_usage
-  name: "test_me_namespace_rule"
-  namespaces:
-    - "example::.*"
-  rules:
-    - type: Deny
-      denied_namespaces:
-        - "std::collections"
-      severity: Info
-    - type: RequireEmptyMod 
-      severity: Info
-
-test_me_function_length_rule:
-  type: function_length
-  namespace: example::.*
-  max_lines: 10
-  severity: Info
-    
-#
 # Rules for this project, cargo-pup.
 #
 
 # Implementations of our lint rules ... 
 architecture_lint_rules:
   type: trait_impl
-  source_name: "lints::ArchitectureLintRule"
+  source_name: "lints::architecture_lint_rule::ArchitectureLintRule"
   # Must be named consistently
   name_must_match: ".*LintProcessor$"
   # ... and must be public
-  enforce_visibility: "Public"
+  enforce_visibility: "Private"
   severity: Error
 
 # Implementations of our lint factories
@@ -49,13 +24,10 @@ configuration_factories:
 
 # Our namespaces that follow the mod.rs structure
 # must be empty. That is, they should only contain nested
-# module references, uses, and re-exports 
+# module references, uses, and re-exports
 empty_mods:
-  type: namespace_usage
-  namespaces:
+  type: empty_mod
+  modules:
     - "lints"
     - "utils"
-  rules:
-    - type: RequireEmptyMod
-      severity: Warn
-
+  severity: Warn

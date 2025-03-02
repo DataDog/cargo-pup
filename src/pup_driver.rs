@@ -1,8 +1,13 @@
 #![feature(rustc_private)]
 #![feature(let_chains)]
+#![feature(array_windows)]
+#![feature(try_blocks)]
+
 extern crate rustc_driver;
+extern crate rustc_errors;
 extern crate rustc_hir;
 extern crate rustc_interface;
+extern crate rustc_lint;
 extern crate rustc_middle;
 extern crate rustc_session;
 extern crate rustc_span;
@@ -11,7 +16,7 @@ use anyhow::Result;
 use cli::{PupCli, PupCliCommands};
 use lints::{ArchitectureLintRunner, Mode};
 
-use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, register_all_lints};
+use crate::lints::{ArchitectureLintCollection, register_all_lints};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{
     env,
@@ -21,10 +26,9 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-use utils::configuration_factory::LintConfigurationFactory;
+use utils::configuration_factory::setup_lints_yaml;
 
 mod cli;
-mod example;
 mod lints;
 mod utils;
 
@@ -60,13 +64,14 @@ pub fn main() -> Result<()> {
     };
 
     // Suppress rust's own lint output
-    orig_args.extend(vec!["-A".into(), "warnings".into()]);
+    // orig_args.extend(vec!["-A".into(), "warnings".into()]);
 
     // Log it, so we can work out what is going on
     log_invocation(&orig_args)?;
 
     // Forward all arguments to RunCompiler, including `"-"`
-    let lint_collection = ArchitectureLintCollection::new(setup_lints_yaml()?);
+    let lint_rules = setup_lints_yaml()?;
+    let lint_collection = ArchitectureLintCollection::new(lint_rules);
     let mut runner = ArchitectureLintRunner::new(mode, cli_args.into(), lint_collection);
 
     rustc_driver::run_compiler(&orig_args, &mut runner);
@@ -96,17 +101,6 @@ fn find_sysroot() -> String {
     }
 
     panic!("Could not determine sysroot.");
-}
-
-fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
-    use std::fs;
-
-    // Attempt to load configuration from `pup.yaml`
-    let yaml_content = fs::read_to_string("pup.yaml")?;
-    let lint_rules =
-        LintConfigurationFactory::from_yaml(&yaml_content).map_err(anyhow::Error::msg)?;
-
-    Ok(lint_rules)
 }
 
 ///
@@ -150,11 +144,14 @@ mod tests {
         register_all_lints();
 
         let lints = setup_lints_yaml()?;
-        assert_eq!(lints.len(), 5);
+        assert_eq!(lints.len(), 3);
         Ok(())
     }
 
-    use crate::lints::register_all_lints;
+    use crate::{
+        lints::register_all_lints,
+        utils::configuration_factory::{LintConfigurationFactory, setup_lints_yaml},
+    };
 
     ///
     /// This project should have its own loadable pup.yaml
@@ -163,6 +160,6 @@ mod tests {
     pub fn load_own_configuration() {
         register_all_lints();
 
-        LintConfigurationFactory::from_yaml(include_str!("../pup.yaml")).unwrap();
+        LintConfigurationFactory::from_yaml(include_str!("../pup.yaml").to_string()).unwrap();
     }
 }

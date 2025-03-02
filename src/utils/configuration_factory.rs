@@ -1,10 +1,10 @@
 use std::{
     collections::HashMap,
-    sync::{LazyLock, Mutex},
+    sync::{Arc, LazyLock, Mutex},
 };
 
 use crate::lints::ArchitectureLintRule;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 pub trait LintFactory: Send + Sync {
     ///
@@ -16,6 +16,9 @@ pub trait LintFactory: Send + Sync {
 
     ////
     /// Create a list of `ArchitectureLintRule`s from a YAML configuration
+    /// These let us do non-lint checks - e.g., for printing our namespace
+    /// or trait trees. These are not run as part of the rustc lint process
+    /// itself.
     ///
     fn configure(
         &self,
@@ -25,7 +28,7 @@ pub trait LintFactory: Send + Sync {
 }
 
 pub struct LintConfigurationFactory {
-    factories: HashMap<String, Box<dyn LintFactory>>,
+    factories: HashMap<String, Arc<dyn LintFactory>>,
 }
 
 // Define the static singleton instance
@@ -52,16 +55,20 @@ impl LintConfigurationFactory {
         let mut instance = LintConfigurationFactory::get_instance();
         instance
             .factories
-            .insert(name.to_string(), Box::new(factory));
+            .insert(name.to_string(), Arc::new(factory));
     }
 
     /// Load a YAML configuration and produce a list of `ArchitectureLintRule`s
-    pub fn from_yaml(yaml: &str) -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
-        let instance = LintConfigurationFactory::get_instance();
-
-        let config: serde_yaml::Value = serde_yaml::from_str(yaml)?;
+    pub fn from_yaml(yaml: String) -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
+        let config: serde_yaml::Value = serde_yaml::from_str(&yaml)?;
 
         let mut rules = vec![];
+
+        // Extract the factories once, then drop `instance`
+        let factories = {
+            let instance = LintConfigurationFactory::get_instance();
+            instance.factories.clone()
+        };
 
         if let Some(mapping) = config.as_mapping() {
             for (rule_name, value) in mapping {
@@ -69,33 +76,43 @@ impl LintConfigurationFactory {
                     .as_mapping()
                     .ok_or_else(|| anyhow!("Invalid rule format for {:?}", rule_name))?;
 
-                // Extract the `type` field
                 let lint_type = rule_config
                     .get(serde_yaml::Value::String("type".to_string()))
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| anyhow!("Missing `type` field in rule {:?}", rule_name))?;
 
-                // Extract the rule name
                 let rule_name = rule_name
                     .as_str()
                     .expect("missing rule name on dictionary can never happen!");
 
-                // Find the factory
-                let factory = instance
-                    .factories
+                // Lookup factory in `factories` (independent of `instance`)
+                let factory = factories
                     .get(lint_type)
+                    .cloned()
                     .ok_or_else(|| anyhow!("Unknown lint type: {}", lint_type))?;
 
-                // Pass the entire rule configuration (minus `type`) to the factory
                 let mut rule_config_map = rule_config.clone();
                 rule_config_map.remove(serde_yaml::Value::String("type".to_string()));
 
-                let mut lint_rules =
-                    factory.configure(rule_name, &serde_yaml::Value::Mapping(rule_config_map))?;
+                let config = &serde_yaml::Value::Mapping(rule_config_map);
+
+                let mut lint_rules = factory.configure(rule_name, config)?;
+
                 rules.append(&mut lint_rules);
             }
         }
 
         Ok(rules)
     }
+}
+
+pub fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
+    use std::fs;
+
+    // Attempt to load configuration from `pup.yaml`
+    let yaml_content = fs::read_to_string("pup.yaml")?.to_string();
+    let lint_rules =
+        LintConfigurationFactory::from_yaml(yaml_content).map_err(anyhow::Error::msg)?;
+
+    Ok(lint_rules)
 }

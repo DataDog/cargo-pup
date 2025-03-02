@@ -1,16 +1,18 @@
 use std::{collections::BTreeSet, path::Path};
-
 use ansi_term::Color;
 use rustc_driver::Callbacks;
 use rustc_hir::ItemKind;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 
-use super::{ArchitectureLintCollection, ArchitectureLintRule, LintResult};
+use crate::utils::configuration_factory::setup_lints_yaml;
+
+use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
 
 ///
 /// The mode our lint runner should operate in
 ///
+#[derive(Clone)]
 pub enum Mode {
     /// Run the lints
     Check,
@@ -38,7 +40,6 @@ pub struct ArchitectureLintRunner {
     // Because we gather our output within the compiler
     // Callback mechanism, we need somewhere we can stash our
     // results internally.
-    lint_results: Vec<LintResult>,
     result_text: String,
 }
 
@@ -47,18 +48,9 @@ impl ArchitectureLintRunner {
         ArchitectureLintRunner {
             mode,
             lint_collection,
-            lint_results: vec![],
             result_text: String::new(),
             cli_args,
         }
-    }
-
-    ///
-    /// Borrow the lint results.
-    ///
-    pub fn lint_results(&self) -> &Vec<LintResult> {
-        #![allow(dead_code)]
-        &self.lint_results
     }
 
     ///
@@ -66,21 +58,6 @@ impl ArchitectureLintRunner {
     ///
     pub fn lint_results_text(&self) -> &String {
         &self.result_text
-    }
-
-    //
-    // Runs the lints!
-    // This is the main action we can perform
-    //
-    fn check(
-        &self,
-        tcx: TyCtxt<'_>,
-        lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
-    ) -> (Vec<LintResult>, String) {
-        let lint_results = lints.iter().flat_map(|lint| lint.lint(tcx)).collect();
-        let source_map = tcx.sess.source_map();
-        let lint_results_text = self.results_to_text(source_map, &lint_results);
-        (lint_results, lint_results_text)
     }
 
     ///
@@ -106,7 +83,7 @@ impl ArchitectureLintRunner {
 
         let mut output = String::new();
         for (module, trait_name) in &trait_set {
-            output.push_str(&format!("{}::{}", Color::Blue.paint(module), trait_name));
+            output.push_str(&format!("{}::{}\n", Color::Blue.paint(module), trait_name));
         }
 
         if !output.is_empty() {
@@ -141,7 +118,7 @@ impl ArchitectureLintRunner {
         for (module, namespace) in &namespace_set {
             let applicable_lints: Vec<String> = lints
                 .iter()
-                .filter(|lint| lint.applies_to_namespace(namespace))
+                .filter(|lint| lint.applies_to_module(namespace))
                 .map(|lint| lint.name())
                 .collect();
 
@@ -159,29 +136,12 @@ impl ArchitectureLintRunner {
         }
     }
 
-    ///
-    /// Print out all the lint results to a string
-    ///
-    fn results_to_text(
-        &self,
-        source_map: &rustc_span::source_map::SourceMap,
-        lint_results: &Vec<LintResult>,
-    ) -> String {
-        lint_results
-            .iter()
-            .map(|result| result.to_string(source_map))
-            .collect::<Vec<String>>()
-            .join("\n")
-    }
-
     /// Called back from the compiler
     fn callback(&mut self, tcx: TyCtxt<'_>) {
         let lints = self.lint_collection.lints();
         match self.mode {
             Mode::Check => {
-                let (lint_results, lint_results_text) = self.check(tcx, lints);
-                self.lint_results = lint_results;
-                self.result_text = lint_results_text;
+                // Do nothing. Checking happens as part of the lints.
             }
             Mode::PrintNamespaces => {
                 self.result_text = self.print_namespaces(tcx, lints);
@@ -200,6 +160,18 @@ impl ArchitectureLintRunner {
 impl Callbacks for ArchitectureLintRunner {
     fn config(&mut self, config: &mut rustc_interface::interface::Config) {
         let cli_args = self.cli_args.clone();
+        let mode = self.mode.clone();
+
+        config.register_lints = Some(Box::new(move |_sess, lint_store| {
+            // If we're actually linting, recreate the lints and add them all
+            if let Mode::Check = mode {
+                let lints = setup_lints_yaml().expect("can load lints");
+                for lint in lints {
+                    lint.register_late_pass(lint_store);
+                }
+            }
+        }));
+
         config.psess_created = Some(Box::new(move |psess| {
             // track CLI args
             psess
@@ -208,21 +180,45 @@ impl Callbacks for ArchitectureLintRunner {
                 .insert((Symbol::intern(""), Some(Symbol::intern(&cli_args))));
 
             // Track config file
-            if Path::new("pup.yaml").exists() {
+            if Path::new("../../../pup.yaml").exists() {
                 psess
                     .file_depinfo
                     .get_mut()
                     .insert(Symbol::intern("pup.yaml"));
             }
+
+            // Add our test lint
         }));
     }
 
+    ///
+    /// This is where we are running our "manual" lints.
+    /// E.g., ones that are not meeting the rust lint interface.
+    ///
     fn after_expansion(
         &mut self,
         _compiler: &rustc_interface::interface::Compiler,
         tcx: TyCtxt<'_>,
     ) -> rustc_driver::Compilation {
         self.callback(tcx);
+        rustc_driver::Compilation::Continue
+    }
+
+    ///
+    /// We can use this to filter
+    /// lint results, probably, if we need
+    /// to do this dynamically (e.g., raising level if we cross some threshold).
+    ///
+    /// TODO - we should check this to make sure it works and we can keep it up our
+    /// sleeve.
+    ///
+    fn after_analysis(
+        &mut self,
+        _compiler: &rustc_interface::interface::Compiler,
+        _tcx: TyCtxt<'_>,
+    ) -> rustc_driver::Compilation {
+        _compiler.sess.coverage_discard_all_spans_in_codegen();
+
         rustc_driver::Compilation::Continue
     }
 }

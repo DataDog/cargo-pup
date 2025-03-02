@@ -1,10 +1,9 @@
-use rustc_middle::ty::TyCtxt;
-
-use super::LintResult;
+use rustc_lint::LintStore;
 
 /// Trait for defining architecture-specific lint rules
-pub trait ArchitectureLintRule {
-    fn lint(&self, ctx: TyCtxt<'_>) -> Vec<LintResult>;
+pub trait ArchitectureLintRule: Sync + Send {
+
     fn name(&self) -> String;
-    fn applies_to_namespace(&self, namespace: &str) -> bool;
+    fn applies_to_module(&self, namespace: &str) -> bool;
+    fn register_late_pass(&self, _lint_store: &mut LintStore) {}
 }
