@@ -1,9 +1,10 @@
-use std::{collections::BTreeSet, path::Path};
 use ansi_term::Color;
 use rustc_driver::Callbacks;
 use rustc_hir::ItemKind;
+use rustc_hir::def_id::LocalModDefId;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
+use std::{collections::BTreeSet, path::Path};
 
 use crate::utils::configuration_factory::setup_lints_yaml;
 
@@ -66,12 +67,13 @@ impl ArchitectureLintRunner {
     fn print_traits(
         &self,
         tcx: TyCtxt<'_>,
-        _lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
+        _lints: &[Box<dyn ArchitectureLintRule + Send>],
     ) -> String {
         let mut trait_set: BTreeSet<(String, String)> = BTreeSet::new();
 
-        for id in tcx.hir().items() {
-            let item = tcx.hir().item(id);
+        let (module, _, _) = tcx.hir_get_module(LocalModDefId::CRATE_DEF_ID);
+        for id in module.item_ids {
+            let item = tcx.hir_item(*id);
             if let ItemKind::Trait(..) = item.kind {
                 let trait_name = tcx.def_path_str(item.owner_id.to_def_id());
                 let module = tcx
@@ -102,9 +104,10 @@ impl ArchitectureLintRunner {
         lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
     ) -> String {
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
+        let (module, _, _) = tcx.hir_get_module(LocalModDefId::CRATE_DEF_ID);
 
-        for id in tcx.hir().items() {
-            let item = tcx.hir().item(id);
+        for id in module.item_ids {
+            let item = tcx.hir_item(*id);
             if let ItemKind::Mod(..) = item.kind {
                 let namespace = tcx.def_path_str(item.owner_id.to_def_id());
                 let module = tcx

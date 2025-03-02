@@ -11,14 +11,13 @@ use uuid::Uuid;
 use rustc_driver::{self, Callbacks};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 
-use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule, Severity};
-use crate::lints::function_length::FunctionLengthConfiguration;
+use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
 
 static INIT: Once = Once::new();
 
 /// Confirm that the expected set of lint results was returned. If it wasn't, print all the
 /// lint results out to stderr.
-pub fn assert_lint_results(expected_count: usize, diagnostics: &Vec<DiagInner>) {
+pub fn assert_lint_results(expected_count: usize, diagnostics: &[DiagInner]) {
     if diagnostics.len() != expected_count {
         eprintln!(
             "Expected {} lint results, got {}. Dumping results:",
@@ -39,7 +38,7 @@ fn diagnostic_to_string(diagnostic: &DiagInner) -> String {
     match message {
         rustc_errors::DiagMessage::Str(cow) => format!("DiagMessage::Str: {}", cow).to_string(),
         rustc_errors::DiagMessage::Translated(cow) => {
-            format!("DiagMessage::Translated: {}", cow.to_string())
+            format!("DiagMessage::Translated: {}", cow)
         }
         rustc_errors::DiagMessage::FluentIdentifier(cow, cow1) => {
             format!("DiagMessage::FluentIdentifier({:?},{:?})", cow, cow1).to_string()
@@ -47,10 +46,7 @@ fn diagnostic_to_string(diagnostic: &DiagInner) -> String {
     }
 }
 
-pub fn lints_for_code(
-    code: &str,
-    lint: impl ArchitectureLintRule + Send + Sync + 'static,
-) -> Vec<DiagInner> {
+pub fn lints_for_code(code: &str, lint: impl ArchitectureLintRule + 'static) -> Vec<DiagInner> {
     // Initialize the Rust compiler's environment logger once
     INIT.call_once(|| {
         let early_dcx = EarlyDiagCtxt::new(ErrorOutputType::default());
@@ -124,7 +120,7 @@ fn generate_compiler_args(
         "-C".into(),
         "split-debuginfo=unpacked".into(),
         "-C".into(),
-        format!("incremental={}", temp_dir_path.to_str().unwrap()).into(),
+        format!("incremental={}", temp_dir_path.to_str().unwrap()),
         "--sysroot".into(),
         "/Users/scott.gerring/.rustup/toolchains/nightly-2025-02-10-aarch64-apple-darwin".into(),
         // "--target-dir".into(),
@@ -132,7 +128,6 @@ fn generate_compiler_args(
     ];
     args
 }
-
 
 struct DiagnosticTestRunner {
     lint_collection: Option<ArchitectureLintCollection>,

@@ -76,7 +76,7 @@ impl ModuleUsageLintProcessor {
 
 impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
-        let module_def_id = cx.tcx.hir().get_parent_item(item.hir_id());
+        let module_def_id = cx.tcx.hir_get_parent_item(item.hir_id());
 
         // Ensure we apply the lint to the right module
         if !self.applies_to_module(&cx.tcx, &module_def_id) {

@@ -99,10 +99,10 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLengthLintProcessor {
             has_body: _,
         } = &item.kind
         {
-            let body = cx.tcx.hir().body(*body);
+            let body = cx.tcx.hir_body(*body);
             let source_map = cx.sess().source_map();
             let line_limit = self.rule.max_lines;
-            let module = cx.tcx.hir().get_parent_item(item.owner_id.into());
+            let module = cx.tcx.hir_get_parent_item(item.owner_id.into());
 
             if self.applies_to_module(&cx.tcx, &module) {
                 if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
@@ -128,13 +128,13 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLengthLintProcessor {
 
     fn check_impl_item(&mut self, cx: &LateContext<'tcx>, impl_item: &ImplItem<'tcx>) {
         if let ImplItemKind::Fn(_fn_sig, body_id) = &impl_item.kind {
-            let body = cx.tcx.hir().body(*body_id);
+            let body = cx.tcx.hir_body(*body_id);
             let source_map = cx.sess().source_map();
             let line_limit = self.rule.max_lines;
 
             // This is the containing impl block
-            let impl_block = cx.tcx.hir().get_parent_item(impl_item.owner_id.into());
-            let module = cx.tcx.hir().get_parent_item(impl_block.into());
+            let impl_block = cx.tcx.hir_get_parent_item(impl_item.owner_id.into());
+            let module = cx.tcx.hir_get_parent_item(impl_block.into());
             if self.applies_to_module(&cx.tcx, &module) {
                 if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
                     if file_lines.lines.len() > line_limit {

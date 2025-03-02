@@ -1,6 +1,7 @@
-use crate::lints::helpers::clippy_utils::span_lint_and_help;
 use super::{ArchitectureLintRule, Severity};
 use crate::declare_variable_severity_lint;
+use crate::lints::helpers::clippy_utils::span_lint_and_help;
+use crate::lints::helpers::get_full_module_name;
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
 use regex::Regex;
 use rustc_hir::{Item, ItemKind, OwnerId};
@@ -9,7 +10,6 @@ use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use rustc_span::FileName;
 use serde::Deserialize;
-use crate::lints::helpers::get_full_module_name;
 
 /// Configuration for empty module lint rule
 #[derive(Debug, Deserialize, Clone)]
@@ -40,7 +40,7 @@ impl EmptyModLintProcessor {
         let module_regexps = rule
             .modules
             .iter()
-            .map(|m| Regex::new(m).expect(format!("Can construct a regexp from {}", m).as_str()))
+            .map(|m| Regex::new(m).unwrap_or_else(|_| panic!("Can construct a regexp from {}", m)))
             .collect();
 
         Self {
@@ -52,7 +52,9 @@ impl EmptyModLintProcessor {
 
     fn applies_to_module(&self, tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> bool {
         let full_name = get_full_module_name(tcx, module_def_id);
-        self.module_regexps.iter().any(|r| r.is_match(full_name.as_str()))
+        self.module_regexps
+            .iter()
+            .any(|r| r.is_match(full_name.as_str()))
     }
 }
 
@@ -66,7 +68,7 @@ impl<'tcx> LateLintPass<'tcx> for EmptyModLintProcessor {
             }
 
             for item_id in module_data.item_ids {
-                let item = hir.item(*item_id);
+                let item = ctx.tcx.hir_item(*item_id);
                 let span = item.span;
                 let item_name = hir.name(item.hir_id()).to_ident_string();
 
@@ -165,7 +167,7 @@ impl LintFactory for EmptyModLintFactory {
 #[cfg(test)]
 pub mod test {
     use crate::lints::empty_mod::EmptyModLintFactory;
-    use crate::lints::function_length::FunctionLengthLintFactory;
+    
     use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
 
     const CONFIGURATION_YAML: &str = "
@@ -189,5 +191,4 @@ enforce_empty_mod:
 
         Ok(())
     }
-
 }
