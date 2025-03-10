@@ -79,4 +79,50 @@ warning: Use of wildcard imports in 'std::io' is denied.
   = help: Avoid wildcard imports.
   = note: Applied by cargo-pup rule 'deny_std_collections'.
 
-warning: `test_app` (bin "test_app") generated 7 warnings
+warning: struct 'DeniedStruct' is not allowed in this module
+ --> src/item_type/mod.rs:2:1
+  |
+2 | / pub struct DeniedStruct {
+3 | |     field: String,
+4 | | }
+  | |_^
+  |
+  = help: Consider moving this item to a different module
+  = note: Applied by cargo-pup rule 'deny_item_types'.
+  = note: `#[warn(item_type)]` on by default
+
+warning: enum 'DeniedEnum' is not allowed in this module
+ --> src/item_type/mod.rs:6:1
+  |
+6 | / pub enum DeniedEnum {
+7 | |     Variant1,
+8 | |     Variant2,
+9 | | }
+  | |_^
+  |
+  = help: Consider moving this item to a different module
+  = note: Applied by cargo-pup rule 'deny_item_types'.
+
+warning: trait 'DeniedTrait' is not allowed in this module
+  --> src/item_type/mod.rs:11:1
+   |
+11 | / pub trait DeniedTrait {
+12 | |     fn some_method(&self);
+13 | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types'.
+
+warning: module 'nested' is not allowed in this module
+  --> src/item_type/mod.rs:23:1
+   |
+23 | / pub mod nested {
+...  |
+26 | | } 
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types'.
+
+warning: `test_app` (bin "test_app") generated 11 warnings
