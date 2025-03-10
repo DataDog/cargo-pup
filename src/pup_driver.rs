@@ -146,7 +146,7 @@ mod tests {
         register_all_lints();
 
         let lints = setup_lints_yaml()?;
-        assert_eq!(lints.len(), 3);
+        assert_eq!(lints.len(), 5);
         Ok(())
     }
 
