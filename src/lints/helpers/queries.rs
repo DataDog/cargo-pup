@@ -2,13 +2,11 @@ use rustc_hir::OwnerId;
 use rustc_hir::def_id::DefId;
 use rustc_infer::infer::TyCtxtInferExt;
 use rustc_middle::ty::{
-    self, Binder, ExistentialPredicate, ParamEnv, Predicate, PredicatePolarity, TraitPredicate,
-    TraitRef, Ty, TyCtxt, TypingMode,
+    self, ParamEnv, Ty, TyCtxt, TypingMode,
 };
 use rustc_span::symbol::sym;
-use rustc_trait_selection::infer::InferCtxtBuilderExt;
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
-use rustc_trait_selection::traits::{Obligation, ObligationCause, SelectionContext};
+use rustc_trait_selection::traits::{Obligation, ObligationCause};
 
 ///
 /// Returns the complete name for a module, including the crate name.

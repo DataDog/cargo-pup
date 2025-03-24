@@ -6,12 +6,10 @@ use crate::{
     utils::configuration_factory::{LintConfigurationFactory, LintFactory},
 };
 use regex::Regex;
-use rustc_hir::{Item, ItemKind, Node, OwnerId};
+use rustc_hir::{Item, ItemKind, OwnerId};
 use rustc_lint::{LateContext, LateLintPass, Lint};
-use rustc_middle::query::Key;
-use rustc_middle::ty::{EarlyBinder, Ty, TyCtxt, TyKind, TypeVisitableExt};
+use rustc_middle::ty::{TyCtxt, TyKind};
 use rustc_session::impl_lint_pass;
-use rustc_span::sym;
 use serde::Deserialize;
 
 /// Configuration for Result error type lint rule
