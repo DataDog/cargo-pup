@@ -1,15 +1,151 @@
 warning: unused manifest key: target.aarch64-apple-darwin.rustflags
-error: process didn't exit successfully: `/Users/scott.gerring/Documents/code/cargo-pup/target/release/cargo-pup /Users/scott.gerring/.rustup/toolchains/nightly-2025-02-27-aarch64-apple-darwin/bin/rustc -vV` (exit status: 1)
---- stderr
-Error: Unknown lint type: result_error
+    Checking test_app v0.1.0 (/Users/scott.gerring/Documents/code/cargo-pup/test_app)
+warning: Item ThisSHouldntBeHere disallowed in mod.rs due to empty-module policy
+ --> src/empty_mod/mod.rs:7:1
+  |
+7 | pub struct ThisSHouldntBeHere {
+  | ^
+  |
+  = help: Remove this definition from the module.
+  = note: Applied by cargo-pup rule 'enforce_empty_mod'.
+  = note: `#[warn(empty_mod)]` on by default
 
-Stack backtrace:
-   0: std::backtrace::Backtrace::create
-   1: anyhow::error::<impl anyhow::Error>::msg
-   2: pup_driver::utils::configuration_factory::setup_lints_yaml
-   3: pup_driver::main
-   4: std::sys::backtrace::__rust_begin_short_backtrace
-   5: std::rt::lang_start::{{closure}}
-   6: std::rt::lang_start_internal
-   7: _main
+warning: Function exceeds maximum length of 5 lines with 8 lines
+  --> src/function_length/mod.rs:5:1
+   |
+5  | / pub fn free_function_too_long() -> i32 {
+6  | |     // A function body that should be
+7  | |     // less than 5 lines long but isn't.
+8  | |     let a = 1+1;
+...  |
+11 | |     a + b + c
+12 | | }
+   | |_^
+   |
+   = help: 
+   = note: Applied by cargo-pup rule 'deny_long_functions'.
+   = note: `#[warn(pup_function_length)]` on by default
 
+warning: Function exceeds maximum length of 5 lines with 8 lines
+  --> src/function_length/mod.rs:21:5
+   |
+21 | /     fn impl_function_too_long() -> i32 {
+22 | |     // A function body that should be
+23 | |     // less than 5 lines long but isn't.
+24 | |     let a = 1+1;
+...  |
+27 | |     a + b + c
+28 | |     }
+   | |_____^
+   |
+   = help: 
+   = note: Applied by cargo-pup rule 'deny_long_functions'.
+
+warning: Struct 'MyBadlyNamedThing' does not match the required pattern '.*MyTraitImpl$'.
+  --> src/trait_impl/mod.rs:15:1
+   |
+15 | pub struct MyBadlyNamedThing {}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider renaming the struct.
+   = note: Applied by cargo-pup rule 'test_trait_constraint'.
+   = note: `#[warn(trait_impl)]` on by default
+
+warning: Struct 'MyBadlyNamedThing' is public, but should be private.
+  --> src/trait_impl/mod.rs:15:1
+   |
+15 | pub struct MyBadlyNamedThing {}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Change the visibility to private.
+   = note: Applied by cargo-pup rule 'test_trait_constraint'.
+
+warning: Use of module 'std::collections::HashMap' is denied; ["std::collections"] are not permitted.
+ --> src/module_usage/mod.rs:1:1
+  |
+1 | use std::collections::HashMap;
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: Remove this import.
+  = note: Applied by cargo-pup rule 'deny_std_collections'.
+  = note: `#[warn(module_usage)]` on by default
+
+warning: Use of wildcard imports in 'std::io' is denied.
+ --> src/module_usage/mod.rs:3:1
+  |
+3 | use std::io::*;
+  | ^^^^^^^^^^^^^^^
+  |
+  = help: Avoid wildcard imports.
+  = note: Applied by cargo-pup rule 'deny_std_collections'.
+
+warning: struct 'DeniedStruct' is not allowed in this module
+ --> src/item_type/mod.rs:2:1
+  |
+2 | / pub struct DeniedStruct {
+3 | |     field: String,
+4 | | }
+  | |_^
+  |
+  = help: Consider moving this item to a different module
+  = note: Applied by cargo-pup rule 'deny_item_types'.
+  = note: `#[warn(item_type)]` on by default
+
+warning: enum 'DeniedEnum' is not allowed in this module
+ --> src/item_type/mod.rs:6:1
+  |
+6 | / pub enum DeniedEnum {
+7 | |     Variant1,
+8 | |     Variant2,
+9 | | }
+  | |_^
+  |
+  = help: Consider moving this item to a different module
+  = note: Applied by cargo-pup rule 'deny_item_types'.
+
+warning: trait 'DeniedTrait' is not allowed in this module
+  --> src/item_type/mod.rs:11:1
+   |
+11 | / pub trait DeniedTrait {
+12 | |     fn some_method(&self);
+13 | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types'.
+
+warning: module 'nested' is not allowed in this module
+  --> src/item_type/mod.rs:23:1
+   |
+23 | / pub mod nested {
+...  |
+26 | | } 
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types'.
+
+warning: Type 'i32' is used as an error type in Result but does not implement Error trait
+  --> src/result_error/mod.rs:12:1
+   |
+12 | / pub fn bad_result() -> Result<String, i32> {
+13 | |     Ok("bad".to_string())
+14 | | }
+   | |_^
+   |
+   = help: Implement the Error trait for this type or use a type that implements Error.
+   = note: Applied by cargo-pup rule 'enforce_result_error'.
+   = note: `#[warn(result_error)]` on by default
+
+warning: Type 'result_error::CustomError' is used as an error type in Result but does not implement Error trait
+  --> src/result_error/mod.rs:21:1
+   |
+21 | / pub fn custom_error_result() -> Result<String, CustomError> {
+22 | |     Ok("bad".to_string())
+23 | | }
+   | |_^
+   |
+   = help: Implement the Error trait for this type or use a type that implements Error.
+   = note: Applied by cargo-pup rule 'enforce_result_error'.
+
+warning: `test_app` (bin "test_app") generated 13 warnings
