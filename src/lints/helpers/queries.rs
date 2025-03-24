@@ -48,9 +48,19 @@ pub fn implements_error_trait<'tcx>(
     param_env: ParamEnv<'tcx>,
     ty: Ty<'tcx>,
 ) -> bool {
+    // Check for primitive types that definitely don't implement Error
+    match ty.kind() {
+        ty::TyKind::Int(_) | ty::TyKind::Uint(_) | ty::TyKind::Float(_) | 
+        ty::TyKind::Bool | ty::TyKind::Char => return false,
+        _ => {}
+    }
+
+    // Try the standard approach
     if let Some(error_trait_def_id) = tcx.get_diagnostic_item(sym::Error) {
         implements_trait(tcx, param_env, ty, error_trait_def_id)
     } else {
-        false
+        // If we can't find the Error trait, be conservative and consider it might implement Error
+        // unless it's a primitive type (which we checked above)
+        !ty.is_primitive()
     }
 }

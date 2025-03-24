@@ -70,7 +70,10 @@ impl<'tcx> LateLintPass<'tcx> for ResultErrorLintProcessor {
         let module_path = ctx.tcx.def_path_str(module_def_id);
         let full_name = format!("{}::{}", crate_name, module_path);
 
-        if !self.module_regexps.iter().any(|r| r.is_match(&full_name)) {
+        // Add debug output to see if the module name matches any regex
+        let matches = self.module_regexps.iter().any(|r| r.is_match(&full_name));
+        
+        if !matches {
             return;
         }
 
