@@ -31,8 +31,8 @@ else
 fi
 
 cargo build --release --all
-cp target/release/cargo-pup ~/.local/bin/
-cp target/release/pup-driver ~/.local/bin/
+cp target/release/cargo-pup ~/.cargo/bin/
+cp target/release/pup-driver ~/.cargo/bin/
 popd
 
 if [[ -n "${tmpdir+x}" ]]; then
