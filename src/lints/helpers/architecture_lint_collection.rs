@@ -5,7 +5,8 @@ use crate::utils::configuration_factory::LintFactory;
 use crate::lints::{
     ArchitectureLintRule, function_length::FunctionLengthLintFactory,
     trait_impl::TraitImplLintFactory,
-    item_type::ItemTypeLintFactory
+    item_type::ItemTypeLintFactory,
+    result_error::ResultErrorLintFactory
 };
 
 
@@ -37,4 +38,5 @@ pub fn register_all_lints() {
     EmptyModLintFactory::register();
     ModuleUsageLintFactory::register();
     ItemTypeLintFactory::register();
+    ResultErrorLintFactory::register();
 }

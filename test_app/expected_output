@@ -125,4 +125,27 @@ warning: module 'nested' is not allowed in this module
    = help: Consider moving this item to a different module
    = note: Applied by cargo-pup rule 'deny_item_types'.
 
-warning: `test_app` (bin "test_app") generated 11 warnings
+warning: Type 'i32' is used as an error type in Result but does not implement Error trait
+  --> src/result_error/mod.rs:12:1
+   |
+12 | / pub fn bad_result() -> Result<String, i32> {
+13 | |     Ok("bad".to_string())
+14 | | }
+   | |_^
+   |
+   = help: Implement the Error trait for this type or use a type that implements Error.
+   = note: Applied by cargo-pup rule 'enforce_result_error'.
+   = note: `#[warn(result_error)]` on by default
+
+warning: Type 'result_error::CustomError' is used as an error type in Result but does not implement Error trait
+  --> src/result_error/mod.rs:21:1
+   |
+21 | / pub fn custom_error_result() -> Result<String, CustomError> {
+22 | |     Ok("bad".to_string())
+23 | | }
+   | |_^
+   |
+   = help: Implement the Error trait for this type or use a type that implements Error.
+   = note: Applied by cargo-pup rule 'enforce_result_error'.
+
+warning: `test_app` (bin "test_app") generated 13 warnings

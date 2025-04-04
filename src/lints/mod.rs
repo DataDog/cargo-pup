@@ -6,6 +6,7 @@ mod helpers;
 mod module_usage;
 mod item_type;
 mod lint_result;
+mod result_error;
 
 // Re-export our public API
 pub use helpers::architecture_lint_collection::ArchitectureLintCollection;
