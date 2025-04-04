@@ -58,3 +58,10 @@ deny_item_types:
     - trait
     - module
   severity: Warn
+
+# Result error type tests
+enforce_result_error:
+  type: result_error
+  modules:
+    - "^test_app::result_error$"
+  severity: Warn
