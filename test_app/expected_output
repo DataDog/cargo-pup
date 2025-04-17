@@ -1,5 +1,4 @@
 warning: unused manifest key: target.aarch64-apple-darwin.rustflags
-    Checking test_app v0.1.0 (/Users/scott.gerring/Documents/code/cargo-pup/test_app)
 warning: Item ThisSHouldntBeHere disallowed in mod.rs due to empty-module policy
  --> src/empty_mod/mod.rs:7:1
   |
