@@ -122,16 +122,23 @@ pub fn main() {
         return;
     }
 
-    // Check if we have a `pup.yaml` in the directory we're in
-    if !Path::exists(Path::new("./pup.yaml")) {
+    // Parse command and arguments
+    // Normal invocation - process args and run cargo
+    let args: Vec<String> = env::args().collect();
+    
+    // Check if we're running generate-config
+    let is_generate_config = args.len() > 1 && 
+        ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
+         (args[1] == "generate-config"));
+
+    // Only check for pup.yaml if we're NOT generating a config
+    if !is_generate_config && !Path::exists(Path::new("./pup.yaml")) {
         println!("Missing pup.yaml - nothing to do!");
         println!("Consider generating an initial context:");
         println!("cargo pup generate-config");
         exit(-1)
     }
 
-    // Parse command and arguments
-    // Normal invocation - process args and run cargo
     let process_result = process(env::args());
 
     if let Err(code) = process_result {
@@ -146,8 +153,11 @@ where
     // Parse arguments to get pup command and cargo args
     let pup_args = PupArgs::parse(args);
 
+    // Store command for later use
+    let command = pup_args.command.clone();
+
     // Check if we're generating config and the file already exists
-    if pup_args.command == cli::PupCommand::GenerateConfig {
+    if command == cli::PupCommand::GenerateConfig {
         // Check for any existing generated config files
         let entries = std::fs::read_dir(".").expect("Failed to read current directory");
         let existing_configs: Vec<_> = entries
@@ -202,6 +212,32 @@ where
         .expect("could not run cargo")
         .wait()
         .expect("failed to wait for cargo?");
+
+    // If we just ran generate-config and it succeeded, check for generated files
+    if exit_status.success() && command == cli::PupCommand::GenerateConfig {
+        // Look for generated config files
+        let entries = std::fs::read_dir(".").expect("Failed to read current directory");
+        let generated_configs: Vec<_> = entries
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                if let Some(name) = entry.file_name().to_str() {
+                    name.starts_with("pup.generated.") && name.ends_with(".yaml")
+                } else {
+                    false
+                }
+            })
+            .collect();
+        
+        // If there's exactly one generated file and pup.yaml doesn't exist, rename it
+        if generated_configs.len() == 1 && !Path::exists(Path::new("./pup.yaml")) {
+            let generated_path = generated_configs[0].path();
+            if let Err(e) = std::fs::rename(&generated_path, "pup.yaml") {
+                println!("Warning: Failed to rename generated config to pup.yaml: {}", e);
+            } else {
+                println!("Created pup.yaml from {}", generated_path.file_name().unwrap().to_string_lossy());
+            }
+        }
+    }
 
     if exit_status.success() {
         Ok(())
