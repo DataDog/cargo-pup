@@ -125,6 +125,8 @@ pub fn main() {
     // Check if we have a `pup.yaml` in the directory we're in
     if !Path::exists(Path::new("./pup.yaml")) {
         println!("Missing pup.yaml - nothing to do!");
+        println!("Consider generating an initial context:");
+        println!("cargo pup generate-config");
         exit(-1)
     }
 
@@ -143,6 +145,31 @@ where
 {
     // Parse arguments to get pup command and cargo args
     let pup_args = PupArgs::parse(args);
+
+    // Check if we're generating config and the file already exists
+    if pup_args.command == cli::PupCommand::GenerateConfig {
+        // Check for any existing generated config files
+        let entries = std::fs::read_dir(".").expect("Failed to read current directory");
+        let existing_configs: Vec<_> = entries
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                if let Some(name) = entry.file_name().to_str() {
+                    name.starts_with("pup.generated.") && name.ends_with(".yaml")
+                } else {
+                    false
+                }
+            })
+            .collect();
+        
+        if !existing_configs.is_empty() {
+            println!("Error: Generated config files already exist:");
+            for entry in existing_configs {
+                println!("  - {}", entry.file_name().to_str().unwrap());
+            }
+            println!("Remove these files if you want to regenerate the configuration.");
+            return Err(CommandExitStatus(1));
+        }
+    }
 
     // Create configuration to pass through to pup-driver
     let pup_cli = PupCli {
@@ -275,9 +302,10 @@ Usage:
     cargo pup [COMMAND] [OPTIONS] [--] [CARGO_ARGS...]
 
 Commands:
-    check         Run architectural lints (default)
-    print-modules Print all modules and applicable lints
-    print-traits  Print all traits
+    check            Run architectural lints (default)
+    print-modules    Print all modules and applicable lints
+    print-traits     Print all traits
+    generate-config  Generates an initial pup.yaml for your project.
 
 Options:
     -h, --help             Print this message

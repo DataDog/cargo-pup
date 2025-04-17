@@ -63,6 +63,7 @@ pub fn main() -> Result<()> {
         PupCommand::PrintModules => Mode::PrintModules,
         PupCommand::PrintTraits => Mode::PrintTraits,
         PupCommand::Check => Mode::Check,
+        PupCommand::GenerateConfig => Mode::GenerateConfig,
     };
 
     // Log it, so we can work out what is going on
@@ -81,15 +82,17 @@ pub fn main() -> Result<()> {
     // Forward all arguments to RunCompiler, including `"-"`
     let lint_rules = setup_lints_yaml()?;
     let lint_collection = ArchitectureLintCollection::new(lint_rules);
-    let mut runner = ArchitectureLintRunner::new(mode, cli_args.into(), lint_collection);
+    let mut runner = ArchitectureLintRunner::new(mode.clone(), cli_args.into(), lint_collection);
     runner.set_cargo_args(cargo_args);
 
     rustc_driver::run_compiler(&orig_args, &mut runner);
 
     // Print out our lints
-    let results_text = runner.lint_results_text();
-    if !results_text.is_empty() {
-        eprintln!("{0}", runner.lint_results_text());
+    if mode != Mode::GenerateConfig {
+        let results_text = runner.lint_results_text();
+        if !results_text.is_empty() {
+            eprintln!("{0}", runner.lint_results_text());
+        }
     }
 
     process::exit(0);

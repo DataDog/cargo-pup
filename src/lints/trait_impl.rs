@@ -193,7 +193,81 @@ impl LintFactory for TraitImplLintFactory {
             raw_config,
         ))])
     }
-}
+    
+    fn generate_config(&self, context: &crate::utils::config_generation::GenerationContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        use std::collections::HashMap;
+    
+        let mut configs = HashMap::new();
+    
+        // Generate a sample config for each trait
+        for (i, trait_info) in context.traits.iter().enumerate().take(3) {
+            // Only generate for traits that have implementations
+            if !trait_info.implementors.is_empty() {
+                // Create a rule name based on the trait
+                let trait_parts: Vec<&str> = trait_info.name.split("::").collect();
+                let trait_simple_name = trait_parts.last().unwrap_or(&"unknown");
+                let rule_name = format!("enforce_{}_impl", trait_simple_name.to_lowercase());
+    
+                // Create a sample config with comments
+                let config = format!(
+                    r#"    # Trait implementation lint for {}
+    #
+    # This rule enforces naming conventions for types that implement this trait.
+    # 
+    # Current implementations:
+    #   {}
+    #
+    # Parameters:
+    #   source_name: fully qualified trait name
+    #   name_must_match: regex for implementor type names
+    #   enforce_visibility: Public, Private or None
+    #   severity: Error or Warn
+    #
+    type: trait_impl
+    source_name: "{}"
+    name_must_match: ".*{}Impl"
+    enforce_visibility: "Public"
+    severity: Warn"#,
+                    trait_info.name,
+                    trait_info.implementors.join("\n    #   "),
+                    trait_info.name,
+                    trait_simple_name
+                );
+    
+                configs.insert(rule_name, config);
+    
+                // Only generate a few examples
+                if i >= 2 {
+                    break;
+                }
+            }
+        }
+    
+        // If no traits with impls were found, create a generic example
+        if configs.is_empty() {
+            configs.insert(
+                "enforce_trait_impl".to_string(),
+                r#"  # Example trait implementation rule
+    #
+    # This rule enforces naming conventions for types that implement a specific trait.
+    #
+    # Parameters:
+    #   source_name: fully qualified trait name
+    #   name_must_match: regex for implementor type names
+    #   enforce_visibility: Public, Private or None
+    #   severity: Error or Warn
+    #
+    type: trait_impl
+    source_name: "core::example::Trait"
+    name_must_match: ".*TraitImpl"
+    enforce_visibility: "Public"
+    severity: Warn"#.to_string(),
+            );
+        }
+    
+        Ok(configs)
+    }
+}    
 
 #[cfg(test)]
 pub mod tests {

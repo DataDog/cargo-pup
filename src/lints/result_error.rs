@@ -183,6 +183,43 @@ impl LintFactory for ResultErrorLintFactory {
             raw_config,
         ))])
     }
+    
+    fn generate_config(&self, context: &crate::utils::config_generation::GenerationContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        use std::collections::HashMap;
+        
+        let mut configs = HashMap::new();
+        
+        // Generate a crate-wide config based on the current crate
+        let rule_name = format!("enforce_result_error_{}", context.module_root);
+        
+        // Build a regex pattern for the current crate
+        let module_pattern = format!("^{}", context.module_root);
+        
+        // Create a config with comments
+        let config = format!(
+            r#"    # Result error type enforcement for the crate
+    #
+    # Ensures that all Result error types implement the Error trait.
+    # This improves error handling consistency across the codebase.
+    #
+    # Crate: {}
+    #
+    # Parameters:
+    #   modules: list of regex patterns for modules to check
+    #   severity: Error or Warn
+    #
+    type: result_error
+    modules:
+    - "{}"
+    severity: Error"#,
+            context.module_root,
+            module_pattern
+        );
+        
+        configs.insert(rule_name.to_string(), config);
+        
+        Ok(configs)
+    }
 }
 
 #[cfg(test)]

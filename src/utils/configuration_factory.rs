@@ -1,9 +1,11 @@
 use std::{
     collections::HashMap,
+    fs,
+    io::Write,
     sync::{Arc, LazyLock, Mutex},
 };
 
-use crate::lints::ArchitectureLintRule;
+use crate::{lints::ArchitectureLintRule, utils::config_generation::GenerationContext};
 use anyhow::{Result, anyhow};
 
 pub trait LintFactory: Send + Sync {
@@ -25,6 +27,15 @@ pub trait LintFactory: Send + Sync {
         rule_name: &str,
         yaml: &serde_yaml::Value,
     ) -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>>;
+    
+    ///
+    /// Generate a sample configuration for this lint factory based on the provided context
+    /// Returns a map of (rule_name, yaml_string) pairs with commented YAML
+    ///
+    fn generate_config(&self, _context: &GenerationContext) -> Result<HashMap<String, String>> {
+        // Default implementation returns empty
+        Ok(HashMap::new())
+    }
 }
 
 pub struct LintConfigurationFactory {
@@ -103,6 +114,40 @@ impl LintConfigurationFactory {
         }
 
         Ok(rules)
+    }
+    
+    /// Generate a configuration file based on the current context
+    pub fn generate_yaml(context: &GenerationContext) -> Result<String> {
+        // Get all factories
+        let factories = {
+            let instance = LintConfigurationFactory::get_instance();
+            instance.factories.clone()
+        };
+        
+        let mut yaml_parts = Vec::new();
+        yaml_parts.push("# Generated configuration file\n#\n# This file contains recommended lint rules for your project\n".to_string());
+        
+        // Generate config from each factory
+        for (lint_type, factory) in factories {
+            let configs = factory.generate_config(context)?;
+            if !configs.is_empty() {
+                yaml_parts.push(format!("\n# {}\n", lint_type));
+                
+                for (rule_name, config_yaml) in configs {
+                    yaml_parts.push(format!("{}:\n{}\n", rule_name, config_yaml));
+                }
+            }
+        }
+        
+        Ok(yaml_parts.join("\n"))
+    }
+    
+    /// Generate a configuration file and write it to disk
+    pub fn generate_config_file(context: &GenerationContext, path: &str) -> Result<()> {
+        let yaml = Self::generate_yaml(context)?;
+        let mut file = fs::File::create(path)?;
+        file.write_all(yaml.as_bytes())?;
+        Ok(())
     }
 }
 

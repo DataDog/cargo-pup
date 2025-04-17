@@ -6,6 +6,7 @@ pub enum PupCommand {
     PrintModules,
     PrintTraits,
     Check,
+    GenerateConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,6 +67,10 @@ impl PupArgs {
                     command = PupCommand::Check;
                     start_idx += 1;
                 }
+                "generate-config" => {
+                    command = PupCommand::GenerateConfig;
+                    start_idx += 1;
+                }
                 _ => { /* Not a command, use default and keep this arg */ }
             }
         }
@@ -111,6 +116,11 @@ mod tests {
         // Test check command
         let args = parse_args(&["cargo-pup", "check"]);
         assert_eq!(args.command, PupCommand::Check);
+        assert!(args.cargo_args.is_empty());
+        
+        // Test generate-config command
+        let args = parse_args(&["cargo-pup", "generate-config"]);
+        assert_eq!(args.command, PupCommand::GenerateConfig);
         assert!(args.cargo_args.is_empty());
     }
 
