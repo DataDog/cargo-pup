@@ -61,11 +61,11 @@ impl ResultErrorLintProcessor {
 
 impl<'tcx> LateLintPass<'tcx> for ResultErrorLintProcessor {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
-
         // Add debug output to see if the module name matches any regex
         let matches = self.applies_to_module(&ctx.tcx, &item.owner_id);
 
-        if !matches {
+            
+        if !matches {  
             return;
         }
 

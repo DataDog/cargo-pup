@@ -62,14 +62,13 @@
 
 mod cli;
 
-use clap::Parser;
-use cli::PupCli;
+use cli::{PupArgs, PupCli};
 
 use std::env;
+use std::error::Error;
+use std::fmt;
 use std::path::Path;
 use std::process::{Command, exit};
-use std::fmt;
-use std::error::Error;
 
 /// Simple error type that wraps a command exit code
 #[derive(Debug)]
@@ -83,83 +82,94 @@ impl fmt::Display for CommandExitStatus {
 
 impl Error for CommandExitStatus {}
 
-#[allow(dead_code)]
 fn show_help() {
     println!("{}", help_message());
 }
 
-#[allow(dead_code)]
 fn show_version() {
-    println!("Golden Span Retriever version 0.1.0");
+    println!("cargo-pup version 0.1.0");
 }
 
 pub fn main() {
+    // Handle help and version flags
+    if env::args().any(|a| a == "--help" || a == "-h") {
+        show_help();
+        return;
+    }
+
+    if env::args().any(|a| a == "--version" || a == "-V") {
+        show_version();
+        return;
+    }
+
+    // Are we being invoked as a rustc wrapper?
+    if env::args().len() > 1 && env::args().nth(1).is_some_and(|a| a.ends_with("rustc")) {
+        // Special case: Handle rustc version query
+        if env::args().len() > 2 && env::args().nth(2).is_some_and(|a| a == "-vV") {
+            // Just run rustc with -vV to get its version
+            let status = Command::new(env::args().nth(1).unwrap())
+                .arg("-vV")
+                .status()
+                .expect("failed to run rustc");
+            exit(status.code().unwrap_or(-1));
+        }
+
+        // Get the toolchain and run pup-driver with the args we've been given
+        let toolchain = get_toolchain();
+        if let Err(err) = run_pup_driver(&toolchain) {
+            exit(err.0);
+        }
+        return;
+    }
+
     // Check if we have a `pup.yaml` in the directory we're in
     if !Path::exists(Path::new("./pup.yaml")) {
         println!("Missing pup.yaml - nothing to do!");
         exit(-1)
     }
 
-    let toolchain = get_toolchain();
+    // Parse command and arguments
+    // Normal invocation - process args and run cargo
+    let process_result = process(env::args());
 
-    // Are we first-iteration, or, are we being called back by cargo?
-    // If we're first iteration, we redirect cargo back to us.
-    if env::var("PUP_TRAMPOLINE_MODE").is_ok() {
-        // We're in the trampoline - we need to run cargo-pup
-        // with the arguments we've got to do the build.
-        if let Err(err) = run_pup_cmd(&toolchain) {
-            exit(err.0);
-        }
-    } else {
-        // We've not trampolined yet - we're in the initial invocation.
-        // We need to trampoline through using `cargo build` with us as
-        // the workspace wrapper.
-        //
-        // But first, let's check the command line arguments to see if we can
-        // short circuit this.
-        let cmd = PupCli::parse_from(env::args().skip(1));
-        let cli_args = cmd.to_env_str();
-        if let Err(err) = run_trampoline(&toolchain, &cli_args) {
-            exit(err.0);
-        }
+    if let Err(code) = process_result {
+        exit(code.0);
     }
 }
 
-///
-/// Generates our trampoline command. This trampolines straight
-/// back to this executable, cargo-pup.
-///
-fn generate_trampoline_cmd(toolchain: &str, cli_args: &str) -> Command {
-    // we want to invoke cargo via rutup
-    let mut cmd = Command::new("rustup");
-    let terminal_width = termize::dimensions().map_or(0, |(w, _)| w);
+fn process<I>(args: I) -> Result<(), CommandExitStatus>
+where
+    I: Iterator<Item = String>,
+{
+    // Parse arguments to get pup command and cargo args
+    let pup_args = PupArgs::parse(args);
 
-    // Construct a path back to ourselves
-    let path = env::current_exe().expect("current executable path invalid");
+    // Create configuration to pass through to pup-driver
+    let pup_cli = PupCli {
+        command: pup_args.command,
+    };
 
-    // But, we'll use RUSTC_WORKSPACE_WRAPPER, so that when the nested cargo runs, it kicks
-    // the invocation back to us
-    cmd.env("RUSTC_WORKSPACE_WRAPPER", path.to_str().unwrap())
-        .env("PUP_TRAMPOLINE_MODE", "true")
-        .env("PUP_TERMINAL_WIDTH", terminal_width.to_string())
+    // Convert args to string for environment
+    let cli_args = pup_cli.to_env_str();
+
+    // Format cargo args for environment
+    let cargo_args_str = pup_args.cargo_args.join("__PUP_ARG_SEP__");
+
+    // Build the cargo command
+    let mut cmd = Command::new("cargo");
+
+    // Set up environment variables
+    cmd.env("RUSTC_WORKSPACE_WRAPPER", get_pup_path())
         .env("PUP_CLI_ARGS", cli_args)
-        .arg("run")
-        .arg(toolchain)
-        .arg("cargo")
+        .env("PUP_CARGO_ARGS", cargo_args_str)
         .arg("check")
         .arg("--target-dir")
         .arg(".pup");
 
-    cmd
-}
+    // Add cargo args
+    cmd.args(&pup_args.cargo_args);
 
-///
-/// Trampolines back through cargo-pup using us as RUSTC_WORKSPACE_WRAPPER. This'll return to us with
-/// the `rustc` invocation that cargo wants, which we can than wrap up and pass off to pup-driver.
-///
-fn run_trampoline(toolchain: &str, cli_args: &str) -> Result<(), CommandExitStatus> {
-    let mut cmd = generate_trampoline_cmd(toolchain, cli_args);
-
+    // Run cargo with our wrapper
     let exit_status = cmd
         .spawn()
         .expect("could not run cargo")
@@ -173,13 +183,25 @@ fn run_trampoline(toolchain: &str, cli_args: &str) -> Result<(), CommandExitStat
     }
 }
 
-///
-/// The second time we come through, when we are being invoekd as the wrapper,
-/// we call off with all of our arguments to pup-driver, using rustup to wrap
-/// the invocation.
-///
-fn generate_pup_cmd(args: env::Args, toolchain: &String) -> anyhow::Result<Command> {
-    // First, construct the executable path to pup-driver.
+fn get_pup_path() -> String {
+    env::current_exe()
+        .expect("current executable path invalid")
+        .to_str()
+        .unwrap()
+        .to_string()
+}
+
+fn run_pup_driver(toolchain: &str) -> Result<(), CommandExitStatus> {
+    let args: Vec<String> = env::args().collect();
+
+    // Check if we're processing a rustc wrapper call
+    let rustc_args = if args.len() > 1 && args[1].ends_with("rustc") {
+        args[2..].to_vec()
+    } else {
+        args[1..].to_vec()
+    };
+
+    // Build path to pup-driver
     let mut pup_driver_path = env::current_exe()
         .expect("current executable path invalid")
         .with_file_name("pup-driver");
@@ -187,27 +209,44 @@ fn generate_pup_cmd(args: env::Args, toolchain: &String) -> anyhow::Result<Comma
         pup_driver_path.set_extension("exe");
     }
 
-    // Locate rustup
-    let which_rustup = which::which("rustup").unwrap();
-    let rustup = which_rustup.to_str().unwrap();
+    // Find rustup
+    let rustup = which::which("rustup")
+        .expect("couldn't find rustup")
+        .to_str()
+        .unwrap()
+        .to_string();
 
-    rustup_toolchain::install(toolchain)?;
-
-    // Compose our arguments
-    let mut final_args: Vec<String> = vec![
-        "run".into(),
-        toolchain.into(),
-        pup_driver_path.to_str().unwrap().into(),
-    ];
-    for arg in args.skip(1) {
-        let arg = arg.to_string();
-        final_args.push(arg);
+    // Install the toolchain if needed
+    if let Err(e) = rustup_toolchain::install(toolchain) {
+        eprintln!("Failed to install toolchain: {}", e);
+        return Err(CommandExitStatus(-1));
     }
 
-    let mut cmd = Command::new(rustup);
-    cmd.args(final_args);
+    // Compose our arguments for rustup run
+    let mut final_args = vec![
+        "run".to_string(),
+        toolchain.to_string(),
+        pup_driver_path.to_str().unwrap().to_string(),
+    ];
 
-    Ok(cmd)
+    // Add all rustc arguments
+    final_args.extend(rustc_args);
+
+    // Run pup-driver through rustup
+    let mut cmd = Command::new(rustup);
+    cmd.args(&final_args);
+
+    let exit_status = cmd
+        .spawn()
+        .expect("could not run pup-driver")
+        .wait()
+        .expect("failed to wait for pup-driver?");
+
+    if exit_status.success() {
+        Ok(())
+    } else {
+        Err(CommandExitStatus(exit_status.code().unwrap_or(-1)))
+    }
 }
 
 fn get_toolchain() -> String {
@@ -227,42 +266,26 @@ fn get_toolchain() -> String {
         .to_string()
 }
 
-///
-/// Runs pup-driver. This is the bit that does the actual work of starting
-/// the rustc compilation with all of the args we've been given by cargo.
-///
-/// This is launched once we've trampolined back through ourselves.
-///
-fn run_pup_cmd(toolchain: &String) -> Result<(), CommandExitStatus> {
-    match generate_pup_cmd(env::args(), toolchain) {
-        Ok(mut cmd) => {
-            let exit_status = cmd
-                .spawn()
-                .expect("could not run pup-driver")
-                .wait()
-                .expect("failed to wait for pup-driver?");
-
-            if exit_status.success() {
-                Ok(())
-            } else {
-                Err(CommandExitStatus(exit_status.code().unwrap_or(-1)))
-            }
-        }
-        Err(_) => Err(CommandExitStatus(-1)),
-    }
-}
-
 #[must_use]
 pub fn help_message() -> &'static str {
     "
 Pretty Useful Pup: Checks your architecture against your architecture lint file.
 
 Usage:
-    cargo pup [OPTIONS] [--] [ARGS...]
+    cargo pup [COMMAND] [OPTIONS] [--] [CARGO_ARGS...]
+
+Commands:
+    check         Run architectural lints (default)
+    print-modules Print all modules and applicable lints
+    print-traits  Print all traits
 
 Options:
     -h, --help             Print this message
     -V, --version          Print version info and exit
+
+Any additional arguments will be passed directly to cargo:
+    --features=FEATURES    Cargo features to enable
+    --manifest-path=PATH   Path to Cargo.toml
 
 You can use tool lints to allow or deny lints from your code, e.g.:
     #[allow(pup::some_lint)]

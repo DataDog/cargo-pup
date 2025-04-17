@@ -4,11 +4,9 @@ use crate::utils::configuration_factory::LintFactory;
 
 use crate::lints::{
     ArchitectureLintRule, function_length::FunctionLengthLintFactory,
+    item_type::ItemTypeLintFactory, result_error::ResultErrorLintFactory,
     trait_impl::TraitImplLintFactory,
-    item_type::ItemTypeLintFactory,
-    result_error::ResultErrorLintFactory
 };
-
 
 ///
 /// Collects a set of architecture lints configured

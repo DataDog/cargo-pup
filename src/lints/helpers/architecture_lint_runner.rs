@@ -38,6 +38,9 @@ pub struct ArchitectureLintRunner {
     // change.
     cli_args: String,
 
+    // Cargo arguments that were passed through
+    cargo_args: Vec<String>,
+
     // Because we gather our output within the compiler
     // Callback mechanism, we need somewhere we can stash our
     // results internally.
@@ -51,7 +54,13 @@ impl ArchitectureLintRunner {
             lint_collection,
             result_text: String::new(),
             cli_args,
+            cargo_args: Vec::new(),
         }
+    }
+
+    /// Set cargo arguments that were passed through from the original command
+    pub fn set_cargo_args(&mut self, args: Vec<String>) {
+        self.cargo_args = args;
     }
 
     ///
@@ -99,7 +108,7 @@ impl ArchitectureLintRunner {
         lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
     ) -> String {
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
-        
+
         // Start recursive traversal from crate root
         self.collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
 
@@ -169,6 +178,7 @@ impl Callbacks for ArchitectureLintRunner {
     fn config(&mut self, config: &mut rustc_interface::interface::Config) {
         let cli_args = self.cli_args.clone();
         let mode = self.mode.clone();
+        let cargo_args = self.cargo_args.clone();
 
         config.register_lints = Some(Box::new(move |_sess, lint_store| {
             // If we're actually linting, recreate the lints and add them all
@@ -186,6 +196,15 @@ impl Callbacks for ArchitectureLintRunner {
                 .env_depinfo
                 .get_mut()
                 .insert((Symbol::intern(""), Some(Symbol::intern(&cli_args))));
+
+            // Track cargo args
+            if !cargo_args.is_empty() {
+                let cargo_args_str = cargo_args.join(" ");
+                psess.env_depinfo.get_mut().insert((
+                    Symbol::intern("cargo_args"),
+                    Some(Symbol::intern(&cargo_args_str)),
+                ));
+            }
 
             // Track config file
             if Path::new("../../../pup.yaml").exists() {

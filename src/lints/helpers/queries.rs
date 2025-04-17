@@ -1,9 +1,7 @@
 use rustc_hir::OwnerId;
 use rustc_hir::def_id::DefId;
 use rustc_infer::infer::TyCtxtInferExt;
-use rustc_middle::ty::{
-    self, ParamEnv, Ty, TyCtxt, TypingMode,
-};
+use rustc_middle::ty::{self, ParamEnv, Ty, TyCtxt, TypingMode};
 use rustc_span::symbol::sym;
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
 use rustc_trait_selection::traits::{Obligation, ObligationCause};
@@ -23,20 +21,15 @@ pub fn implements_trait<'tcx>(
     tcx: TyCtxt<'tcx>,
     param_env: ParamEnv<'tcx>,
     ty: Ty<'tcx>,
-    trait_def_id: DefId
+    trait_def_id: DefId,
 ) -> bool {
     let infcx = tcx.infer_ctxt().build(TypingMode::Coherence);
-    
+
     let cause = ObligationCause::dummy();
     let trait_ref = ty::TraitRef::new(tcx, trait_def_id, [ty]);
-    
-    let obligation = Obligation::new(
-        tcx,
-        cause,
-        param_env,
-        trait_ref,
-    );
-    
+
+    let obligation = Obligation::new(tcx, cause, param_env, trait_ref);
+
     infcx.predicate_may_hold(&obligation)
 }
 
@@ -48,8 +41,11 @@ pub fn implements_error_trait<'tcx>(
 ) -> bool {
     // Check for primitive types that definitely don't implement Error
     match ty.kind() {
-        ty::TyKind::Int(_) | ty::TyKind::Uint(_) | ty::TyKind::Float(_) | 
-        ty::TyKind::Bool | ty::TyKind::Char => return false,
+        ty::TyKind::Int(_)
+        | ty::TyKind::Uint(_)
+        | ty::TyKind::Float(_)
+        | ty::TyKind::Bool
+        | ty::TyKind::Char => return false,
         _ => {}
     }
 

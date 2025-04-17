@@ -12,7 +12,6 @@ use rustc_lint::LintStore;
 ///   namespaces - so that we can print a diagnostic tree of what our rules are actually
 ///   doing.
 pub trait ArchitectureLintRule: Sync + Send {
-
     ///
     /// Returns the name of the lint rule. This is the name specified
     /// in pup.yaml
