@@ -174,8 +174,8 @@ mod tests {
     #[test]
     fn test_real_world_examples() {
         // Our specific troublesome case
-        let args = parse_args(&["cargo", "pup", "print-modules", "--features=poop"]);
+        let args = parse_args(&["cargo", "pup", "print-modules", "--features=test-feature"]);
         assert_eq!(args.command, PupCommand::PrintModules);
-        assert_eq!(args.cargo_args, vec!["--features=poop"]);
+        assert_eq!(args.cargo_args, vec!["--features=test-feature"]);
     }
 }

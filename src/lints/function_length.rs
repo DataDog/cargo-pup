@@ -159,20 +159,20 @@ impl LintFactory for FunctionLengthLintFactory {
             
             // Create a sample config with comments
             let config = format!(
-                "    # Function length lint for {} submodule\n\
-                 #\n\
-                 # This rule checks that functions in a specific submodule\n\
-                 # don't exceed the maximum allowed length.\n\
-                 #\n\
-                 # Parameters:\n\
-                 #   namespace: regex pattern for module to check\n\
-                 #   max_lines: maximum allowed function length in lines\n\
-                 #   severity: Error or Warn\n\
-                 #\n\
-                 type: function_length\n\
-                 namespace: \"{}\"\n\
-                 max_lines: 30\n\
-                 severity: Warn",
+    r#"    # Function length lint for {} submodule
+    #
+    # This rule checks that functions in a specific submodule
+    # don't exceed the maximum allowed length.
+    #
+    # Parameters:
+    #   namespace: regex pattern for module to check
+    #   max_lines: maximum allowed function length in lines
+    #   severity: Error or Warn
+    #
+    type: function_length
+    namespace: "{}"
+    max_lines: 30
+    severity: Warn"#,
                 module_parts.last().unwrap_or(&"specific"),
                 // Escape regex special characters
                 module.replace(".", "\\.").replace("(", "\\(").replace(")", "\\)")
