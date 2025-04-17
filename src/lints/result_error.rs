@@ -1,14 +1,14 @@
 use super::{ArchitectureLintRule, Severity};
 use crate::lints::helpers::clippy_utils::span_lint_and_help;
-use crate::lints::helpers::queries::{get_full_module_name, implements_error_trait};
+use crate::lints::helpers::queries::implements_error_trait;
 use crate::{
     declare_variable_severity_lint,
     utils::configuration_factory::{LintConfigurationFactory, LintFactory},
 };
 use regex::Regex;
-use rustc_hir::{Item, ItemKind, OwnerId};
+use rustc_hir::{Item, ItemKind};
 use rustc_lint::{LateContext, LateLintPass, Lint};
-use rustc_middle::ty::{TyCtxt, TyKind};
+use rustc_middle::ty::TyKind;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
 
@@ -50,25 +50,18 @@ impl ResultErrorLintProcessor {
             module_regexps,
         }
     }
-
-    fn applies_to_module(&self, tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> bool {
-        let full_name = get_full_module_name(tcx, module_def_id);
-        self.module_regexps
-            .iter()
-            .any(|r| r.is_match(full_name.as_str()))
-    }
 }
 
 impl<'tcx> LateLintPass<'tcx> for ResultErrorLintProcessor {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
-        // Get the parent module's ID
+        // Add debug output to see if the module name matches any regex
+        // let matches = self.applies_to_module(&ctx.tcx, &item.owner_id);
         let module_id = ctx.tcx.parent_module(item.hir_id());
         let module_def_id = module_id.to_def_id();
         let crate_name = ctx.tcx.crate_name(module_def_id.krate);
         let module_path = ctx.tcx.def_path_str(module_def_id);
         let full_name = format!("{}::{}", crate_name, module_path);
 
-        // Add debug output to see if the module name matches any regex
         let matches = self.module_regexps.iter().any(|r| r.is_match(&full_name));
 
         if !matches {

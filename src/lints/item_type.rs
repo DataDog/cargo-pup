@@ -1,6 +1,7 @@
 use super::{ArchitectureLintRule, Severity};
 use crate::declare_variable_severity_lint;
 use crate::lints::helpers::clippy_utils::span_lint_and_help;
+use crate::lints::helpers::queries::get_full_module_name;
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
 use regex::Regex;
 use rustc_hir::{Item, ItemKind};
@@ -8,7 +9,6 @@ use rustc_lint::{LateContext, LateLintPass, Lint};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
-use crate::lints::helpers::queries::get_full_module_name;
 
 /// Configuration for item type lint rule
 #[derive(Debug, Deserialize, Clone)]
@@ -85,10 +85,12 @@ impl ItemTypeLintProcessor {
             ItemKind::Impl(..) if self.rule.denied_items.contains(&DeniedItemType::Impl) => {
                 Some("impl")
             }
-            ItemKind::Fn { sig: _, generics: _, body: _, has_body: _ } 
-                if self.rule.denied_items.contains(&DeniedItemType::Function) => {
-                Some("function")
-            }
+            ItemKind::Fn {
+                sig: _,
+                generics: _,
+                body: _,
+                has_body: _,
+            } if self.rule.denied_items.contains(&DeniedItemType::Function) => Some("function"),
             ItemKind::Mod(..) if self.rule.denied_items.contains(&DeniedItemType::Module) => {
                 Some("module")
             }
@@ -200,4 +202,4 @@ test_item_type:
         assert_eq!(results.len(), 1);
         Ok(())
     }
-} 
+}

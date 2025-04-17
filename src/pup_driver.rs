@@ -15,7 +15,7 @@ extern crate rustc_span;
 extern crate rustc_trait_selection;
 
 use anyhow::Result;
-use cli::{PupCli, PupCliCommands};
+use cli::{PupCli, PupCommand};
 use lints::{ArchitectureLintRunner, Mode};
 
 use crate::lints::{ArchitectureLintCollection, register_all_lints};
@@ -59,22 +59,30 @@ pub fn main() -> Result<()> {
     let cli_args = binding.as_str();
     let config = PupCli::from_env_str(cli_args);
 
-    let mode = match config.command.unwrap_or(PupCliCommands::Check) {
-        PupCliCommands::PrintModules => Mode::PrintModules,
-        PupCliCommands::PrintTraits => Mode::PrintTraits,
-        PupCliCommands::Check => Mode::Check,
+    let mode = match config.command {
+        PupCommand::PrintModules => Mode::PrintModules,
+        PupCommand::PrintTraits => Mode::PrintTraits,
+        PupCommand::Check => Mode::Check,
     };
-
-    // Suppress rust's own lint output
-    // orig_args.extend(vec!["-A".into(), "warnings".into()]);
 
     // Log it, so we can work out what is going on
     log_invocation(&orig_args)?;
+
+    // Parse cargo arguments from environment
+    let mut cargo_args = Vec::new();
+    if let Ok(args_str) = env::var("PUP_CARGO_ARGS") {
+        for arg in args_str.split("__PUP_ARG_SEP__") {
+            if !arg.is_empty() {
+                cargo_args.push(arg.to_string());
+            }
+        }
+    }
 
     // Forward all arguments to RunCompiler, including `"-"`
     let lint_rules = setup_lints_yaml()?;
     let lint_collection = ArchitectureLintCollection::new(lint_rules);
     let mut runner = ArchitectureLintRunner::new(mode, cli_args.into(), lint_collection);
+    runner.set_cargo_args(cargo_args);
 
     rustc_driver::run_compiler(&orig_args, &mut runner);
 
@@ -148,7 +156,7 @@ mod tests {
         register_all_lints();
 
         let lints = setup_lints_yaml()?;
-        assert_eq!(lints.len(), 5);
+        assert_eq!(lints.len(), 6);
         Ok(())
     }
 

@@ -1,6 +1,7 @@
 use super::{ArchitectureLintRule, Severity};
 use crate::declare_variable_severity_lint;
 use crate::lints::helpers::clippy_utils::span_lint_and_help;
+use crate::lints::helpers::queries::get_full_module_name;
 use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
 use regex::Regex;
 use rustc_hir::{ImplItem, ImplItemKind, Item, ItemKind, OwnerId};
@@ -8,7 +9,6 @@ use rustc_lint::{LateContext, LateLintPass, Lint, LintContext};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
-use crate::lints::helpers::queries::get_full_module_name;
 
 /// Represents a set of function length lint rules for a module
 #[derive(Debug, Deserialize, Clone)]
