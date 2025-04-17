@@ -30,6 +30,7 @@ empty_mods:
   modules:
     - "lints"
     - "utils"
+    - "^cargo_pup"
   severity: Warn
 
 # Keep helpers implementation details private
@@ -49,4 +50,12 @@ utils_no_structs_or_traits:
   denied_items:
     - struct
     - trait 
+  severity: Error
+
+# Ensure correct Result error types across the project
+enforce_result_error:
+  type: result_error
+  modules:
+    - "^cargo_pup"
+    - "^pup_driver"
   severity: Error

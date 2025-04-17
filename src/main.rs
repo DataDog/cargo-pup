@@ -68,6 +68,21 @@ use cli::PupCli;
 use std::env;
 use std::path::Path;
 use std::process::{Command, exit};
+use std::fmt;
+use std::error::Error;
+
+/// Simple error type that wraps a command exit code
+#[derive(Debug)]
+struct CommandExitStatus(i32);
+
+impl fmt::Display for CommandExitStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Command failed with exit code: {}", self.0)
+    }
+}
+
+impl Error for CommandExitStatus {}
+
 #[allow(dead_code)]
 fn show_help() {
     println!("{}", help_message());
@@ -92,8 +107,8 @@ pub fn main() {
     if env::var("PUP_TRAMPOLINE_MODE").is_ok() {
         // We're in the trampoline - we need to run cargo-pup
         // with the arguments we've got to do the build.
-        if let Err(code) = run_pup_cmd(&toolchain) {
-            exit(code);
+        if let Err(err) = run_pup_cmd(&toolchain) {
+            exit(err.0);
         }
     } else {
         // We've not trampolined yet - we're in the initial invocation.
@@ -104,8 +119,8 @@ pub fn main() {
         // short circuit this.
         let cmd = PupCli::parse_from(env::args().skip(1));
         let cli_args = cmd.to_env_str();
-        if let Err(code) = run_trampoline(&toolchain, &cli_args) {
-            exit(code);
+        if let Err(err) = run_trampoline(&toolchain, &cli_args) {
+            exit(err.0);
         }
     }
 }
@@ -142,7 +157,7 @@ fn generate_trampoline_cmd(toolchain: &str, cli_args: &str) -> Command {
 /// Trampolines back through cargo-pup using us as RUSTC_WORKSPACE_WRAPPER. This'll return to us with
 /// the `rustc` invocation that cargo wants, which we can than wrap up and pass off to pup-driver.
 ///
-fn run_trampoline(toolchain: &str, cli_args: &str) -> Result<(), i32> {
+fn run_trampoline(toolchain: &str, cli_args: &str) -> Result<(), CommandExitStatus> {
     let mut cmd = generate_trampoline_cmd(toolchain, cli_args);
 
     let exit_status = cmd
@@ -154,7 +169,7 @@ fn run_trampoline(toolchain: &str, cli_args: &str) -> Result<(), i32> {
     if exit_status.success() {
         Ok(())
     } else {
-        Err(exit_status.code().unwrap_or(-1))
+        Err(CommandExitStatus(exit_status.code().unwrap_or(-1)))
     }
 }
 
@@ -218,7 +233,7 @@ fn get_toolchain() -> String {
 ///
 /// This is launched once we've trampolined back through ourselves.
 ///
-fn run_pup_cmd(toolchain: &String) -> Result<(), i32> {
+fn run_pup_cmd(toolchain: &String) -> Result<(), CommandExitStatus> {
     match generate_pup_cmd(env::args(), toolchain) {
         Ok(mut cmd) => {
             let exit_status = cmd
@@ -230,10 +245,10 @@ fn run_pup_cmd(toolchain: &String) -> Result<(), i32> {
             if exit_status.success() {
                 Ok(())
             } else {
-                Err(exit_status.code().unwrap_or(-1))
+                Err(CommandExitStatus(exit_status.code().unwrap_or(-1)))
             }
         }
-        Err(_) => Err(-1),
+        Err(_) => Err(CommandExitStatus(-1)),
     }
 }
 
