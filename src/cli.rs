@@ -46,11 +46,7 @@ impl PupArgs {
         let mut start_idx = 1;
 
         // If invoked as 'cargo pup', skip those
-        if args.len() > 1 && args[0] == "cargo" && args[1] == "pup" {
-            start_idx = 2;
-        }
-        // Check if we're invoked as 'cargo-pup pup' (alternative invocation)
-        else if args.len() > 1 && args[1] == "pup" {
+        if args.get(1) == Some(&"pup".to_string()) {
             start_idx = 2;
         }
 

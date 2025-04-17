@@ -110,7 +110,7 @@ impl ArchitectureLintRunner {
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
 
         // Start recursive traversal from crate root
-        self.collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
+        collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
 
         let mut output = String::new();
         for (module, path) in &namespace_set {
@@ -128,29 +128,6 @@ impl ArchitectureLintRunner {
             ));
         }
         output
-    }
-
-    // Fetch all the modules from a top-level module down
-    fn collect_modules(
-        &self,
-        tcx: TyCtxt<'_>,
-        mod_id: LocalModDefId,
-        namespace_set: &mut BTreeSet<(String, String)>,
-    ) {
-        let (module, _, _) = tcx.hir_get_module(mod_id);
-
-        for id in module.item_ids {
-            let item = tcx.hir_item(*id);
-            if let ItemKind::Mod(..) = item.kind {
-                let namespace = tcx.def_path_str(item.owner_id.to_def_id());
-                let module = tcx
-                    .crate_name(item.owner_id.to_def_id().krate)
-                    .to_ident_string();
-                namespace_set.insert((module, namespace.clone()));
-                let child_mod_id = LocalModDefId::new_unchecked(item.owner_id.def_id);
-                self.collect_modules(tcx, child_mod_id, namespace_set);
-            }
-        }
     }
 
     /// Called back from the compiler
@@ -247,5 +224,27 @@ impl Callbacks for ArchitectureLintRunner {
         _compiler.sess.coverage_discard_all_spans_in_codegen();
 
         rustc_driver::Compilation::Continue
+    }
+}
+
+// Fetch all the modules from a top-level module down
+fn collect_modules(
+    tcx: TyCtxt<'_>,
+    mod_id: LocalModDefId,
+    namespace_set: &mut BTreeSet<(String, String)>,
+) {
+    let (module, _, _) = tcx.hir_get_module(mod_id);
+
+    for id in module.item_ids {
+        let item = tcx.hir_item(*id);
+        if let ItemKind::Mod(..) = item.kind {
+            let namespace = tcx.def_path_str(item.owner_id.to_def_id());
+            let module = tcx
+                .crate_name(item.owner_id.to_def_id().krate)
+                .to_ident_string();
+            namespace_set.insert((module, namespace.clone()));
+            let child_mod_id = LocalModDefId::new_unchecked(item.owner_id.def_id);
+            collect_modules(tcx, child_mod_id, namespace_set);
+        }
     }
 }
