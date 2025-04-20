@@ -72,6 +72,13 @@ use std::fmt;
 use std::path::Path;
 use std::process::{Command, exit};
 
+#[derive(Debug, PartialEq)]
+enum ProjectType {
+    ConfiguredPupProject,
+    RustProject,
+    OtherDirectory,
+}
+
 /// Simple error type that wraps a command exit code
 #[derive(Debug)]
 struct CommandExitStatus(i32);
@@ -83,6 +90,20 @@ impl fmt::Display for CommandExitStatus {
 }
 
 impl Error for CommandExitStatus {}
+
+/// Validates the current directory to determine the project type
+fn validate_project() -> ProjectType {
+    let has_pup_yaml = Path::new("./pup.yaml").exists();
+    let has_cargo_toml = Path::new("./Cargo.toml").exists();
+    
+    if has_pup_yaml && has_cargo_toml {
+        ProjectType::ConfiguredPupProject
+    } else if has_cargo_toml {
+        ProjectType::RustProject
+    } else {
+        ProjectType::OtherDirectory
+    }
+}
 
 fn show_ascii_puppy() {
     println!("{}", Cyan.paint(r#"
@@ -147,28 +168,34 @@ pub fn main() {
         ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
          (args[1] == "generate-config"));
 
-    // Only check for pup.yaml if we're NOT generating a config
-    if !is_generate_config && !Path::exists(Path::new("./pup.yaml")) {
-        show_ascii_puppy();
-        
-        // First check if we're in a cargo project directory
-        if !Path::exists(Path::new("Cargo.toml")) {
-            println!("{}", Red.bold().paint("Not in a Cargo project directory!"));
-            println!("{}", Yellow.paint("cargo-pup is an architectural linting tool for Rust projects."));
-            println!("It needs to be run from a directory containing a Cargo.toml file.");
-            println!("\nTo use cargo-pup:");
-            println!("  1. Navigate to a Rust project directory");
-            println!("  2. Run {}", Green.paint("cargo pup generate-config"));
-            println!("  3. Edit the generated pup.yaml file");
-            println!("  4. Run {}", Green.paint("cargo pup"));
-            exit(-1)
+    // Skip environment checks if we're generating a config
+    if !is_generate_config {
+        match validate_project() {
+            ProjectType::ConfiguredPupProject => {
+                // Good to go - continue with normal operation
+            },
+            ProjectType::RustProject => {
+                // In a Rust project but missing pup.yaml
+                show_ascii_puppy();
+                println!("{}", Red.bold().paint("Missing pup.yaml - nothing to do!"));
+                println!("Consider generating an initial configuration:");
+                println!("  {}", Green.paint("cargo pup generate-config"));
+                exit(-1)
+            },
+            ProjectType::OtherDirectory => {
+                // Not in a cargo project directory
+                show_ascii_puppy();
+                println!("{}", Red.bold().paint("Not in a Cargo project directory!"));
+                println!("{}", Yellow.paint("cargo-pup is an architectural linting tool for Rust projects."));
+                println!("It needs to be run from a directory containing a Cargo.toml file.");
+                println!("\nTo use cargo-pup:");
+                println!("  1. Navigate to a Rust project directory");
+                println!("  2. Run {}", Green.paint("cargo pup generate-config"));
+                println!("  3. Edit the generated pup.yaml file");
+                println!("  4. Run {}", Green.paint("cargo pup"));
+                exit(-1)
+            }
         }
-        
-        // We're in a cargo project but missing pup.yaml
-        println!("{}", Red.bold().paint("Missing pup.yaml - nothing to do!"));
-        println!("Consider generating an initial configuration:");
-        println!("  {}", Green.paint("cargo pup generate-config"));
-        exit(-1)
     }
 
     let process_result = process(env::args());
@@ -395,4 +422,87 @@ Any additional arguments will be passed directly to cargo:
         generate_config = Green.paint("generate-config"),
         options_label = Blue.bold().paint("Options"),
         note = Yellow.paint("You can use tool lints"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::fs;
+    use tempfile::TempDir;
+    
+    /// Tests for validate_project function
+    mod validate_project_tests {
+        use super::*;
+        
+        fn setup_test_directory() -> TempDir {
+            TempDir::new().expect("Failed to create temp directory")
+        }
+        
+        #[test]
+        fn test_configured_pup_project() {
+            let temp_dir = setup_test_directory();
+            let temp_path = temp_dir.path();
+            
+            // Create Cargo.toml and pup.yaml files
+            fs::write(temp_path.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n")
+                .expect("Failed to write Cargo.toml");
+            fs::write(temp_path.join("pup.yaml"), "# Test pup.yaml\n")
+                .expect("Failed to write pup.yaml");
+            
+            // Change to the temporary directory
+            let original_dir = env::current_dir().expect("Failed to get current dir");
+            env::set_current_dir(&temp_path).expect("Failed to change directory");
+            
+            // Run the validation
+            let result = validate_project();
+            
+            // Change back to original directory
+            env::set_current_dir(original_dir).expect("Failed to change back to original directory");
+            
+            assert_eq!(result, ProjectType::ConfiguredPupProject);
+        }
+        
+        #[test]
+        fn test_rust_project_without_pup() {
+            let temp_dir = setup_test_directory();
+            let temp_path = temp_dir.path();
+            
+            // Create only Cargo.toml file
+            fs::write(temp_path.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n")
+                .expect("Failed to write Cargo.toml");
+            
+            // Change to the temporary directory
+            let original_dir = env::current_dir().expect("Failed to get current dir");
+            env::set_current_dir(&temp_path).expect("Failed to change directory");
+            
+            // Run the validation
+            let result = validate_project();
+            
+            // Change back to original directory
+            env::set_current_dir(original_dir).expect("Failed to change back to original directory");
+            
+            assert_eq!(result, ProjectType::RustProject);
+        }
+        
+        #[test]
+        fn test_other_directory() {
+            let temp_dir = setup_test_directory();
+            let temp_path = temp_dir.path();
+            
+            // Empty directory - no files
+            
+            // Change to the temporary directory
+            let original_dir = env::current_dir().expect("Failed to get current dir");
+            env::set_current_dir(&temp_path).expect("Failed to change directory");
+            
+            // Run the validation
+            let result = validate_project();
+            
+            // Change back to original directory
+            env::set_current_dir(original_dir).expect("Failed to change back to original directory");
+            
+            assert_eq!(result, ProjectType::OtherDirectory);
+        }
+    }
 }
