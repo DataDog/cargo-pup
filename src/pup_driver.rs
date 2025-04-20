@@ -80,8 +80,15 @@ pub fn main() -> Result<()> {
     }
 
     // Forward all arguments to RunCompiler, including `"-"`
-    let lint_rules = setup_lints_yaml()?;
-    let lint_collection = ArchitectureLintCollection::new(lint_rules);
+    let lint_collection = if mode == Mode::GenerateConfig {
+        // For generate-config mode, use an empty collection
+        ArchitectureLintCollection::new(Vec::new())
+    } else {
+        // For other modes, load rules from pup.yaml
+        let lint_rules = setup_lints_yaml()?;
+        ArchitectureLintCollection::new(lint_rules)
+    };
+    
     let mut runner = ArchitectureLintRunner::new(mode.clone(), cli_args.into(), lint_collection);
     runner.set_cargo_args(cargo_args);
 
@@ -91,7 +98,7 @@ pub fn main() -> Result<()> {
     if mode != Mode::GenerateConfig {
         let results_text = runner.lint_results_text();
         if !results_text.is_empty() {
-            eprintln!("{0}", runner.lint_results_text());
+            eprintln!("{0}", results_text);
         }
     }
 

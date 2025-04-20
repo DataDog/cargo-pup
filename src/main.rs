@@ -64,6 +64,8 @@ mod cli;
 
 use cli::{PupArgs, PupCli};
 
+use ansi_term::Colour::{Blue, Green, Red, Yellow, Cyan};
+use ansi_term::Style;
 use std::env;
 use std::error::Error;
 use std::fmt;
@@ -82,12 +84,26 @@ impl fmt::Display for CommandExitStatus {
 
 impl Error for CommandExitStatus {}
 
+fn show_ascii_puppy() {
+    println!("{}", Cyan.paint(r#"
+     / \__
+    (    @\___
+    /         O
+   /   (_____/
+  /_____/   U
+"#));
+}
+
 fn show_help() {
+    show_ascii_puppy();
     println!("{}", help_message());
 }
 
 fn show_version() {
-    println!("cargo-pup version 0.1.0");
+    println!("{} {}", 
+        Style::new().bold().paint("cargo-pup version"), 
+        Green.paint(env!("CARGO_PKG_VERSION"))
+    );
 }
 
 pub fn main() {
@@ -133,9 +149,25 @@ pub fn main() {
 
     // Only check for pup.yaml if we're NOT generating a config
     if !is_generate_config && !Path::exists(Path::new("./pup.yaml")) {
-        println!("Missing pup.yaml - nothing to do!");
-        println!("Consider generating an initial context:");
-        println!("cargo pup generate-config");
+        show_ascii_puppy();
+        
+        // First check if we're in a cargo project directory
+        if !Path::exists(Path::new("Cargo.toml")) {
+            println!("{}", Red.bold().paint("Not in a Cargo project directory!"));
+            println!("{}", Yellow.paint("cargo-pup is an architectural linting tool for Rust projects."));
+            println!("It needs to be run from a directory containing a Cargo.toml file.");
+            println!("\nTo use cargo-pup:");
+            println!("  1. Navigate to a Rust project directory");
+            println!("  2. Run {}", Green.paint("cargo pup generate-config"));
+            println!("  3. Edit the generated pup.yaml file");
+            println!("  4. Run {}", Green.paint("cargo pup"));
+            exit(-1)
+        }
+        
+        // We're in a cargo project but missing pup.yaml
+        println!("{}", Red.bold().paint("Missing pup.yaml - nothing to do!"));
+        println!("Consider generating an initial configuration:");
+        println!("  {}", Green.paint("cargo pup generate-config"));
         exit(-1)
     }
 
@@ -330,20 +362,20 @@ fn get_toolchain() -> String {
 }
 
 #[must_use]
-pub fn help_message() -> &'static str {
-    "
-Pretty Useful Pup: Checks your architecture against your architecture lint file.
+pub fn help_message() -> String {
+    format!("
+{title}: Checks your architecture against your architecture lint file.
 
-Usage:
+{usage_label}:
     cargo pup [COMMAND] [OPTIONS] [--] [CARGO_ARGS...]
 
-Commands:
-    check            Run architectural lints (default)
-    print-modules    Print all modules and applicable lints
-    print-traits     Print all traits
-    generate-config  Generates an initial pup.yaml for your project.
+{commands_label}:
+    {check}            Run architectural lints (default)
+    {print_modules}    Print all modules and applicable lints
+    {print_traits}     Print all traits
+    {generate_config}  Generates an initial pup.yaml for your project.
 
-Options:
+{options_label}:
     -h, --help             Print this message
     -V, --version          Print version info and exit
 
@@ -351,7 +383,16 @@ Any additional arguments will be passed directly to cargo:
     --features=FEATURES    Cargo features to enable
     --manifest-path=PATH   Path to Cargo.toml
 
-You can use tool lints to allow or deny lints from your code, e.g.:
+{note} to allow or deny lints from your code, e.g.:
     #[allow(pup::some_lint)]
-"
+",
+        title = Style::new().bold().paint("Pretty Useful Pup"),
+        usage_label = Blue.bold().paint("Usage"),
+        commands_label = Blue.bold().paint("Commands"),
+        check = Green.paint("check"),
+        print_modules = Green.paint("print-modules"),
+        print_traits = Green.paint("print-traits"),
+        generate_config = Green.paint("generate-config"),
+        options_label = Blue.bold().paint("Options"),
+        note = Yellow.paint("You can use tool lints"))
 }
