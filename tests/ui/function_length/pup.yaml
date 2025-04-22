@@ -1,0 +1,5 @@
+long_function_test:
+  type: function_length
+  namespace: "^test$"
+  max_lines: 5
+  severity: Error 

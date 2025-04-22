@@ -1,6 +1,6 @@
 # `cargo pup`
 
-**Pretty Useful Pup** (_pup_) lets you write assertions about your Rust project’s architecture, letting you continuously
+**Pretty Useful Pup** (_pup_) lets you write assertions about your Rust project's architecture, letting you continuously
 validate consistency both locally and in your CI pipelines. As projects grow and new contributors come on board inconsistency
 begins to creep in, increasing the cognitive load for everyone working on the system.
 
@@ -93,6 +93,36 @@ helpers_no_structs_or_traits:
   severity: Error
 ```
 
+## Testing
+
+### UI Tests
+
+Cargo Pup includes UI tests to validate lint behavior. These tests follow the pattern used by Clippy and other Rust compiler components.
+
+To run the UI tests:
+
+```bash
+cargo test --test ui-test
+```
+
+If you make changes to the lints that affect the expected output, you can update the .stderr files with:
+
+```bash
+BLESS=1 cargo test --test ui-test
+```
+
+#### How UI Tests Work
+
+UI tests consist of:
+1. `.rs` files containing code that triggers (or doesn't trigger) lints 
+2. `.stderr` files containing the expected compiler output/diagnostics
+
+Tests use special comments:
+- `//@` comments configure test behavior
+- `//~` comments mark expected diagnostic locations
+- `//@ pup-config: |` comments define lint configurations for the test
+
+You can find examples in the `tests/ui/function_length/` directory.
 
 ## Pretty Useful Pup Tenets
 

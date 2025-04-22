@@ -14,6 +14,14 @@ pub struct PupCli {
     pub command: PupCommand,
 }
 
+impl Default for PupCli {
+    fn default() -> Self {
+        Self {
+            command: PupCommand::Check,
+        }
+    }
+}
+
 #[allow(dead_code)]
 impl PupCli {
     pub fn to_env_str(&self) -> String {

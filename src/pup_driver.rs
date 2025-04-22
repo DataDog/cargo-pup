@@ -24,11 +24,11 @@ use std::{
     env,
     fs::{self, OpenOptions},
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-use utils::configuration_factory::setup_lints_yaml;
+use utils::configuration_factory::{setup_lints_yaml, LintConfigurationFactory};
 
 mod cli;
 mod lints;
@@ -48,22 +48,35 @@ pub fn main() -> Result<()> {
     if wrapper_mode {
         orig_args.remove(1);
     }
+    
+    // Check if we're in UI testing mode by looking for the "-Zui-testing" flag
+    let is_ui_testing = orig_args.iter().any(|arg| arg == "-Zui-testing");
 
     // Add `--sysroot` if missing
     if !orig_args.iter().any(|arg| arg == "--sysroot") {
         orig_args.extend(vec!["--sysroot".into(), find_sysroot()]);
     }
 
-    // Load our configuration
-    let binding = std::env::var("PUP_CLI_ARGS").expect("Missing PUP_CLI_ARGS");
-    let cli_args = binding.as_str();
-    let config = PupCli::from_env_str(cli_args);
+    // Default to check mode if we're in UI testing
+    let mode = if is_ui_testing {
+        Mode::Check
+    } else {
+        // Load our configuration from CLI args
+        let binding = std::env::var("PUP_CLI_ARGS").unwrap_or_default();
+        let cli_args = binding.as_str();
+        let config = if cli_args.is_empty() {
+            // Default to check mode if no CLI args
+            PupCli::default()
+        } else {
+            PupCli::from_env_str(cli_args)
+        };
 
-    let mode = match config.command {
-        PupCommand::PrintModules => Mode::PrintModules,
-        PupCommand::PrintTraits => Mode::PrintTraits,
-        PupCommand::Check => Mode::Check,
-        PupCommand::GenerateConfig => Mode::GenerateConfig,
+        match config.command {
+            PupCommand::PrintModules => Mode::PrintModules,
+            PupCommand::PrintTraits => Mode::PrintTraits,
+            PupCommand::Check => Mode::Check,
+            PupCommand::GenerateConfig => Mode::GenerateConfig,
+        }
     };
 
     // Log it, so we can work out what is going on
@@ -79,17 +92,57 @@ pub fn main() -> Result<()> {
         }
     }
 
-    // Forward all arguments to RunCompiler, including `"-"`
+    // Determine the lint collection to use
     let lint_collection = if mode == Mode::GenerateConfig {
         // For generate-config mode, use an empty collection
         ArchitectureLintCollection::new(Vec::new())
+    } else if is_ui_testing {
+        // For UI testing, look for a pup.yaml file in the same directory as the test file
+        let source_file = find_source_file(&orig_args)?;
+        let test_dir = source_file.parent().unwrap_or(Path::new("."));
+        let yaml_path = test_dir.join("pup.yaml");
+        
+        println!("UI testing: Looking for config file: {:?}", yaml_path);
+        
+        if yaml_path.exists() {
+            // For UI tests, load rules from the pup.yaml in the test directory
+            println!("UI testing: Found pup.yaml in test directory");
+            match fs::read_to_string(&yaml_path) {
+                Ok(yaml_content) => {
+                    match LintConfigurationFactory::from_yaml(yaml_content) {
+                        Ok(lint_rules) => {
+                            println!("UI testing: Successfully loaded {} lint rules", lint_rules.len());
+                            ArchitectureLintCollection::new(lint_rules)
+                        },
+                        Err(e) => {
+                            println!("UI testing: Error parsing pup.yaml: {:?}", e);
+                            ArchitectureLintCollection::new(Vec::new())
+                        }
+                    }
+                },
+                Err(e) => {
+                    println!("UI testing: Error reading pup.yaml: {:?}", e);
+                    ArchitectureLintCollection::new(Vec::new())
+                }
+            }
+        } else {
+            println!("UI testing: No pup.yaml found in test directory");
+            ArchitectureLintCollection::new(Vec::new())
+        }
     } else {
-        // For other modes, load rules from pup.yaml
+        // For normal operation, load rules from pup.yaml
         let lint_rules = setup_lints_yaml()?;
         ArchitectureLintCollection::new(lint_rules)
     };
     
-    let mut runner = ArchitectureLintRunner::new(mode.clone(), cli_args.into(), lint_collection);
+    // Prepare cli_args, either from environment or empty for UI testing
+    let cli_args = if is_ui_testing {
+        "".to_string()
+    } else {
+        std::env::var("PUP_CLI_ARGS").unwrap_or_default()
+    };
+    
+    let mut runner = ArchitectureLintRunner::new(mode.clone(), cli_args, lint_collection);
     runner.set_cargo_args(cargo_args);
 
     rustc_driver::run_compiler(&orig_args, &mut runner);
@@ -103,6 +156,16 @@ pub fn main() -> Result<()> {
     }
 
     process::exit(0);
+}
+
+/// Find the source file from the command line arguments
+fn find_source_file(args: &[String]) -> Result<PathBuf> {
+    for arg in args {
+        if arg.ends_with(".rs") && !arg.starts_with('-') {
+            return Ok(PathBuf::from(arg));
+        }
+    }
+    anyhow::bail!("No source file found in arguments")
 }
 
 fn find_sysroot() -> String {
