@@ -1,0 +1,13 @@
+# Test for pattern matching only
+name_pattern_test:
+  type: trait_impl
+  source_name: "test::MyTrait"
+  name_must_match: ".*MyTraitImpl$"
+  severity: Error
+
+# Test for visibility only
+visibility_test:
+  type: trait_impl
+  source_name: "test::AnotherTrait"
+  enforce_visibility: "Private"
+  severity: Error

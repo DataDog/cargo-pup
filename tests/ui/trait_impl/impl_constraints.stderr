@@ -1,0 +1,25 @@
+error: Struct 'BadlyNamedStruct' does not match the required pattern '.*MyTraitImpl$'.
+  --> tests/ui/trait_impl/impl_constraints.rs:14:1
+   |
+LL | / pub struct BadlyNamedStruct {
+LL | |     value: String,
+LL | | }
+   | |_^
+   |
+   = help: Consider renaming the struct.
+   = note: Applied by cargo-pup rule 'name_pattern_test'.
+   = note: `#[deny(trait_impl)]` on by default
+
+error: Struct 'VisibilityImpl' is public, but should be private.
+  --> tests/ui/trait_impl/impl_constraints.rs:25:1
+   |
+LL | / pub struct VisibilityImpl {
+LL | |     value: String,
+LL | | }
+   | |_^
+   |
+   = help: Change the visibility to private.
+   = note: Applied by cargo-pup rule 'visibility_test'.
+
+error: aborting due to 2 previous errors
+
