@@ -1,0 +1,5 @@
+result_error_test:
+  type: result_error
+  modules:
+    - ".*" # Match any module
+  severity: Error
