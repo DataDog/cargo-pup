@@ -22,15 +22,15 @@ termize = "0.1.1"
 # These bits are just to keep rust rover happy.
 # Remove them at some point ...
 # 
- rustc_driver = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_driver", optional = true}
- rustc_hir = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_hir", optional = true}
- rustc_interface = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_interface", optional = true}
- rustc_middle = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_middle", optional = true}
- rustc_session = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_session", optional = true}
- rustc_span = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_span", optional = true}
- rustc_lint = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_lint", optional = true}
- rustc_trait_selection = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_trait_selection", optional = true}
-rustc_errors = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_errors", optional = true}
+#  rustc_driver = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_driver", optional = true}
+#  rustc_hir = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_hir", optional = true}
+#  rustc_interface = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_interface", optional = true}
+#  rustc_middle = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_middle", optional = true}
+#  rustc_session = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_session", optional = true}
+#  rustc_span = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_span", optional = true}
+#  rustc_lint = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_lint", optional = true}
+#  rustc_trait_selection = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_trait_selection", optional = true}
+# rustc_errors = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_errors", optional = true}
 
 md5 = "0.7.0"
 toml = "0.8.19"
