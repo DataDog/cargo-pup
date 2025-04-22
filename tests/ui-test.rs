@@ -61,7 +61,7 @@ fn main() {
     });
     
     // Run the tests
-    ui_test::run_tests_generic(
+    let _ = ui_test::run_tests_generic(
         vec![config],
         ui_test::default_file_filter,
         ui_test::default_per_file_config,

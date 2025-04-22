@@ -2,7 +2,7 @@
 //@compile-flags: --crate-type lib
 
 // This function has more than 5 lines and should trigger a lint error
-fn too_long_function() {
+fn too_long_function() { //~ ERROR: Function exceeds maximum length of 5 lines with 9 lines
     let a = 1;
     let b = 2;
     let c = 3;
@@ -24,7 +24,7 @@ struct MyStruct;
 
 impl MyStruct {
     // This method exceeds the length limit
-    fn too_long_method(&self) {
+    fn too_long_method(&self) { //~ ERROR: Function exceeds maximum length of 5 lines with 9 lines
         let a = 1;
         let b = 2;
         let c = 3;

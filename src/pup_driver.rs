@@ -111,7 +111,9 @@ pub fn main() -> Result<()> {
                             ArchitectureLintCollection::new(lint_rules)
                         },
                         Err(e) => {
-                            ArchitectureLintCollection::new(Vec::new())
+                            // TODO - improve this 
+                            panic!("Failed loading lint collection: {:?}", e);
+                            //ArchitectureLintCollection::new(Vec::new())
                         }
                     }
                 },

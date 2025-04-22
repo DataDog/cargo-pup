@@ -7,8 +7,6 @@ use rustc_span::Symbol;
 use std::{collections::BTreeSet, path::Path};
 use std::sync::Arc;
 
-use crate::utils::configuration_factory::setup_lints_yaml;
-
 use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
 
 ///
