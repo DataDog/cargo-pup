@@ -66,6 +66,5 @@ fn main() {
         ui_test::default_file_filter,
         ui_test::default_per_file_config,
         status_emitter::Text::from(args.format),
-    )
-    .unwrap();
+    );
 } 

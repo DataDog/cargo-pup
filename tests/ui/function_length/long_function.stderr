@@ -1,1 +1,34 @@
- 
+error: Function exceeds maximum length of 5 lines with 9 lines
+  --> tests/ui/function_length/long_function.rs:5:1
+   |
+LL | / fn too_long_function() {
+LL | |     let a = 1;
+LL | |     let b = 2;
+LL | |     let c = 3;
+...  |
+LL | |     let g = 7;
+LL | | }
+   | |_^
+   |
+   = help: 
+   = note: Applied by cargo-pup rule 'long_function_test'.
+   = note: `-D pup-function-length` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(pup_function_length)]`
+
+error: Function exceeds maximum length of 5 lines with 9 lines
+  --> tests/ui/function_length/long_function.rs:27:5
+   |
+LL | /     fn too_long_method(&self) {
+LL | |         let a = 1;
+LL | |         let b = 2;
+LL | |         let c = 3;
+...  |
+LL | |         let g = 7;
+LL | |     }
+   | |_____^
+   |
+   = help: 
+   = note: Applied by cargo-pup rule 'long_function_test'.
+
+error: aborting due to 2 previous errors
+

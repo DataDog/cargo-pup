@@ -1,6 +1,8 @@
 use crate::lints::empty_mod::EmptyModLintFactory;
 use crate::lints::module_usage::ModuleUsageLintFactory;
 use crate::utils::configuration_factory::LintFactory;
+use crate::utils::configuration_factory::setup_lints_yaml;
+use std::sync::Arc;
 
 use crate::lints::{
     ArchitectureLintRule, function_length::FunctionLengthLintFactory,
@@ -11,6 +13,7 @@ use crate::lints::{
 ///
 /// Collects a set of architecture lints configured
 /// and ready to run.
+///
 ///
 ///
 pub struct ArchitectureLintCollection {

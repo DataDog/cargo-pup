@@ -187,6 +187,7 @@ impl LintFactory for FunctionLengthLintFactory {
 
 impl<'tcx> LateLintPass<'tcx> for FunctionLengthLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &Item<'tcx>) {
+
         if let ItemKind::Fn {
             sig: _,
             generics: _,

@@ -1,5 +1,5 @@
 long_function_test:
   type: function_length
-  namespace: "^test$"
+  namespace: "^test"
   max_lines: 5
-  severity: Error 
+  severity: Warn

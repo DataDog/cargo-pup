@@ -101,21 +101,16 @@ pub fn main() -> Result<()> {
         let source_file = find_source_file(&orig_args)?;
         let test_dir = source_file.parent().unwrap_or(Path::new("."));
         let yaml_path = test_dir.join("pup.yaml");
-        
-        println!("UI testing: Looking for config file: {:?}", yaml_path);
-        
+
         if yaml_path.exists() {
             // For UI tests, load rules from the pup.yaml in the test directory
-            println!("UI testing: Found pup.yaml in test directory");
             match fs::read_to_string(&yaml_path) {
                 Ok(yaml_content) => {
                     match LintConfigurationFactory::from_yaml(yaml_content) {
                         Ok(lint_rules) => {
-                            println!("UI testing: Successfully loaded {} lint rules", lint_rules.len());
                             ArchitectureLintCollection::new(lint_rules)
                         },
                         Err(e) => {
-                            println!("UI testing: Error parsing pup.yaml: {:?}", e);
                             ArchitectureLintCollection::new(Vec::new())
                         }
                     }
@@ -141,7 +136,7 @@ pub fn main() -> Result<()> {
     } else {
         std::env::var("PUP_CLI_ARGS").unwrap_or_default()
     };
-    
+
     let mut runner = ArchitectureLintRunner::new(mode.clone(), cli_args, lint_collection);
     runner.set_cargo_args(cargo_args);
 

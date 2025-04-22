@@ -5,6 +5,7 @@ use rustc_hir::def_id::LocalModDefId;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 use std::{collections::BTreeSet, path::Path};
+use std::sync::Arc;
 
 use crate::utils::configuration_factory::setup_lints_yaml;
 
@@ -33,7 +34,7 @@ pub enum Mode {
 ///
 pub struct ArchitectureLintRunner {
     mode: Mode,
-    lint_collection: ArchitectureLintCollection,
+    lint_collection: Arc<ArchitectureLintCollection>,
 
     // Arguments to the cargo-pup. We need these
     // so that we can tie the results of the session
@@ -54,7 +55,7 @@ impl ArchitectureLintRunner {
     pub fn new(mode: Mode, cli_args: String, lint_collection: ArchitectureLintCollection) -> Self {
         ArchitectureLintRunner {
             mode,
-            lint_collection,
+            lint_collection: Arc::new(lint_collection),
             result_text: String::new(),
             cli_args,
             cargo_args: Vec::new(),
@@ -262,11 +263,12 @@ impl Callbacks for ArchitectureLintRunner {
         let mode = self.mode.clone();
         let cargo_args = self.cargo_args.clone();
 
+        let lint_collection = Arc::clone(&self.lint_collection);
         config.register_lints = Some(Box::new(move |_sess, lint_store| {
             // If we're actually linting, recreate the lints and add them all
             if let Mode::Check = mode {
-                let lints = setup_lints_yaml().expect("can load lints");
-                for lint in lints {
+                //let lints = setup_lints_yaml().expect("can load lints");
+                for lint in lint_collection.lints() {
                     lint.register_late_pass(lint_store);
                 }
             }
