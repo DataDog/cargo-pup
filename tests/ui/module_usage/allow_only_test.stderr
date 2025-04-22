@@ -1,0 +1,21 @@
+error: Use of module 'std::collections::HashMap' is not allowed; only ["std::fmt", "std::io"] are permitted.
+  --> tests/ui/module_usage/allow_only_test.rs:13:5
+   |
+LL |     use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider removing or changing the import.
+   = note: Applied by cargo-pup rule 'allow_only_rules'.
+   = note: `#[deny(module_usage)]` on by default
+
+error: Use of module 'std::env' is not allowed; only ["std::fmt", "std::io"] are permitted.
+  --> tests/ui/module_usage/allow_only_test.rs:16:5
+   |
+LL |     use std::env;
+   |     ^^^^^^^^^^^^^
+   |
+   = help: Consider removing or changing the import.
+   = note: Applied by cargo-pup rule 'allow_only_rules'.
+
+error: aborting due to 2 previous errors
+
