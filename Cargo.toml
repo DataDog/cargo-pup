@@ -47,7 +47,6 @@ ui_test = "0.29.2"
 name = "ui-test"
 path = "tests/ui-test.rs"
 harness = false
-required-features = []
 
 [package.metadata.rust-analyzer]
 rustc_private=true
@@ -65,4 +64,3 @@ path = "src/main.rs"
 [[bin]]
 name = "pup-driver"
 path = "src/pup_driver.rs"
-required-features = []
