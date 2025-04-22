@@ -224,10 +224,8 @@ impl LintFactory for ResultErrorLintFactory {
 
 #[cfg(test)]
 pub mod test {
-    use super::*;
     use crate::lints::result_error::ResultErrorLintFactory;
     use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
-    use crate::utils::test_helper::{assert_lint_results, lints_for_code};
 
     const CONFIGURATION_YAML: &str = "
 enforce_result_error:
@@ -237,17 +235,6 @@ enforce_result_error:
   severity: Warn
 ";
 
-    const TEST_CODE: &str = "
-        mod test {
-            struct MyError;
-
-            fn test_fn() -> Result<i32, MyError> {
-                Ok(42)
-            }
-
-            static TEST_STATIC: Result<i32, MyError> = Ok(42);
-        }
-    ";
 
     #[test]
     pub fn can_load_configuration_via_lint_factory() -> anyhow::Result<()> {
@@ -257,18 +244,4 @@ enforce_result_error:
         Ok(())
     }
 
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn detects_missing_error_impl() {
-        let rules = ResultErrorLintProcessor::new(
-            "result_error".into(),
-            ResultErrorConfiguration {
-                modules: vec!["test".to_string()],
-                severity: Severity::Warn,
-            },
-        );
-
-        let lints = lints_for_code(TEST_CODE, rules);
-        assert_lint_results(2, &lints); // Should find 2 violations (function and static)
-    }
 }

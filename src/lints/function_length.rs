@@ -277,55 +277,10 @@ impl ArchitectureLintRule for FunctionLengthLintProcessor {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::{
-        configuration_factory::LintConfigurationFactory,
-        test_helper::{assert_lint_results, lints_for_code},
-    };
-
+    use crate::utils::configuration_factory::LintConfigurationFactory;
     use super::*;
 
-    const TEST_FN: &str = "
-            mod test { 
-              pub fn _test_fn() -> i32 { 
-                  let a = 1+1;
-                  let b = 1+1;
-                  let c = 1+1;
-                  a + b + c
-              }
-            }
-        ";
 
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn short_function_no_error() {
-        let function_length_rules = FunctionLengthLintProcessor::new(
-            "test".into(),
-            FunctionLengthConfiguration {
-                namespace: "test".into(),
-                max_lines: 6,
-                severity: Severity::Error,
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_lint_results(0, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn long_function_error() {
-        let function_length_rules = FunctionLengthLintProcessor::new(
-            "test".into(),
-            FunctionLengthConfiguration {
-                namespace: "test".into(),
-                max_lines: 1,
-                severity: Severity::Error,
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_lint_results(1, &lints);
-    }
 
     const CONFIGURATION_YAML: &str = "
 deny_long_functions:

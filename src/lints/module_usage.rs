@@ -77,7 +77,7 @@ impl ModuleUsageLintProcessor {
 impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
         let module_def_id = cx.tcx.hir_get_parent_item(item.hir_id());
-
+        
         // Ensure we apply the lint to the right module
         if !self.applies_to_module(&cx.tcx, &module_def_id) {
             return;
@@ -206,94 +206,10 @@ impl LintFactory for ModuleUsageLintFactory {
 #[cfg(test)]
 mod tests {
 
-    use crate::utils::test_helper::{assert_lint_results, lints_for_code};
 
     use super::*;
 
-    const TEST_FN: &str = "
-        mod test {
-            use std::collections::HashMap;
-            use std::env;
-            use std::io::*;
 
-            pub fn _test_fn() -> usize {
-                let mut map = HashMap::new(); // Allowed
-                map.insert(\"key\", \"value\");
-                let current_dir = env::current_dir().unwrap_or_default(); // Denied
-                map.len() + current_dir.as_os_str().len()
-            }
-        }";
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn allowed_usages_no_errors() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Test Rule".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::Deny {
-                    denied_modules: vec!["std::collections::VecDeque".into()], // Not used in test code
-                    severity: Severity::Error,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(0, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn denied_namespace_error() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Test Rule".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::Deny {
-                    denied_modules: vec!["std::env".into()],
-                    severity: Severity::Error,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(1, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn denied_parent_namespace_error() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Test Rule".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::Deny {
-                    denied_modules: vec!["std".into()],
-                    severity: Severity::Error,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(3, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn denied_wildcard_error() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Deny wildcards".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::DenyWildcard {
-                    severity: Severity::Warn,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(1, &lints);
-    }
 
     const CONFIGURATION_YAML: &str = "
 test_me_namespace_rule:
