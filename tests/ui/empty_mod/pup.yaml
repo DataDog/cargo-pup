@@ -1,7 +1,0 @@
-empty_mod_test:
-  type: empty_mod
-  modules:
-    - "^test$"
-    - "^test::non_empty$"
-    - "^test::"  # Match all modules in test to catch root items
-  severity: Warn

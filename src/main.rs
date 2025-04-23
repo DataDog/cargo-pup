@@ -586,7 +586,7 @@ mod tests {
             
             // Change to the temporary directory
             let original_dir = env::current_dir().expect("Failed to get current dir");
-            env::set_current_dir(&temp_path).expect("Failed to change directory");
+            env::set_current_dir(temp_path).expect("Failed to change directory");
             
             // Run the validation
             let result = validate_project();
@@ -614,7 +614,7 @@ mod tests {
             
             // Change to the temporary directory
             let original_dir = env::current_dir().expect("Failed to get current dir");
-            env::set_current_dir(&temp_path).expect("Failed to change directory");
+            env::set_current_dir(temp_path).expect("Failed to change directory");
             
             // Run the validation
             let result = validate_project();

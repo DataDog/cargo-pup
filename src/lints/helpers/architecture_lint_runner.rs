@@ -190,7 +190,7 @@ impl ArchitectureLintRunner {
                 let full_trait_name = format!("{}::{}", module, trait_name);
                 
                 // Initialize entry with empty vector
-                trait_map.entry(full_trait_name).or_insert_with(Vec::new);
+                trait_map.entry(full_trait_name).or_default();
             }
         }
         

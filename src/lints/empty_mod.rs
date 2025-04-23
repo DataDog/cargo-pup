@@ -163,30 +163,34 @@ impl LintFactory for EmptyModLintFactory {
             raw_config,
         ))])
     }
-    
-    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+
+    fn generate_config(
+        &self,
+        context: &crate::utils::project_context::ProjectContext,
+    ) -> anyhow::Result<std::collections::HashMap<String, String>> {
         use std::collections::HashMap;
-        
+
         let mut configs = HashMap::new();
-        
+
         // Generate a single rule for the entire crate
         let rule_name = format!("enforce_empty_mod_{}", context.module_root);
-        
+
         // Load template from file and format it
         let template = include_str!("templates/empty_mod.tmpl");
-        let config = template.replace("{0}", &context.module_root)
-                             .replace("{1}", &context.module_root);
-        
+        let config = template
+            .replace("{0}", &context.module_root)
+            .replace("{1}", &context.module_root);
+
         configs.insert(rule_name, config);
-        
+
         Ok(configs)
     }
 }
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::utils::project_context::ProjectContext;
     use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
+    use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
 enforce_empty_mod:
@@ -208,12 +212,12 @@ enforce_empty_mod:
 
         Ok(())
     }
-    
+
     #[test]
     fn test_generate_config_template() -> anyhow::Result<()> {
         // Create a factory instance
         let factory = EmptyModLintFactory::new();
-        
+
         // Create a test context
         let context = ProjectContext {
             modules: vec![
@@ -223,29 +227,39 @@ enforce_empty_mod:
             module_root: "test_crate".to_string(),
             traits: Vec::new(),
         };
-        
+
         // Generate config
         let configs = factory.generate_config(&context)?;
-        
+
         // Verify the configs map
         assert_eq!(configs.len(), 1, "Should generate 1 config");
-        
+
         // Check if the key exists
         let expected_key = "enforce_empty_mod_test_crate";
-        assert!(configs.contains_key(expected_key), 
-                "Should contain expected key");
-        
+        assert!(
+            configs.contains_key(expected_key),
+            "Should contain expected key"
+        );
+
         // Get the config
         let config = configs.get(expected_key).unwrap();
-        
+
         // Verify content contains expected elements
-        assert!(config.contains("type: empty_mod"), "Config should specify empty_mod type");
-        assert!(config.contains("modules:"), "Config should have modules section");
-        
+        assert!(
+            config.contains("type: empty_mod"),
+            "Config should specify empty_mod type"
+        );
+        assert!(
+            config.contains("modules:"),
+            "Config should have modules section"
+        );
+
         // Ensure the template was correctly loaded
-        assert!(config.contains("Empty module enforcer for the entire crate"), 
-                "Config should contain text from template");
-        
+        assert!(
+            config.contains("Empty module enforcer for the entire crate"),
+            "Config should contain text from template"
+        );
+
         Ok(())
     }
 }

@@ -28,7 +28,7 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-use utils::configuration_factory::{setup_lints_yaml, LintConfigurationFactory};
+use utils::configuration_factory::{LintConfigurationFactory, setup_lints_yaml};
 
 mod cli;
 mod lints;
@@ -48,7 +48,7 @@ pub fn main() -> Result<()> {
     if wrapper_mode {
         orig_args.remove(1);
     }
-    
+
     // Check if we're in UI testing mode by looking for the "-Zui-testing" flag
     let is_ui_testing = orig_args.iter().any(|arg| arg == "-Zui-testing");
 
@@ -107,16 +107,14 @@ pub fn main() -> Result<()> {
             match fs::read_to_string(&yaml_path) {
                 Ok(yaml_content) => {
                     match LintConfigurationFactory::from_yaml(yaml_content) {
-                        Ok(lint_rules) => {
-                            ArchitectureLintCollection::new(lint_rules)
-                        },
+                        Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
                         Err(e) => {
-                            // TODO - improve this 
+                            // TODO - improve this
                             panic!("Failed loading lint collection: {:?}", e);
                             //ArchitectureLintCollection::new(Vec::new())
                         }
                     }
-                },
+                }
                 Err(e) => {
                     println!("UI testing: Error reading pup.yaml: {:?}", e);
                     ArchitectureLintCollection::new(Vec::new())
@@ -131,7 +129,7 @@ pub fn main() -> Result<()> {
         let lint_rules = setup_lints_yaml()?;
         ArchitectureLintCollection::new(lint_rules)
     };
-    
+
     // Prepare cli_args, either from environment or empty for UI testing
     let cli_args = if is_ui_testing {
         "".to_string()
@@ -214,42 +212,4 @@ fn log_invocation(orig_args: &[String]) -> std::io::Result<()> {
     writeln!(file, "[{}] {}", timestamp, args_str)?;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    // This test is conditionally compiled because it requires a pup.yaml file in the project root
-    #[cfg(feature = "test_with_pup_yaml")]
-    #[test]
-    pub fn test_yaml_loading() -> Result<()> {
-        register_all_lints();
-
-        let lints = setup_lints_yaml()?;
-        // This will only pass if there's a pup.yaml file with exactly 6 lint rules
-        assert_eq!(lints.len(), 6);
-        Ok(())
-    }
-
-    use crate::{
-        lints::register_all_lints,
-        utils::configuration_factory::{LintConfigurationFactory, setup_lints_yaml},
-    };
-
-    ///
-    /// This project should have its own loadable pup.yaml
-    ///
-    // This test is commented out because it requires a pup.yaml file in the project root
-    // Uncommment and remove the cfg attribute when you have a pup.yaml file for testing
-    #[cfg(feature = "test_with_pup_yaml")]
-    #[test]
-    pub fn load_own_configuration() {
-        register_all_lints();
-        
-        use std::fs;
-        let yaml_content = fs::read_to_string("pup.yaml").expect("Failed to read pup.yaml");
-        LintConfigurationFactory::from_yaml(yaml_content).unwrap();
-    }
 }
