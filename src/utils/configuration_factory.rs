@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 
-use crate::{lints::ArchitectureLintRule, utils::config_generation::GenerationContext};
+use crate::{lints::ArchitectureLintRule, utils::project_context::ProjectContext};
 use anyhow::{Result, anyhow};
 
 pub trait LintFactory: Send + Sync {
@@ -32,7 +32,7 @@ pub trait LintFactory: Send + Sync {
     /// Generate a sample configuration for this lint factory based on the provided context
     /// Returns a map of (rule_name, yaml_string) pairs with commented YAML
     ///
-    fn generate_config(&self, _context: &GenerationContext) -> Result<HashMap<String, String>> {
+    fn generate_config(&self, _context: &ProjectContext) -> Result<HashMap<String, String>> {
         // Default implementation returns empty
         Ok(HashMap::new())
     }
@@ -117,7 +117,7 @@ impl LintConfigurationFactory {
     }
     
     /// Generate a configuration file based on the current context
-    pub fn generate_yaml(context: &GenerationContext) -> Result<String> {
+    pub fn generate_yaml(context: &ProjectContext) -> Result<String> {
         // Get all factories
         let factories = {
             let instance = LintConfigurationFactory::get_instance();
@@ -134,7 +134,14 @@ impl LintConfigurationFactory {
                 yaml_parts.push(format!("\n# {}\n", lint_type));
                 
                 for (rule_name, config_yaml) in configs {
-                    yaml_parts.push(format!("{}:\n{}\n", rule_name, config_yaml));
+                    // Add proper indentation to the config content
+                    let indented_yaml = config_yaml
+                        .lines()
+                        .map(|line| if line.trim().is_empty() { line.to_string() } else { format!("  {}", line) })
+                        .collect::<Vec<String>>()
+                        .join("\n");
+                    
+                    yaml_parts.push(format!("{}:\n{}\n", rule_name, indented_yaml));
                 }
             }
         }
@@ -143,7 +150,7 @@ impl LintConfigurationFactory {
     }
     
     /// Generate a configuration file and write it to disk
-    pub fn generate_config_file(context: &GenerationContext, path: &str) -> Result<()> {
+    pub fn generate_config_file(context: &ProjectContext, path: &str) -> Result<()> {
         let yaml = Self::generate_yaml(context)?;
         let mut file = fs::File::create(path)?;
         file.write_all(yaml.as_bytes())?;
@@ -155,7 +162,18 @@ pub fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
     use std::fs;
 
     // Attempt to load configuration from `pup.yaml`
-    let yaml_content = fs::read_to_string("pup.yaml")?.to_string();
+    let yaml_content = match fs::read_to_string("pup.yaml") {
+        Ok(content) => content,
+        Err(e) => {
+            // If file doesn't exist, return an empty list of rules
+            if e.kind() == std::io::ErrorKind::NotFound {
+                println!("Warning: pup.yaml not found, using empty lint configuration");
+                return Ok(Vec::new());
+            }
+            return Err(anyhow::Error::from(e));
+        }
+    };
+    
     let lint_rules =
         LintConfigurationFactory::from_yaml(yaml_content).map_err(anyhow::Error::msg)?;
 

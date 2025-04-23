@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-/// Context for configuration generation containing module and trait information
+/// Context for configuration generation containing compile-time discoverable
+/// context about the project we're running cargo-pup on. 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GenerationContext {
+pub struct ProjectContext {
     /// List of all modules, fully qualified
     pub modules: Vec<String>,
     /// The top-level crate name (root module)

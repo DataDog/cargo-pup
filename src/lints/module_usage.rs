@@ -220,14 +220,30 @@ impl LintFactory for ModuleUsageLintFactory {
             raw_config,
         ))])
     }
+    
+    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        use std::collections::HashMap;
+        
+        let mut configs = HashMap::new();
+        
+        // Generate a sample configuration for wildcard imports
+        let rule_name = format!("module_usage_wildcard_{}", context.module_root);
+        
+        // Load template from file. We've got no automatic suggestions, so we have
+        // no substitutions.
+        let template = include_str!("templates/module_usage.tmpl").to_string();
+        configs.insert(rule_name, template);
+        
+        Ok(configs)
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
-
     use super::*;
-
+    use crate::utils::project_context::ProjectContext;
+    use crate::utils::configuration_factory::LintConfigurationFactory;
 
 
     const CONFIGURATION_YAML: &str = "
@@ -266,6 +282,48 @@ test_me_namespace_rule_two:
         // Assert the correct number of rules are loaded
         assert_eq!(results.len(), 2);
 
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_template() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = ModuleUsageLintFactory::new();
+        
+        // Create a test context
+        let context = ProjectContext {
+            modules: vec![
+                "test_crate".to_string(),
+                "test_crate::api".to_string(),
+            ],
+            module_root: "test_crate".to_string(),
+            traits: Vec::new(),
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // Verify the configs map
+        assert_eq!(configs.len(), 1, "Should generate 1 config");
+        
+        // Check if the key exists
+        let expected_key = "module_usage_wildcard_test_crate";
+        assert!(configs.contains_key(expected_key), 
+                "Should contain expected key");
+        
+        // Get the config
+        let config = configs.get(expected_key).unwrap();
+        
+        // Verify content contains expected elements
+        assert!(config.contains("type: module_usage"), "Config should specify module_usage type");
+        assert!(config.contains("modules:"), "Config should have modules section");
+        assert!(config.contains("rules:"), "Config should have rules section");
+        assert!(config.contains("type: DenyWildcard"), "Should have DenyWildcard rule active");
+        
+        // Ensure the template was correctly loaded
+        assert!(config.contains("Module usage restrictions"), 
+                "Config should contain text from template");
+        
         Ok(())
     }
 }

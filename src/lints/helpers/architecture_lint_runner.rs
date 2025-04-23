@@ -150,7 +150,7 @@ impl ArchitectureLintRunner {
     }
 
     fn generate_config(&mut self, tcx: TyCtxt<'_>) {
-        use crate::utils::config_generation::{GenerationContext, TraitInfo};
+        use crate::utils::project_context::{ProjectContext, TraitInfo};
         use crate::utils::configuration_factory::LintConfigurationFactory;
         use std::collections::HashMap;
         
@@ -226,7 +226,7 @@ impl ArchitectureLintRunner {
             .collect();
             
         // Create the context
-        let context = GenerationContext { 
+        let context = ProjectContext {
             modules, 
             module_root,
             traits 

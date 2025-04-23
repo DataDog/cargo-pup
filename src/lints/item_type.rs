@@ -177,12 +177,31 @@ impl LintFactory for ItemTypeLintFactory {
             raw_config,
         ))])
     }
+    
+    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        use std::collections::HashMap;
+        
+        let mut configs = HashMap::new();
+        
+        // Generate a sample configuration
+        let rule_name = format!("item_type_restrictions_{}", context.module_root);
+        
+        // Load template from file and format it
+        let template = include_str!("templates/item_type.tmpl");
+        let config = template.replace("{0}", &context.module_root)
+                             .replace("{1}", &context.module_root);
+        
+        configs.insert(rule_name, config);
+        
+        Ok(configs)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::utils::configuration_factory::LintConfigurationFactory;
+    use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
 test_item_type:
@@ -200,6 +219,47 @@ test_item_type:
         ItemTypeLintFactory::register();
         let results = LintConfigurationFactory::from_yaml(CONFIGURATION_YAML.to_string())?;
         assert_eq!(results.len(), 1);
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_template() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = ItemTypeLintFactory::new();
+        
+        // Create a test context
+        let context = ProjectContext {
+            modules: vec![
+                "test_crate".to_string(),
+                "test_crate::interfaces".to_string(),
+            ],
+            module_root: "test_crate".to_string(),
+            traits: Vec::new(),
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // Verify the configs map
+        assert_eq!(configs.len(), 1, "Should generate 1 config");
+        
+        // Check if the key exists
+        let expected_key = "item_type_restrictions_test_crate";
+        assert!(configs.contains_key(expected_key), 
+                "Should contain expected key");
+        
+        // Get the config
+        let config = configs.get(expected_key).unwrap();
+        
+        // Verify content contains expected elements
+        assert!(config.contains("type: item_type"), "Config should specify item_type type");
+        assert!(config.contains("modules:"), "Config should have modules section");
+        assert!(config.contains("denied_items:"), "Config should have denied_items section");
+        
+        // Ensure the template was correctly loaded
+        assert!(config.contains("Item type restrictions for modules"), 
+                "Config should contain text from template");
+        
         Ok(())
     }
 }

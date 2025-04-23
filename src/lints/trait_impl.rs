@@ -194,7 +194,7 @@ impl LintFactory for TraitImplLintFactory {
         ))])
     }
     
-    fn generate_config(&self, context: &crate::utils::config_generation::GenerationContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
         use std::collections::HashMap;
     
         let mut configs = HashMap::new();
@@ -208,31 +208,13 @@ impl LintFactory for TraitImplLintFactory {
                 let trait_simple_name = trait_parts.last().unwrap_or(&"unknown");
                 let rule_name = format!("enforce_{}_impl", trait_simple_name.to_lowercase());
     
-                // Create a sample config with comments
-                let config = format!(
-                    r#"    # Trait implementation lint for {}
-    #
-    # This rule enforces naming conventions for types that implement this trait.
-    # 
-    # Current implementations:
-    #   {}
-    #
-    # Parameters:
-    #   source_name: fully qualified trait name
-    #   name_must_match: regex for implementor type names
-    #   enforce_visibility: Public, Private or None
-    #   severity: Error or Warn
-    #
-    type: trait_impl
-    source_name: "{}"
-    name_must_match: ".*{}Impl"
-    enforce_visibility: "Public"
-    severity: Warn"#,
-                    trait_info.name,
-                    trait_info.implementors.join("\n    #   "),
-                    trait_info.name,
-                    trait_simple_name
-                );
+                // Load template from file and format it
+                let template = include_str!("templates/trait_impl.tmpl");
+                let impl_list = trait_info.implementors.join("\n#   ");
+                let config = template.replace("{0}", &trait_info.name)
+                                     .replace("{1}", &impl_list)
+                                     .replace("{2}", &trait_info.name)
+                                     .replace("{3}", trait_simple_name);
     
                 configs.insert(rule_name, config);
     
@@ -245,24 +227,8 @@ impl LintFactory for TraitImplLintFactory {
     
         // If no traits with impls were found, create a generic example
         if configs.is_empty() {
-            configs.insert(
-                "enforce_trait_impl".to_string(),
-                r#"  # Example trait implementation rule
-    #
-    # This rule enforces naming conventions for types that implement a specific trait.
-    #
-    # Parameters:
-    #   source_name: fully qualified trait name
-    #   name_must_match: regex for implementor type names
-    #   enforce_visibility: Public, Private or None
-    #   severity: Error or Warn
-    #
-    type: trait_impl
-    source_name: "core::example::Trait"
-    name_must_match: ".*TraitImpl"
-    enforce_visibility: "Public"
-    severity: Warn"#.to_string(),
-            );
+            let template = include_str!("templates/trait_impl_generic.tmpl");
+            configs.insert("enforce_trait_impl".to_string(), template.to_string());
         }
     
         Ok(configs)
@@ -273,6 +239,8 @@ impl LintFactory for TraitImplLintFactory {
 pub mod tests {
 
     use super::*;
+    use crate::utils::project_context::{ProjectContext, TraitInfo};
+    use crate::utils::configuration_factory::LintConfigurationFactory;
 
 
 
@@ -298,6 +266,100 @@ test_trait_constraint:
 
         assert_eq!(results.len(), 1);
 
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_with_traits() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = TraitImplLintFactory::new();
+        
+        // Create a test context with some traits
+        let traits = vec![
+            TraitInfo {
+                name: "test_crate::Display".to_string(),
+                implementors: vec!["test_crate::User".to_string(), "test_crate::Product".to_string()],
+            },
+            TraitInfo {
+                name: "test_crate::Serialize".to_string(),
+                implementors: vec!["test_crate::Config".to_string()],
+            },
+        ];
+        
+        let context = ProjectContext {
+            modules: vec!["test_crate".to_string()],
+            module_root: "test_crate".to_string(),
+            traits,
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // We should have 2 configs for the 2 traits
+        assert_eq!(configs.len(), 2, "Should generate 1 config per trait with implementations");
+        
+        // Check if the keys exist
+        assert!(configs.contains_key("enforce_display_impl"), 
+                "Should contain key for Display trait");
+        assert!(configs.contains_key("enforce_serialize_impl"), 
+                "Should contain key for Serialize trait");
+        
+        // Get the Display config
+        let display_config = configs.get("enforce_display_impl").unwrap();
+        
+        // Verify content contains expected elements
+        assert!(display_config.contains("type: trait_impl"), 
+                "Config should specify trait_impl type");
+        assert!(display_config.contains("source_name: \"test_crate::Display\""), 
+                "Config should have correct trait name");
+        assert!(display_config.contains("name_must_match: \".*DisplayImpl\""), 
+                "Config should derive pattern from trait name");
+        
+        // Ensure the template was correctly loaded
+        assert!(display_config.contains("Trait implementation lint for"), 
+                "Config should contain text from template");
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_fallback() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = TraitImplLintFactory::new();
+        
+        // Create a test context with no traits that have implementations
+        let traits = vec![
+            TraitInfo {
+                name: "test_crate::EmptyTrait".to_string(),
+                implementors: vec![],  // No implementations
+            },
+        ];
+        
+        let context = ProjectContext {
+            modules: vec!["test_crate".to_string()],
+            module_root: "test_crate".to_string(),
+            traits,
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // Should use the fallback generic template
+        assert_eq!(configs.len(), 1, "Should generate 1 fallback config");
+        
+        // Check if the fallback key exists
+        assert!(configs.contains_key("enforce_trait_impl"), 
+                "Should contain fallback key");
+        
+        // Get the config
+        let config = configs.get("enforce_trait_impl").unwrap();
+        
+        // Verify content contains expected elements from the generic template
+        assert!(config.contains("Example trait implementation rule"), 
+                "Config should contain text from generic template");
+        assert!(config.contains("source_name: \"core::example::Trait\""), 
+                "Config should use generic example trait");
+        
         Ok(())
     }
 }

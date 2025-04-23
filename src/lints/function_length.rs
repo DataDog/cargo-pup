@@ -10,7 +10,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
 use std::collections::HashMap;
-use crate::utils::config_generation;
+use crate::utils::project_context;
 
 /// Represents a set of function length lint rules for a module
 #[derive(Debug, Deserialize, Clone)]
@@ -87,7 +87,7 @@ impl LintFactory for FunctionLengthLintFactory {
         )) as Box<dyn ArchitectureLintRule + Send>])
     }
     
-    fn generate_config(&self, context: &config_generation::GenerationContext) -> anyhow::Result<HashMap<String, String>> {
+    fn generate_config(&self, context: &project_context::ProjectContext) -> anyhow::Result<HashMap<String, String>> {
         let mut configs = HashMap::new();
         
         // Create a single rule for the entire project
@@ -96,28 +96,11 @@ impl LintFactory for FunctionLengthLintFactory {
         // Create regex pattern that matches the root module and all submodules
         // The ^ ensures it starts with the module root, no need for $ or ::
         let module_pattern = format!("^{}", context.module_root);
-            
-        // Create a sample config with comments
-        let config = format!(
-            r#"# Function length lint for the entire project
-#
-# This rule checks that all functions don't exceed
-# the maximum allowed length.
-#
-# Crate: {}
-#
-# Parameters:
-#   namespace: regex pattern for modules to check
-#   max_lines: maximum allowed function length in lines
-#   severity: Error or Warn
-#
-type: function_length
-namespace: "{}"
-max_lines: 50
-severity: Warn"#,
-            context.module_root,
-            module_pattern
-        );
+        
+        // Load template from file and format it
+        let template = include_str!("templates/function_length.tmpl");
+        let config = template.replace("{0}", &context.module_root)
+                             .replace("{1}", &module_pattern);
         
         configs.insert(rule_name, config);
         
@@ -218,6 +201,7 @@ impl ArchitectureLintRule for FunctionLengthLintProcessor {
 #[cfg(test)]
 mod tests {
     use crate::utils::configuration_factory::LintConfigurationFactory;
+    use crate::utils::project_context::ProjectContext;
     use super::*;
 
 
@@ -241,6 +225,46 @@ deny_long_functions:
 
         assert_eq!(results.len(), 1);
 
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_template() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = FunctionLengthLintFactory::new();
+        
+        // Create a test context
+        let context = ProjectContext {
+            modules: vec![
+                "test_crate".to_string(),
+                "test_crate::module1".to_string(),
+                "test_crate::module2".to_string(),
+            ],
+            module_root: "test_crate".to_string(),
+            traits: Vec::new(),
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // Verify the configs map
+        assert_eq!(configs.len(), 1, "Should generate exactly 1 config");
+        
+        // Check if the key exists
+        assert!(configs.contains_key("max_function_length"), "Should contain 'max_function_length' key");
+        
+        // Get the config
+        let config = configs.get("max_function_length").unwrap();
+        
+        // Verify content contains expected elements
+        assert!(config.contains("type: function_length"), "Config should specify function_length type");
+        assert!(config.contains("max_lines: 50"), "Config should set max_lines to 50");
+        assert!(config.contains("namespace: \"^test_crate\""), "Config should have correct namespace pattern");
+        
+        // Ensure the template was correctly loaded
+        assert!(config.contains("Function length lint for the entire project"), 
+                "Config should contain text from template");
+        
         Ok(())
     }
 }
