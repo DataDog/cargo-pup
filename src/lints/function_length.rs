@@ -90,96 +90,36 @@ impl LintFactory for FunctionLengthLintFactory {
     fn generate_config(&self, context: &config_generation::GenerationContext) -> anyhow::Result<HashMap<String, String>> {
         let mut configs = HashMap::new();
         
-        // Add a rule specifically for the root module itself
-        let rule_name = format!("max_function_length_{}", context.module_root);
+        // Create a single rule for the entire project
+        let rule_name = "max_function_length".to_string();
         
-        // Create regex pattern that matches the exact module root
-        // This will target the root module without including submodules
-        let module_pattern = format!("^{}$", context.module_root);
+        // Create regex pattern that matches the root module and all submodules
+        // The ^ ensures it starts with the module root, no need for $ or ::
+        let module_pattern = format!("^{}", context.module_root);
             
         // Create a sample config with comments
         let config = format!(
-            r#"  # Function length lint for root module
-    #
-    # This rule checks that functions in the root module
-    # don't exceed the maximum allowed length.
-    #
-    # Crate: {}
-    #
-    # Parameters:
-    #   namespace: regex pattern for module to check
-    #   max_lines: maximum allowed function length in lines
-    #   severity: Error or Warn
-    #
-    type: function_length
-    namespace: "{}"
-    max_lines: 30
-    severity: Warn"#,
+            r#"# Function length lint for the entire project
+#
+# This rule checks that all functions don't exceed
+# the maximum allowed length.
+#
+# Crate: {}
+#
+# Parameters:
+#   namespace: regex pattern for modules to check
+#   max_lines: maximum allowed function length in lines
+#   severity: Error or Warn
+#
+type: function_length
+namespace: "{}"
+max_lines: 50
+severity: Warn"#,
             context.module_root,
             module_pattern
         );
         
-        configs.insert(rule_name.to_string(), config);
-        
-        // Add a rule for the entire crate (including submodules)
-        let rule_name = format!("max_function_length_{}_all", context.module_root);
-        
-        // Create regex pattern for the entire crate including submodules
-        let module_pattern = format!("^{}::", context.module_root);
-            
-        // Create a sample config with comments
-        let config = format!(
-            r#"    # Function length lint for entire crate
-    #
-    # This rule checks that functions across the entire crate
-    # don't exceed the maximum allowed length.
-    #
-    # Crate: {}
-    #
-    # Parameters:
-    #   namespace: regex pattern for modules to check
-    #   max_lines: maximum allowed function length in lines
-    #   severity: Error or Warn
-    #
-    type: function_length
-    namespace: "{}"
-    max_lines: 30
-    severity: Warn"#,
-            context.module_root,
-            module_pattern
-        );
-        
-        configs.insert(rule_name.to_string(), config);
-        
-        // Generate a sample config for a specific important submodule if available
-        if let Some(module) = context.modules.iter().find(|m| m.contains("::")) {
-            // Create a rule name based on the module
-            let module_parts: Vec<&str> = module.split("::").collect();
-            let rule_name = format!("max_function_length_{}", module_parts.last().unwrap_or(&"submodule"));
-            
-            // Create a sample config with comments
-            let config = format!(
-    r#"    # Function length lint for {} submodule
-    #
-    # This rule checks that functions in a specific submodule
-    # don't exceed the maximum allowed length.
-    #
-    # Parameters:
-    #   namespace: regex pattern for module to check
-    #   max_lines: maximum allowed function length in lines
-    #   severity: Error or Warn
-    #
-    type: function_length
-    namespace: "{}"
-    max_lines: 30
-    severity: Warn"#,
-                module_parts.last().unwrap_or(&"specific"),
-                // Escape regex special characters
-                module.replace(".", "\\.").replace("(", "\\(").replace(")", "\\)")
-            );
-            
-            configs.insert(rule_name, config);
-        }
+        configs.insert(rule_name, config);
         
         Ok(configs)
     }
