@@ -9,6 +9,10 @@ introduces an exciting, fresh naming convention for architectural linting tools.
 
 Check out the [Examples](#examples) to see what you can do!
 
+## PR TODO
+
+* **denied_items** - add deny for impl blocks
+
 ## Usage
 
 > [!NOTE]

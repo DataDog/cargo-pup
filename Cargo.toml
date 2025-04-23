@@ -51,12 +51,6 @@ harness = false
 [package.metadata.rust-analyzer]
 rustc_private=true
 
-# cargo build output isn't runnable. We probably need to play around with
-# rustflags ....
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "prefer-dynamic=no"]
-# 
-# 
 [[bin]]
 name = "cargo-pup"  # This enables it to be invoked as `cargo pup`
 path = "src/main.rs"

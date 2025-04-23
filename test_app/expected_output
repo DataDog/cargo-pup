@@ -59,7 +59,7 @@ warning: Struct 'MyBadlyNamedThing' is public, but should be private.
    = help: Change the visibility to private.
    = note: Applied by cargo-pup rule 'test_trait_constraint'.
 
-warning: Use of module 'std::collections::HashMap' is denied; ["std::collections"] are not permitted.
+warning: Use of module 'std::collections::HashMap' is denied; ["^std::collections"] are not permitted.
  --> src/module_usage/mod.rs:1:1
   |
 1 | use std::collections::HashMap;

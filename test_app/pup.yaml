@@ -19,7 +19,7 @@ deny_std_collections:
   rules:
     - type: Deny
       denied_modules:
-        - "std::collections"
+        - "^std::collections"
       severity: Warn
     - type: DenyWildcard
       severity: Warn

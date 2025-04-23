@@ -10,10 +10,10 @@ mod test_allow_only {
     use std::io;
 
     // This import is not in the allowed list and should trigger the lint
-    use std::collections::HashMap; //~ ERROR: Use of module 'std::collections::HashMap' is not allowed; only ["std::fmt", "std::io"] are permitted.
+    use std::collections::HashMap; //~ ERROR: Use of module 'std::collections::HashMap' is not allowed; only ["^std::fmt", "^std::io"] are permitted.
 
     // This import is also not allowed
-    use std::env; //~ ERROR: Use of module 'std::env' is not allowed; only ["std::fmt", "std::io"] are permitted.
+    use std::env; //~ ERROR: Use of module 'std::env' is not allowed; only ["^std::fmt", "^std::io"] are permitted.
 
     fn test_function() {
         let mut map = HashMap::new();

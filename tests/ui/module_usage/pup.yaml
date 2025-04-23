@@ -28,6 +28,17 @@ allow_only_rules:
   rules:
     - type: AllowOnly
       allowed_modules:
-        - "std::fmt"
-        - "std::io"
+        - "^std::fmt"
+        - "^std::io"
+      severity: Error
+
+# Configuration for wildcard match (wildcard_match_test.rs)
+wildcard_match_rules:
+  type: module_usage
+  modules:
+    - "^wildcard_match::test_wildcard_match$"
+  rules:
+    - type: Deny
+      denied_modules:
+        - "^std::.*"
       severity: Error

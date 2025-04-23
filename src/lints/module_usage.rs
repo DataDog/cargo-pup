@@ -72,6 +72,11 @@ impl ModuleUsageLintProcessor {
             .iter()
             .any(|r| r.is_match(full_name.as_str()))
     }
+    
+    /// Helper function to compile a module pattern string to regex
+    fn compile_module_regex(pattern: &str) -> anyhow::Result<Regex> {
+        Ok(Regex::new(pattern)?)
+    }
 }
 
 impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
@@ -98,10 +103,17 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                         allowed_modules,
                         severity,
                     } => {
-                        if !allowed_modules
-                            .iter()
-                            .any(|mod_name| import_module.starts_with(mod_name))
-                        {
+                        // Use regex matching to check allowed modules
+                        let allowed = allowed_modules.iter().any(|pattern| {
+                            if let Ok(re) = Self::compile_module_regex(pattern) {
+                                re.is_match(&import_module)
+                            } else {
+                                // Fallback to simpler check if regex fails
+                                import_module.starts_with(pattern)
+                            }
+                        });
+                        
+                        if !allowed {
                             span_lint_and_help(
                                 cx,
                                 get_lint(*severity),
@@ -120,10 +132,17 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                         denied_modules,
                         severity,
                     } => {
-                        if denied_modules
-                            .iter()
-                            .any(|ns| import_module.starts_with(ns))
-                        {
+                        // Use regex matching to check denied modules
+                        let denied = denied_modules.iter().any(|pattern| {
+                            if let Ok(re) = Self::compile_module_regex(pattern) {
+                                re.is_match(&import_module)
+                            } else {
+                                // Fallback to simpler check if regex fails
+                                import_module.starts_with(pattern)
+                            }
+                        });
+                        
+                        if denied {
                             span_lint_and_help(
                                 cx,
                                 get_lint(*severity),
@@ -220,7 +239,7 @@ test_me_namespace_rule:
     - type: Deny
       severity: Warn
       denied_modules:
-        - \"std::collections\"
+        - \"^std::collections\"
 
 test_me_namespace_rule_two:
   type: module_usage
@@ -230,7 +249,7 @@ test_me_namespace_rule_two:
     - type: Deny
       severity: Error
       denied_modules:
-        - \"anyhow::*\"
+        - \"^anyhow::.*\"
 ";
 
     #[test]
