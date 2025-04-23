@@ -1,0 +1,50 @@
+error: struct 'ForbiddenStruct' is not allowed in this module
+  --> tests/ui/item_type/denied_items.rs:5:1
+   |
+LL | / pub struct ForbiddenStruct {
+LL | |     pub field: String,
+LL | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types_test'.
+   = note: `#[deny(item_type)]` on by default
+
+error: enum 'ForbiddenEnum' is not allowed in this module
+  --> tests/ui/item_type/denied_items.rs:10:1
+   |
+LL | / pub enum ForbiddenEnum {
+LL | |     VariantA,
+LL | |     VariantB,
+LL | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types_test'.
+
+error: trait 'ForbiddenTrait' is not allowed in this module
+  --> tests/ui/item_type/denied_items.rs:16:1
+   |
+LL | / pub trait ForbiddenTrait {
+LL | |     fn method(&self);
+LL | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types_test'.
+
+error: module 'nested_module' is not allowed in this module
+  --> tests/ui/item_type/denied_items.rs:21:1
+   |
+LL | / pub mod nested_module {
+LL | |     pub fn allowed_function() {
+LL | |         println!("This function is inside a forbidden module!");
+LL | |     }
+LL | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'deny_item_types_test'.
+
+error: aborting due to 4 previous errors
+

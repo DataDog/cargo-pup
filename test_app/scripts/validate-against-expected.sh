@@ -7,7 +7,7 @@ export PATH="${PATHS}$PATH"
 pushd "$(dirname "$0")/../" > /dev/null
 
 # Run it once, so we don't see any tooling installs in the output
-cargo pup 2>&1 > /dev/null
+cargo pup > /dev/null 2>&1
 
 # Now run it for real and check
 cargo pup 2>&1 | grep -v 'Finished' | grep -vE '^\s*Checking test_app' | diff - expected_output

@@ -5,15 +5,14 @@ use rustc_hir::def_id::LocalModDefId;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 use std::{collections::BTreeSet, path::Path};
-
-use crate::utils::configuration_factory::setup_lints_yaml;
+use std::sync::Arc;
 
 use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
 
 ///
 /// The mode our lint runner should operate in
 ///
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Mode {
     /// Run the lints
     Check,
@@ -23,6 +22,9 @@ pub enum Mode {
 
     /// Print traits
     PrintTraits,
+
+    /// Generate configuration
+    GenerateConfig,
 }
 
 ///
@@ -30,7 +32,7 @@ pub enum Mode {
 ///
 pub struct ArchitectureLintRunner {
     mode: Mode,
-    lint_collection: ArchitectureLintCollection,
+    lint_collection: Arc<ArchitectureLintCollection>,
 
     // Arguments to the cargo-pup. We need these
     // so that we can tie the results of the session
@@ -51,7 +53,7 @@ impl ArchitectureLintRunner {
     pub fn new(mode: Mode, cli_args: String, lint_collection: ArchitectureLintCollection) -> Self {
         ArchitectureLintRunner {
             mode,
-            lint_collection,
+            lint_collection: Arc::new(lint_collection),
             result_text: String::new(),
             cli_args,
             cargo_args: Vec::new(),
@@ -143,6 +145,108 @@ impl ArchitectureLintRunner {
             Mode::PrintTraits => {
                 self.result_text = self.print_traits(tcx, lints);
             }
+            Mode::GenerateConfig => self.generate_config(tcx),
+        }
+    }
+
+    fn generate_config(&mut self, tcx: TyCtxt<'_>) {
+        use crate::utils::project_context::{ProjectContext, TraitInfo};
+        use crate::utils::configuration_factory::LintConfigurationFactory;
+        use std::collections::HashMap;
+        
+        // Create a GenerationContext with modules and traits info
+        let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
+        collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
+        
+        // Collect all modules
+        let modules: Vec<String> = namespace_set
+            .iter()
+            .map(|(module, path)| format!("{}::{}", module, path))
+            .collect();
+            
+        // Get the current crate name (module root)
+        // Just take the first entry's module name, which is the current crate
+        let module_root = if let Some((crate_name, _)) = namespace_set.iter().next() {
+            crate_name.clone()
+        } else {
+            "unknown_crate".to_string()
+        };
+        
+        // Create filename with module root that we'll use later
+        let config_filename = format!("pup.generated.{}.yaml", module_root);
+            
+        // Collect all traits and their implementors
+        let mut trait_map: HashMap<String, Vec<String>> = HashMap::new();
+        
+        // Find all traits in the crate
+        let module_items = tcx.hir_crate_items(());
+        for item_id in module_items.free_items() {
+            let item = tcx.hir_item(item_id);
+            if let ItemKind::Trait(..) = item.kind {
+                let trait_name = tcx.def_path_str(item.owner_id.to_def_id());
+                let module = tcx
+                    .crate_name(item.owner_id.to_def_id().krate)
+                    .to_ident_string();
+                let full_trait_name = format!("{}::{}", module, trait_name);
+                
+                // Initialize entry with empty vector
+                trait_map.entry(full_trait_name).or_default();
+            }
+        }
+        
+        // Find implementations
+        for item_id in module_items.free_items() {
+            let item = tcx.hir_item(item_id);
+            if let ItemKind::Impl(impl_data) = &item.kind {
+                if let Some(trait_ref) = impl_data.of_trait {
+                    // This is a trait implementation
+                    let trait_def_id = trait_ref.path.res.def_id();
+                    let trait_name = tcx.def_path_str(trait_def_id);
+                    let trait_module = tcx
+                        .crate_name(trait_def_id.krate)
+                        .to_ident_string();
+                    let full_trait_name = format!("{}::{}", trait_module, trait_name);
+                    
+                    // Get the implementing type
+                    let self_ty = tcx.type_of(item.owner_id).skip_binder();
+                    let impl_type = format!("{:?}", self_ty);
+                    
+                    // Add implementor to trait
+                    if let Some(implementors) = trait_map.get_mut(&full_trait_name) {
+                        implementors.push(impl_type);
+                    }
+                }
+            }
+        }
+        
+        // Convert hashmap to vector of TraitInfo
+        let traits: Vec<TraitInfo> = trait_map
+            .into_iter()
+            .map(|(name, implementors)| TraitInfo { name, implementors })
+            .collect();
+            
+        // Create the context
+        let context = ProjectContext {
+            modules, 
+            module_root,
+            traits 
+        };
+        
+        // Generate config file
+        match LintConfigurationFactory::generate_yaml(&context) {
+            Ok(yaml) => {
+                // Print the generated YAML to the result
+                self.result_text = yaml;
+                
+                // Also write to file
+                match LintConfigurationFactory::generate_config_file(&context, &config_filename) {
+                    Ok(_) => self.result_text.push_str(&format!("\n\nConfig written to {}", config_filename)),
+                    Err(e) => self.result_text.push_str(&format!("\n\nError writing file: {}", e)),
+                }
+            },
+            Err(e) => {
+                self.result_text = format!("Error generating configuration: {}", e);
+            }
         }
     }
 }
@@ -157,11 +261,12 @@ impl Callbacks for ArchitectureLintRunner {
         let mode = self.mode.clone();
         let cargo_args = self.cargo_args.clone();
 
+        let lint_collection = Arc::clone(&self.lint_collection);
         config.register_lints = Some(Box::new(move |_sess, lint_store| {
             // If we're actually linting, recreate the lints and add them all
             if let Mode::Check = mode {
-                let lints = setup_lints_yaml().expect("can load lints");
-                for lint in lints {
+                //let lints = setup_lints_yaml().expect("can load lints");
+                for lint in lint_collection.lints() {
                     lint.register_late_pass(lint_store);
                 }
             }

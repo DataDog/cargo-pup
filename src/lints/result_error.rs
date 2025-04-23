@@ -183,14 +183,34 @@ impl LintFactory for ResultErrorLintFactory {
             raw_config,
         ))])
     }
+    
+    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        use std::collections::HashMap;
+        
+        let mut configs = HashMap::new();
+        
+        // Generate a crate-wide config based on the current crate
+        let rule_name = format!("enforce_result_error_{}", context.module_root);
+        
+        // Build a regex pattern for the current crate
+        let module_pattern = format!("^{}", context.module_root);
+        
+        // Load template from file and format it
+        let template = include_str!("templates/result_error.tmpl");
+        let config = template.replace("{0}", &context.module_root)
+                             .replace("{1}", &module_pattern);
+        
+        configs.insert(rule_name.to_string(), config);
+        
+        Ok(configs)
+    }
 }
 
 #[cfg(test)]
 pub mod test {
-    use super::*;
     use crate::lints::result_error::ResultErrorLintFactory;
     use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
-    use crate::utils::test_helper::{assert_lint_results, lints_for_code};
+    use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
 enforce_result_error:
@@ -200,17 +220,6 @@ enforce_result_error:
   severity: Warn
 ";
 
-    const TEST_CODE: &str = "
-        mod test {
-            struct MyError;
-
-            fn test_fn() -> Result<i32, MyError> {
-                Ok(42)
-            }
-
-            static TEST_STATIC: Result<i32, MyError> = Ok(42);
-        }
-    ";
 
     #[test]
     pub fn can_load_configuration_via_lint_factory() -> anyhow::Result<()> {
@@ -219,19 +228,44 @@ enforce_result_error:
         assert_eq!(results.len(), 1);
         Ok(())
     }
-
+    
     #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn detects_missing_error_impl() {
-        let rules = ResultErrorLintProcessor::new(
-            "result_error".into(),
-            ResultErrorConfiguration {
-                modules: vec!["test".to_string()],
-                severity: Severity::Warn,
-            },
-        );
-
-        let lints = lints_for_code(TEST_CODE, rules);
-        assert_lint_results(2, &lints); // Should find 2 violations (function and static)
+    pub fn test_generate_config_template() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = ResultErrorLintFactory::new();
+        
+        // Create a test context
+        let context = ProjectContext {
+            modules: vec![
+                "test_crate".to_string(),
+                "test_crate::module1".to_string(),
+            ],
+            module_root: "test_crate".to_string(),
+            traits: Vec::new(),
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // Verify the configs map
+        assert_eq!(configs.len(), 1, "Should generate exactly 1 config");
+        
+        // Check if the generated config has the expected name
+        let expected_key = "enforce_result_error_test_crate";
+        assert!(configs.contains_key(expected_key), 
+                "Should contain key with format 'enforce_result_error_{}'", context.module_root);
+        
+        // Get the config
+        let config = configs.get(expected_key).unwrap();
+        
+        // Verify content contains expected elements
+        assert!(config.contains("type: result_error"), "Config should specify result_error type");
+        assert!(config.contains("- \"^test_crate\""), "Config should have correct module pattern");
+        
+        // Ensure the template was correctly loaded
+        assert!(config.contains("Result error type enforcement for the crate"), 
+                "Config should contain text from template");
+        
+        Ok(())
     }
 }

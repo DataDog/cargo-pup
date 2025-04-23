@@ -13,6 +13,7 @@ use crate::lints::{
 /// and ready to run.
 ///
 ///
+///
 pub struct ArchitectureLintCollection {
     lints: Vec<Box<dyn ArchitectureLintRule + Send>>,
 }

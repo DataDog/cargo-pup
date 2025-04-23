@@ -1,0 +1,13 @@
+long_function_test:
+  type: function_length
+  namespace: "^test$"
+  max_lines: 5
+  severity: Warn
+
+namespace_patterns_test:
+  type: function_length
+  namespace: "^namespace_patterns::my_module$"
+  max_lines: 5
+  severity: Error
+
+

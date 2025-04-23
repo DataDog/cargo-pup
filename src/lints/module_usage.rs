@@ -72,12 +72,17 @@ impl ModuleUsageLintProcessor {
             .iter()
             .any(|r| r.is_match(full_name.as_str()))
     }
+    
+    /// Helper function to compile a module pattern string to regex
+    fn compile_module_regex(pattern: &str) -> anyhow::Result<Regex> {
+        Ok(Regex::new(pattern)?)
+    }
 }
 
 impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
         let module_def_id = cx.tcx.hir_get_parent_item(item.hir_id());
-
+        
         // Ensure we apply the lint to the right module
         if !self.applies_to_module(&cx.tcx, &module_def_id) {
             return;
@@ -98,10 +103,17 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                         allowed_modules,
                         severity,
                     } => {
-                        if !allowed_modules
-                            .iter()
-                            .any(|mod_name| import_module.starts_with(mod_name))
-                        {
+                        // Use regex matching to check allowed modules
+                        let allowed = allowed_modules.iter().any(|pattern| {
+                            if let Ok(re) = Self::compile_module_regex(pattern) {
+                                re.is_match(&import_module)
+                            } else {
+                                // Fallback to simpler check if regex fails
+                                import_module.starts_with(pattern)
+                            }
+                        });
+                        
+                        if !allowed {
                             span_lint_and_help(
                                 cx,
                                 get_lint(*severity),
@@ -120,10 +132,17 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                         denied_modules,
                         severity,
                     } => {
-                        if denied_modules
-                            .iter()
-                            .any(|ns| import_module.starts_with(ns))
-                        {
+                        // Use regex matching to check denied modules
+                        let denied = denied_modules.iter().any(|pattern| {
+                            if let Ok(re) = Self::compile_module_regex(pattern) {
+                                re.is_match(&import_module)
+                            } else {
+                                // Fallback to simpler check if regex fails
+                                import_module.starts_with(pattern)
+                            }
+                        });
+                        
+                        if denied {
                             span_lint_and_help(
                                 cx,
                                 get_lint(*severity),
@@ -201,99 +220,31 @@ impl LintFactory for ModuleUsageLintFactory {
             raw_config,
         ))])
     }
+    
+    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        use std::collections::HashMap;
+        
+        let mut configs = HashMap::new();
+        
+        // Generate a sample configuration for wildcard imports
+        let rule_name = format!("module_usage_wildcard_{}", context.module_root);
+        
+        // Load template from file. We've got no automatic suggestions, so we have
+        // no substitutions.
+        let template = include_str!("templates/module_usage.tmpl").to_string();
+        configs.insert(rule_name, template);
+        
+        Ok(configs)
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::utils::test_helper::{assert_lint_results, lints_for_code};
-
     use super::*;
+    use crate::utils::project_context::ProjectContext;
+    use crate::utils::configuration_factory::LintConfigurationFactory;
 
-    const TEST_FN: &str = "
-        mod test {
-            use std::collections::HashMap;
-            use std::env;
-            use std::io::*;
-
-            pub fn _test_fn() -> usize {
-                let mut map = HashMap::new(); // Allowed
-                map.insert(\"key\", \"value\");
-                let current_dir = env::current_dir().unwrap_or_default(); // Denied
-                map.len() + current_dir.as_os_str().len()
-            }
-        }";
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn allowed_usages_no_errors() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Test Rule".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::Deny {
-                    denied_modules: vec!["std::collections::VecDeque".into()], // Not used in test code
-                    severity: Severity::Error,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(0, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn denied_namespace_error() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Test Rule".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::Deny {
-                    denied_modules: vec!["std::env".into()],
-                    severity: Severity::Error,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(1, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn denied_parent_namespace_error() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Test Rule".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::Deny {
-                    denied_modules: vec!["std".into()],
-                    severity: Severity::Error,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(3, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn denied_wildcard_error() {
-        let namespace_rules = ModuleUsageLintProcessor::new(
-            "Deny wildcards".into(),
-            ModuleUsageConfiguration {
-                modules: vec!["test".to_string()],
-                rules: vec![ModuleUsageLintRule::DenyWildcard {
-                    severity: Severity::Warn,
-                }],
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, namespace_rules);
-        assert_lint_results(1, &lints);
-    }
 
     const CONFIGURATION_YAML: &str = "
 test_me_namespace_rule:
@@ -304,7 +255,7 @@ test_me_namespace_rule:
     - type: Deny
       severity: Warn
       denied_modules:
-        - \"std::collections\"
+        - \"^std::collections\"
 
 test_me_namespace_rule_two:
   type: module_usage
@@ -314,7 +265,7 @@ test_me_namespace_rule_two:
     - type: Deny
       severity: Error
       denied_modules:
-        - \"anyhow::*\"
+        - \"^anyhow::.*\"
 ";
 
     #[test]
@@ -331,6 +282,48 @@ test_me_namespace_rule_two:
         // Assert the correct number of rules are loaded
         assert_eq!(results.len(), 2);
 
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_template() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = ModuleUsageLintFactory::new();
+        
+        // Create a test context
+        let context = ProjectContext {
+            modules: vec![
+                "test_crate".to_string(),
+                "test_crate::api".to_string(),
+            ],
+            module_root: "test_crate".to_string(),
+            traits: Vec::new(),
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // Verify the configs map
+        assert_eq!(configs.len(), 1, "Should generate 1 config");
+        
+        // Check if the key exists
+        let expected_key = "module_usage_wildcard_test_crate";
+        assert!(configs.contains_key(expected_key), 
+                "Should contain expected key");
+        
+        // Get the config
+        let config = configs.get(expected_key).unwrap();
+        
+        // Verify content contains expected elements
+        assert!(config.contains("type: module_usage"), "Config should specify module_usage type");
+        assert!(config.contains("modules:"), "Config should have modules section");
+        assert!(config.contains("rules:"), "Config should have rules section");
+        assert!(config.contains("type: DenyWildcard"), "Should have DenyWildcard rule active");
+        
+        // Ensure the template was correctly loaded
+        assert!(config.contains("Module usage restrictions"), 
+                "Config should contain text from template");
+        
         Ok(())
     }
 }

@@ -7,14 +7,22 @@ use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
 use rustc_trait_selection::traits::{Obligation, ObligationCause};
 
 ///
-/// Returns the complete name for a module, including the crate name.
+/// Returns the name for a module. If the module is the root module, returns just the crate name.
+/// For submodules, includes the crate name with module path.
 ///
 pub fn get_full_module_name(tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> String {
     let krate_name = tcx
         .crate_name(module_def_id.to_def_id().krate)
         .to_ident_string();
     let module_name = tcx.def_path_str(module_def_id.to_def_id());
-    format!("{}::{}", krate_name, module_name)
+    
+    // If the module_name is empty, this is the root module
+    // In that case, return just the crate name without "::"
+    if module_name.is_empty() {
+        krate_name
+    } else {
+        format!("{}::{}", krate_name, module_name)
+    }
 }
 
 pub fn implements_trait<'tcx>(

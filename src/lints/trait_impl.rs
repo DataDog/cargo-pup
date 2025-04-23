@@ -193,108 +193,56 @@ impl LintFactory for TraitImplLintFactory {
             raw_config,
         ))])
     }
-}
+    
+    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        use std::collections::HashMap;
+    
+        let mut configs = HashMap::new();
+    
+        // Generate a sample config for each trait
+        for (i, trait_info) in context.traits.iter().enumerate().take(3) {
+            // Only generate for traits that have implementations
+            if !trait_info.implementors.is_empty() {
+                // Create a rule name based on the trait
+                let trait_parts: Vec<&str> = trait_info.name.split("::").collect();
+                let trait_simple_name = trait_parts.last().unwrap_or(&"unknown");
+                let rule_name = format!("enforce_{}_impl", trait_simple_name.to_lowercase());
+    
+                // Load template from file and format it
+                let template = include_str!("templates/trait_impl.tmpl");
+                let impl_list = trait_info.implementors.join("\n#   ");
+                let config = template.replace("{0}", &trait_info.name)
+                                     .replace("{1}", &impl_list)
+                                     .replace("{2}", &trait_info.name)
+                                     .replace("{3}", trait_simple_name);
+    
+                configs.insert(rule_name, config);
+    
+                // Only generate a few examples
+                if i >= 2 {
+                    break;
+                }
+            }
+        }
+    
+        // If no traits with impls were found, create a generic example
+        if configs.is_empty() {
+            let template = include_str!("templates/trait_impl_generic.tmpl");
+            configs.insert("enforce_trait_impl".to_string(), template.to_string());
+        }
+    
+        Ok(configs)
+    }
+}    
 
 #[cfg(test)]
 pub mod tests {
 
     use super::*;
-    use crate::{
-        lints::Severity,
-        utils::test_helper::{assert_lint_results, lints_for_code},
-    };
+    use crate::utils::project_context::{ProjectContext, TraitInfo};
+    use crate::utils::configuration_factory::LintConfigurationFactory;
 
-    const TEST_FN: &str = "
-            mod test {
-              trait MyTrait {
-                 fn test_fn() -> i32;
-              }
 
-              pub struct MyStruct {}
-
-              impl MyTrait for MyStruct {
-                  fn test_fn() -> i32 {
-                      let a = 1+1;
-                      let b = 1+1;
-                      let c = 1+1;
-                      a + b + c
-                  }
-                }
-            }
-        ";
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn impl_name_error() {
-        let function_length_rules = TraitImplLintProcessor::new(
-            "trait_name".into(),
-            TraitImplConfiguration {
-                source_name: "test::MyTrait".to_string(),
-                name_must_match: Some(".*MyTraitImpl".into()),
-                severity: Severity::Error,
-                enforce_visibility: None,
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_lint_results(1, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn impl_name_no_error() {
-        let function_length_rules = TraitImplLintProcessor::new(
-            "trait_name".into(),
-            TraitImplConfiguration {
-                source_name: "test::MyTrait".to_string(),
-                name_must_match: Some(".*Struct".into()),
-                severity: Severity::Error,
-                enforce_visibility: None,
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_lint_results(0, &lints);
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn enforce_visibility_private_only() {
-        let function_length_rules = TraitImplLintProcessor::new(
-            "trait_name".into(),
-            TraitImplConfiguration {
-                source_name: "test::MyTrait".to_string(),
-                name_must_match: None,
-                severity: Severity::Error,
-                enforce_visibility: Some(RequiredVisibility::Private),
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_lint_results(1, &lints);
-        // assert!(
-        //     lints
-        //         .lint_results_text()
-        //         .contains("Struct 'test::MyStruct' is public, but should be private")
-        // );
-    }
-
-    #[test]
-    #[ignore = "fix in-process testing framework"]
-    pub fn enforce_visibility_public_only() {
-        let function_length_rules = TraitImplLintProcessor::new(
-            "trait_name".into(),
-            TraitImplConfiguration {
-                source_name: "test::MyTrait".to_string(),
-                name_must_match: None,
-                severity: Severity::Error,
-                enforce_visibility: Some(RequiredVisibility::Public),
-            },
-        );
-
-        let lints = lints_for_code(TEST_FN, function_length_rules);
-        assert_lint_results(0, &lints);
-    }
 
     const CONFIGURATION_YAML: &str = "
 test_trait_constraint:
@@ -318,6 +266,100 @@ test_trait_constraint:
 
         assert_eq!(results.len(), 1);
 
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_with_traits() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = TraitImplLintFactory::new();
+        
+        // Create a test context with some traits
+        let traits = vec![
+            TraitInfo {
+                name: "test_crate::Display".to_string(),
+                implementors: vec!["test_crate::User".to_string(), "test_crate::Product".to_string()],
+            },
+            TraitInfo {
+                name: "test_crate::Serialize".to_string(),
+                implementors: vec!["test_crate::Config".to_string()],
+            },
+        ];
+        
+        let context = ProjectContext {
+            modules: vec!["test_crate".to_string()],
+            module_root: "test_crate".to_string(),
+            traits,
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // We should have 2 configs for the 2 traits
+        assert_eq!(configs.len(), 2, "Should generate 1 config per trait with implementations");
+        
+        // Check if the keys exist
+        assert!(configs.contains_key("enforce_display_impl"), 
+                "Should contain key for Display trait");
+        assert!(configs.contains_key("enforce_serialize_impl"), 
+                "Should contain key for Serialize trait");
+        
+        // Get the Display config
+        let display_config = configs.get("enforce_display_impl").unwrap();
+        
+        // Verify content contains expected elements
+        assert!(display_config.contains("type: trait_impl"), 
+                "Config should specify trait_impl type");
+        assert!(display_config.contains("source_name: \"test_crate::Display\""), 
+                "Config should have correct trait name");
+        assert!(display_config.contains("name_must_match: \".*DisplayImpl\""), 
+                "Config should derive pattern from trait name");
+        
+        // Ensure the template was correctly loaded
+        assert!(display_config.contains("Trait implementation lint for"), 
+                "Config should contain text from template");
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_generate_config_fallback() -> anyhow::Result<()> {
+        // Create a factory instance
+        let factory = TraitImplLintFactory::new();
+        
+        // Create a test context with no traits that have implementations
+        let traits = vec![
+            TraitInfo {
+                name: "test_crate::EmptyTrait".to_string(),
+                implementors: vec![],  // No implementations
+            },
+        ];
+        
+        let context = ProjectContext {
+            modules: vec!["test_crate".to_string()],
+            module_root: "test_crate".to_string(),
+            traits,
+        };
+        
+        // Generate config
+        let configs = factory.generate_config(&context)?;
+        
+        // Should use the fallback generic template
+        assert_eq!(configs.len(), 1, "Should generate 1 fallback config");
+        
+        // Check if the fallback key exists
+        assert!(configs.contains_key("enforce_trait_impl"), 
+                "Should contain fallback key");
+        
+        // Get the config
+        let config = configs.get("enforce_trait_impl").unwrap();
+        
+        // Verify content contains expected elements from the generic template
+        assert!(config.contains("Example trait implementation rule"), 
+                "Config should contain text from generic template");
+        assert!(config.contains("source_name: \"core::example::Trait\""), 
+                "Config should use generic example trait");
+        
         Ok(())
     }
 }

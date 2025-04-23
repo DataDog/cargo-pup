@@ -6,11 +6,20 @@ pub enum PupCommand {
     PrintModules,
     PrintTraits,
     Check,
+    GenerateConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PupCli {
     pub command: PupCommand,
+}
+
+impl Default for PupCli {
+    fn default() -> Self {
+        Self {
+            command: PupCommand::Check,
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -66,6 +75,10 @@ impl PupArgs {
                     command = PupCommand::Check;
                     start_idx += 1;
                 }
+                "generate-config" => {
+                    command = PupCommand::GenerateConfig;
+                    start_idx += 1;
+                }
                 _ => { /* Not a command, use default and keep this arg */ }
             }
         }
@@ -111,6 +124,11 @@ mod tests {
         // Test check command
         let args = parse_args(&["cargo-pup", "check"]);
         assert_eq!(args.command, PupCommand::Check);
+        assert!(args.cargo_args.is_empty());
+        
+        // Test generate-config command
+        let args = parse_args(&["cargo-pup", "generate-config"]);
+        assert_eq!(args.command, PupCommand::GenerateConfig);
         assert!(args.cargo_args.is_empty());
     }
 
@@ -164,8 +182,8 @@ mod tests {
     #[test]
     fn test_real_world_examples() {
         // Our specific troublesome case
-        let args = parse_args(&["cargo", "pup", "print-modules", "--features=poop"]);
+        let args = parse_args(&["cargo", "pup", "print-modules", "--features=test-feature"]);
         assert_eq!(args.command, PupCommand::PrintModules);
-        assert_eq!(args.cargo_args, vec!["--features=poop"]);
+        assert_eq!(args.cargo_args, vec!["--features=test-feature"]);
     }
 }
