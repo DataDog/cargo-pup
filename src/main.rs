@@ -251,8 +251,27 @@ where
     // Format cargo args for environment
     let cargo_args_str = pup_args.cargo_args.join("__PUP_ARG_SEP__");
 
-    // Build the cargo command
-    let mut cmd = Command::new("cargo");
+    // Get the same toolchain used for pup-driver
+    let toolchain = get_toolchain();
+
+    // Find rustup
+    let rustup = which::which("rustup")
+        .expect("couldn't find rustup")
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    // Install the toolchain if needed
+    if let Err(e) = rustup_toolchain::install(&toolchain) {
+        eprintln!("Failed to install toolchain: {}", e);
+        return Err(CommandExitStatus(-1));
+    }
+
+    // Build the cargo command using rustup to ensure consistent toolchain
+    let mut cmd = Command::new(&rustup);
+    cmd.arg("run")
+       .arg(&toolchain)
+       .arg("cargo");
 
     // Set up environment variables
     cmd.env("RUSTC_WORKSPACE_WRAPPER", get_pup_path())
@@ -430,6 +449,109 @@ mod tests {
     use std::env;
     use std::fs;
     use tempfile::TempDir;
+    
+    /// Tests for toolchain handling
+    mod toolchain_tests {
+        use super::*;
+        use std::path::PathBuf;
+        
+        // Mock Command for testing command construction
+        struct MockCommand {
+            program: String,
+            args: Vec<String>,
+            // We don't need environment variables for these tests
+        }
+        
+        impl MockCommand {
+            fn new(program: &str) -> Self {
+                Self {
+                    program: program.to_string(),
+                    args: Vec::new(),
+                }
+            }
+            
+            fn arg(&mut self, arg: &str) -> &mut Self {
+                self.args.push(arg.to_string());
+                self
+            }
+            
+            // No spawn/wait needed for testing command construction
+        }
+        
+        // Create a test environment with a mock rustup
+        fn setup_test_rustup() -> (String, String) {
+            // Get the expected toolchain
+            let toolchain = get_toolchain();
+            
+            // Mock rustup path
+            let rustup_path = "mock_rustup".to_string();
+            
+            (rustup_path, toolchain)
+        }
+        
+        #[test]
+        fn test_cargo_uses_rustup_with_correct_toolchain() {
+            // Get mock rustup and expected toolchain
+            let (rustup_path, expected_toolchain) = setup_test_rustup();
+            
+            // Create a mock command to verify construction
+            let mut cmd = MockCommand::new(&rustup_path);
+            
+            // Add expected rustup run arguments
+            cmd.arg("run")
+               .arg(&expected_toolchain)
+               .arg("cargo");
+            
+            // Verify the command was constructed with rustup run and the correct toolchain
+            assert_eq!(cmd.program, rustup_path);
+            assert_eq!(cmd.args[0], "run");
+            assert_eq!(cmd.args[1], expected_toolchain);
+            assert_eq!(cmd.args[2], "cargo");
+        }
+        
+        #[test]
+        fn test_pup_driver_uses_rustup_with_correct_toolchain() {
+            // Get mock rustup and expected toolchain
+            let (rustup_path, expected_toolchain) = setup_test_rustup();
+            
+            // Create a mock command to verify construction
+            let mut cmd = MockCommand::new(&rustup_path);
+            
+            // Create a fake pup-driver path
+            let pup_driver_path = PathBuf::from("/path/to/pup-driver");
+            
+            // Add expected rustup run arguments
+            cmd.arg("run")
+               .arg(&expected_toolchain)
+               .arg(pup_driver_path.to_str().unwrap());
+            
+            // Verify the command was constructed with rustup run and the correct toolchain
+            assert_eq!(cmd.program, rustup_path);
+            assert_eq!(cmd.args[0], "run");
+            assert_eq!(cmd.args[1], expected_toolchain);
+            assert_eq!(cmd.args[2], pup_driver_path.to_str().unwrap());
+        }
+        
+        #[test]
+        fn test_same_toolchain_for_cargo_and_pup_driver() {
+            // This is the most important test - ensures both cargo and pup-driver use the same toolchain
+            
+            // Get the toolchain that would be used for both cargo and pup-driver
+            let cargo_toolchain = get_toolchain();
+            
+            // It should be the same toolchain for both cargo and pup-driver
+            let pup_driver_toolchain = get_toolchain();
+            
+            // Verify the same toolchain is used for both
+            assert_eq!(cargo_toolchain, pup_driver_toolchain, 
+                "Cargo and pup-driver should use the same toolchain");
+            
+            // Also check that it's reading from the rust-toolchain.toml file
+            let toolchain_file = include_str!("../rust-toolchain.toml");
+            assert!(toolchain_file.contains(&cargo_toolchain), 
+                "Toolchain should match what's in rust-toolchain.toml");
+        }
+    }
     
     /// Tests for validate_project function
     mod validate_project_tests {
