@@ -1,0 +1,18 @@
+# Trait implementation lint for {0}
+#
+# This rule enforces naming conventions for types that implement this trait.
+# 
+# Current implementations:
+#   {1}
+#
+# Parameters:
+#   source_name: fully qualified trait name
+#   name_must_match: regex for implementor type names
+#   enforce_visibility: Public, Private or None
+#   severity: Error or Warn
+#
+type: trait_impl
+source_name: "{2}"
+name_must_match: ".*{3}Impl"
+enforce_visibility: "Public"
+severity: Warn

@@ -1,0 +1,44 @@
+error: Item ForbiddenStruct disallowed in mod.rs due to empty-module policy
+  --> tests/ui/empty_mod/non_empty_mod.rs:10:5
+   |
+LL |     pub struct ForbiddenStruct {
+   |     ^
+   |
+   = help: Remove this definition from the module.
+   = note: Applied by cargo-pup rule 'empty_mod_test'.
+   = note: `-D empty-mod` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(empty_mod)]`
+
+error: Item ForbiddenEnum disallowed in mod.rs due to empty-module policy
+  --> tests/ui/empty_mod/non_empty_mod.rs:15:5
+   |
+LL |     pub enum ForbiddenEnum {
+   |     ^
+   |
+   = help: Remove this definition from the module.
+   = note: Applied by cargo-pup rule 'empty_mod_test'.
+
+error: Item ForbiddenTrait disallowed in mod.rs due to empty-module policy
+  --> tests/ui/empty_mod/non_empty_mod.rs:21:5
+   |
+LL |     pub trait ForbiddenTrait {
+   |     ^
+   |
+   = help: Remove this definition from the module.
+   = note: Applied by cargo-pup rule 'empty_mod_test'.
+
+error: Item ForbiddenStruct disallowed in mod.rs due to empty-module policy
+  --> tests/ui/empty_mod/non_empty_mod.rs:26:5
+   |
+LL | /     impl ForbiddenStruct {
+LL | |         pub fn new(value: String) -> Self {
+LL | |             Self { field: value }
+LL | |         }
+LL | |     }
+   | |_____^
+   |
+   = help: Remove this implementation from the module.
+   = note: Applied by cargo-pup rule 'empty_mod_test'.
+
+error: aborting due to 4 previous errors
+
