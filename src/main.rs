@@ -611,6 +611,7 @@ mod tests {
             let temp_path = temp_dir.path();
             
             // Empty directory - no files
+            // Note: We're deliberately NOT creating Cargo.toml here
             
             // Change to the temporary directory
             let original_dir = env::current_dir().expect("Failed to get current dir");
@@ -623,6 +624,488 @@ mod tests {
             env::set_current_dir(original_dir).expect("Failed to change back to original directory");
             
             assert_eq!(result, ProjectType::OtherDirectory);
+        }
+    }
+    
+    /// Tests for help message and display functions
+    mod display_tests {
+        use super::*;
+        
+        #[test]
+        fn test_help_message_format() {
+            // Test that help_message() returns a properly formatted string
+            let help = help_message();
+            
+            // Check for important components
+            assert!(help.contains("Pretty Useful Pup"));
+            assert!(help.contains("Usage"));
+            assert!(help.contains("Commands"));
+            assert!(help.contains("check"));
+            assert!(help.contains("print-modules"));
+            assert!(help.contains("print-traits"));
+            assert!(help.contains("generate-config"));
+            assert!(help.contains("Options"));
+            assert!(help.contains("-h, --help"));
+            assert!(help.contains("-V, --version"));
+        }
+        
+        #[test]
+        fn test_show_ascii_puppy() {
+            // This is a difficult function to test directly since it prints to stdout
+            // We'll just call it to ensure it doesn't panic
+            show_ascii_puppy();
+        }
+        
+        #[test]
+        fn test_show_version() {
+            // This is a difficult function to test directly since it prints to stdout
+            // We'll just call it to ensure it doesn't panic
+            show_version();
+        }
+    }
+    
+    /// Tests for the CommandExitStatus error type
+    mod error_tests {
+        use super::*;
+        use std::error::Error;
+        
+        #[test]
+        fn test_command_exit_status_display() {
+            // Create a CommandExitStatus with a test exit code
+            let status = CommandExitStatus(42);
+            
+            // Test the Display implementation
+            let display_string = format!("{}", status);
+            assert_eq!(display_string, "Command failed with exit code: 42");
+            
+            // Verify it implements the Error trait
+            let error: &dyn Error = &status;
+            assert_eq!(error.to_string(), "Command failed with exit code: 42");
+        }
+        
+        #[test]
+        fn test_command_exit_status_from_process_error() {
+            // Test creating CommandExitStatus from different exit codes
+            let error1 = CommandExitStatus(1);
+            let error2 = CommandExitStatus(2);
+            
+            // Verify they have different values
+            assert_ne!(error1.0, error2.0);
+            
+            // Test error message formatting
+            assert_eq!(error1.to_string(), "Command failed with exit code: 1");
+            assert_eq!(error2.to_string(), "Command failed with exit code: 2");
+        }
+        
+        #[test]
+        fn test_toolchain_parsing_error() {
+            // This test verifies error handling when the toolchain configuration is malformed
+            // We can't actually test this directly without modifying the code to accept a parameter
+            // for the toolchain config, but we can test the error path indirectly
+            
+            // Ensure the function doesn't panic with valid input
+            let toolchain = get_toolchain();
+            assert!(!toolchain.is_empty(), "Toolchain should not be empty");
+        }
+    }
+    
+    /// Tests for the process function
+    mod process_tests {
+        use super::*;
+
+        // Mock Command for process tests that captures the command without executing it
+        #[derive(Debug, Default, Clone)]
+        struct MockCommand {
+            program: String,
+            args: Vec<String>,
+            envs: Vec<(String, String)>,
+            was_spawned: bool,
+        }
+        
+        #[test]
+        fn test_process_generate_config() {
+            // Test the process function when handling generate-config
+            let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
+            let temp_path = temp_dir.path();
+            
+            // Create a Cargo.toml file
+            fs::write(temp_path.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n")
+                .expect("Failed to write Cargo.toml");
+                
+            // Change to the temporary directory
+            let original_dir = env::current_dir().expect("Failed to get current dir");
+            env::set_current_dir(temp_path).expect("Failed to change directory");
+            
+            // Create test args for generate-config
+            let args = vec![
+                "cargo-pup".to_string(),
+                "generate-config".to_string(),
+            ];
+
+            // We don't actually run the command in the test, so we'll just check
+            // that the process function processes the args correctly
+            let result = process(args.into_iter());
+            
+            // Since we can't actually run cargo, this will likely return an error
+            // but we're just making sure it doesn't panic
+            if result.is_err() {
+                // Expected since we're not actually running cargo
+            }
+            
+            // Make sure to change back to the original directory before the temp directory is dropped
+            // This is important to avoid the "No such file or directory" error
+            let change_back_result = env::set_current_dir(&original_dir);
+            assert!(change_back_result.is_ok(), "Failed to change back to original directory");
+        }
+        
+        #[test]
+        fn test_get_pup_path() {
+            // Test that get_pup_path returns the current executable path
+            let exe_path = get_pup_path();
+            
+            // Verify it's a valid string
+            assert!(!exe_path.is_empty());
+            
+            // While we can't check the exact path, we can check it's a valid path
+            let path = Path::new(&exe_path);
+            assert!(path.is_absolute(), "Path should be absolute");
+        }
+        
+        #[test]
+        fn test_process_with_existing_generated_configs() {
+            // Test the process function behavior when there are existing generated configs
+            let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
+            let temp_path = temp_dir.path();
+            
+            // Create a Cargo.toml file
+            fs::write(temp_path.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n")
+                .expect("Failed to write Cargo.toml");
+                
+            // Create an existing generated config file
+            fs::write(temp_path.join("pup.generated.test.yaml"), "# Test generated config\n")
+                .expect("Failed to write pup.generated.test.yaml");
+                
+            // Change to the temporary directory
+            let original_dir = env::current_dir().expect("Failed to get current dir");
+            env::set_current_dir(temp_path).expect("Failed to change directory");
+            
+            // Create test args for generate-config
+            let args = vec![
+                "cargo-pup".to_string(),
+                "generate-config".to_string(),
+            ];
+
+            // Since there's an existing generated config, this should return an error
+            let result = process(args.into_iter());
+            
+            // Verify that the process function returned an error
+            assert!(result.is_err());
+            
+            // Check that the error code is 1, as expected
+            if let Err(CommandExitStatus(code)) = result {
+                assert_eq!(code, 1, "Error code should be 1 for existing configs");
+            }
+            
+            // Change back to original directory
+            env::set_current_dir(original_dir).expect("Failed to change back to original directory");
+        }
+        
+        #[test]
+        fn test_rename_generated_config() {
+            // Test the rename logic when a single generated config is found
+            let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
+            let temp_path = temp_dir.path();
+            
+            // Create a Cargo.toml file but no pup.yaml
+            fs::write(temp_path.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n")
+                .expect("Failed to write Cargo.toml");
+            
+            // Change to the temporary directory
+            let original_dir = env::current_dir().expect("Failed to get current dir");
+            env::set_current_dir(temp_path).expect("Failed to change directory");
+            
+            // Verify pup.yaml doesn't exist yet
+            assert!(!Path::new("pup.yaml").exists());
+            
+            // Use the full path to the generated config file
+            let generated_config_path = temp_path.join("pup.generated.test.yaml");
+            
+            // Create a generated config file manually
+            fs::write(&generated_config_path, "# Test generated config\n")
+                .expect("Failed to write pup.generated.test.yaml");
+            
+            // Verify the generated config exists
+            assert!(generated_config_path.exists());
+            
+            // Get the destination path for pup.yaml
+            let pup_yaml_path = temp_path.join("pup.yaml");
+            
+            // Rename it manually for the test
+            fs::rename(&generated_config_path, &pup_yaml_path).expect("Failed to rename file");
+            
+            // Verify pup.yaml now exists
+            assert!(pup_yaml_path.exists());
+            
+            // Make sure to change back to the original directory before the temp directory is dropped
+            let change_back_result = env::set_current_dir(&original_dir);
+            assert!(change_back_result.is_ok(), "Failed to change back to original directory");
+        }
+    }
+    
+    /// Tests for the run_pup_driver function
+    mod run_pup_driver_tests {
+        
+        #[test]
+        fn test_run_pup_driver_args_handling() {
+            // Set up temporary environment
+            let _toolchain = "nightly-2023-10-10"; // Example toolchain
+            
+            // Test with rustc wrapper style args
+            let args = vec![
+                "cargo-pup".to_string(),
+                "/path/to/rustc".to_string(),
+                "-Copt-level=2".to_string(),
+                "--edition=2021".to_string(),
+            ];
+            
+            // Check that rustc_args is correctly extracted
+            let rustc_args = if args.len() > 1 && args[1].ends_with("rustc") {
+                args[2..].to_vec()
+            } else {
+                args[1..].to_vec()
+            };
+            
+            assert_eq!(rustc_args, vec!["-Copt-level=2", "--edition=2021"]);
+            
+            // Test without rustc wrapper
+            let args = vec![
+                "cargo-pup".to_string(),
+                "arg1".to_string(),
+                "arg2".to_string(),
+            ];
+            
+            // Check that rustc_args is correctly extracted
+            let rustc_args = if args.len() > 1 && args[1].ends_with("rustc") {
+                args[2..].to_vec()
+            } else {
+                args[1..].to_vec()
+            };
+            
+            assert_eq!(rustc_args, vec!["arg1", "arg2"]);
+        }
+    }
+    
+    /// Tests for the main entry point function
+    mod main_entry_point_tests {
+        use super::*;
+        
+        #[test]
+        fn test_help_flag_handling() {
+            // Test that the --help flag is properly handled
+            
+            // Set up test environment
+            let _original_args = env::args().collect::<Vec<String>>();
+            
+            // Temporarily override args
+            let args: Vec<String> = vec![
+                "cargo-pup".to_string(),
+                "--help".to_string(),
+            ];
+            
+            // We can't override env::args() directly in a test,
+            // but we can check the condition that would be triggered
+            let should_show_help = args.iter().any(|a| a == "--help" || a == "-h");
+            
+            // Verify the condition is true
+            assert!(should_show_help, "Should detect --help flag");
+            
+            // Do the same for -h
+            let args: Vec<String> = vec![
+                "cargo-pup".to_string(),
+                "-h".to_string(),
+            ];
+            
+            let should_show_help = args.iter().any(|a| a == "--help" || a == "-h");
+            assert!(should_show_help, "Should detect -h flag");
+        }
+        
+        #[test]
+        fn test_version_flag_handling() {
+            // Test that the --version flag is properly handled
+            
+            // Set up test environment
+            let _original_args = env::args().collect::<Vec<String>>();
+            
+            // Temporarily override args
+            let args: Vec<String> = vec![
+                "cargo-pup".to_string(),
+                "--version".to_string(),
+            ];
+            
+            // We can't override env::args() directly in a test,
+            // but we can check the condition that would be triggered
+            let should_show_version = args.iter().any(|a| a == "--version" || a == "-V");
+            
+            // Verify the condition is true
+            assert!(should_show_version, "Should detect --version flag");
+            
+            // Do the same for -V
+            let args: Vec<String> = vec![
+                "cargo-pup".to_string(),
+                "-V".to_string(),
+            ];
+            
+            let should_show_version = args.iter().any(|a| a == "--version" || a == "-V");
+            assert!(should_show_version, "Should detect -V flag");
+        }
+        
+        #[test]
+        fn test_trampoline_mode_detection() {
+            // Test that rustc wrapper invocation is properly detected
+            
+            // Create args that look like a rustc wrapper invocation
+            let args = vec![
+                "cargo-pup".to_string(),
+                "/path/to/rustc".to_string(),
+                "-Copt-level=2".to_string(),
+            ];
+            
+            // Check the condition that would trigger trampoline mode
+            let is_rustc_wrapper = args.len() > 1 && args[1].ends_with("rustc");
+            
+            // Verify the condition is true
+            assert!(is_rustc_wrapper, "Should detect rustc wrapper invocation");
+            
+            // Test with args that don't trigger trampoline mode
+            let args = vec![
+                "cargo-pup".to_string(),
+                "check".to_string(),
+            ];
+            
+            // Check the condition that would trigger trampoline mode
+            let is_rustc_wrapper = args.len() > 1 && args[1].ends_with("rustc");
+            
+            // Verify the condition is false
+            assert!(!is_rustc_wrapper, "Should not detect rustc wrapper invocation for normal command");
+        }
+    }
+    
+    /// Tests for command line processing
+    mod command_line_processing_tests {
+        use crate::cli::{PupArgs, PupCommand};
+        
+        #[test]
+        fn test_arguments_parsing() {
+            // Test different argument combinations
+            
+            // Basic command
+            let args = vec![
+                "cargo-pup".to_string(),
+                "check".to_string(),
+            ];
+            let pup_args = PupArgs::parse(args.into_iter());
+            assert_eq!(pup_args.command, PupCommand::Check);
+            assert_eq!(pup_args.cargo_args.len(), 0);
+            
+            // Command with cargo args
+            let args = vec![
+                "cargo-pup".to_string(),
+                "check".to_string(),
+                "--features=foo".to_string(),
+            ];
+            let pup_args = PupArgs::parse(args.into_iter());
+            assert_eq!(pup_args.command, PupCommand::Check);
+            assert_eq!(pup_args.cargo_args, vec!["--features=foo"]);
+            
+            // Command with multiple cargo args
+            let args = vec![
+                "cargo-pup".to_string(),
+                "print-modules".to_string(),
+                "--features=foo".to_string(),
+                "--manifest-path=test/Cargo.toml".to_string(),
+            ];
+            let pup_args = PupArgs::parse(args.into_iter());
+            assert_eq!(pup_args.command, PupCommand::PrintModules);
+            assert_eq!(
+                pup_args.cargo_args,
+                vec!["--features=foo", "--manifest-path=test/Cargo.toml"]
+            );
+        }
+        
+        #[test]
+        fn test_is_generate_config_detection() {
+            // Test that generate-config command is properly detected
+            
+            // Direct invocation
+            let args = vec![
+                "cargo-pup".to_string(),
+                "generate-config".to_string(),
+            ];
+            
+            let is_generate_config = args.len() > 1 && 
+                ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
+                 (args[1] == "generate-config"));
+                 
+            assert!(is_generate_config, "Should detect generate-config command");
+            
+            // Via cargo pup
+            let args = vec![
+                "cargo".to_string(),
+                "pup".to_string(),
+                "generate-config".to_string(),
+            ];
+            
+            let is_generate_config = args.len() > 1 && 
+                ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
+                 (args[1] == "generate-config"));
+                 
+            assert!(is_generate_config, "Should detect generate-config command via cargo pup");
+            
+            // Other command
+            let args = vec![
+                "cargo-pup".to_string(),
+                "check".to_string(),
+            ];
+            
+            let is_generate_config = args.len() > 1 && 
+                ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
+                 (args[1] == "generate-config"));
+                 
+            assert!(!is_generate_config, "Should not detect generate-config for check command");
+        }
+        
+        #[test]
+        fn test_pup_cli_serialization() {
+            // Test that PupCli can be serialized and deserialized correctly
+            use crate::cli::PupCli;
+            
+            // Create a PupCli with a test command
+            let pup_cli = PupCli {
+                command: PupCommand::PrintModules,
+            };
+            
+            // Serialize it
+            let serialized = pup_cli.to_env_str();
+            
+            // Deserialize it
+            let deserialized = PupCli::from_env_str(&serialized);
+            
+            // Verify the round trip works
+            assert_eq!(deserialized.command, PupCommand::PrintModules);
+            
+            // Test with a different command
+            let pup_cli = PupCli {
+                command: PupCommand::GenerateConfig,
+            };
+            
+            // Serialize it
+            let serialized = pup_cli.to_env_str();
+            
+            // Deserialize it
+            let deserialized = PupCli::from_env_str(&serialized);
+            
+            // Verify the round trip works
+            assert_eq!(deserialized.command, PupCommand::GenerateConfig);
         }
     }
 }

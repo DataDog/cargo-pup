@@ -424,3 +424,132 @@ fn collect_modules(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::project_context::TraitInfo;
+    
+    // Test the Mode enum
+    #[test]
+    fn test_mode_debug_and_eq() {
+        // Test Mode Debug and PartialEq implementations
+        let check_mode = Mode::Check;
+        let print_modules_mode = Mode::PrintModules;
+        let print_traits_mode = Mode::PrintTraits;
+        let generate_config_mode = Mode::GenerateConfig;
+        
+        // Verify Debug formatting
+        assert_eq!(format!("{:?}", check_mode), "Check");
+        assert_eq!(format!("{:?}", print_modules_mode), "PrintModules");
+        assert_eq!(format!("{:?}", print_traits_mode), "PrintTraits");
+        assert_eq!(format!("{:?}", generate_config_mode), "GenerateConfig");
+        
+        // Verify PartialEq
+        assert_eq!(check_mode, Mode::Check);
+        assert_eq!(print_modules_mode, Mode::PrintModules);
+        assert_eq!(print_traits_mode, Mode::PrintTraits);
+        assert_eq!(generate_config_mode, Mode::GenerateConfig);
+        
+        assert_ne!(check_mode, print_modules_mode);
+        assert_ne!(check_mode, print_traits_mode);
+        assert_ne!(check_mode, generate_config_mode);
+    }
+    
+    // Test the Clone trait for Mode
+    #[test]
+    fn test_mode_clone() {
+        let modes = vec![
+            Mode::Check,
+            Mode::PrintModules,
+            Mode::PrintTraits,
+            Mode::GenerateConfig,
+        ];
+        
+        for mode in &modes {
+            let cloned_mode = mode.clone();
+            assert_eq!(*mode, cloned_mode);
+        }
+    }
+    
+    // Test creating a ProjectContext
+    #[test]
+    fn test_create_project_context() {
+        // Create a project context
+        let context = ProjectContext {
+            modules: vec!["test::module1".to_string(), "test::module2".to_string()],
+            module_root: "test".to_string(),
+            traits: vec![
+                TraitInfo {
+                    name: "test::Trait1".to_string(),
+                    implementors: vec!["Type1".to_string(), "Type2".to_string()],
+                }
+            ],
+        };
+        
+        // Verify the context properties
+        assert_eq!(context.module_root, "test");
+        assert_eq!(context.modules.len(), 2);
+        assert_eq!(context.modules[0], "test::module1");
+        assert_eq!(context.modules[1], "test::module2");
+        assert_eq!(context.traits.len(), 1);
+        assert_eq!(context.traits[0].name, "test::Trait1");
+        assert_eq!(context.traits[0].implementors.len(), 2);
+    }
+    
+    // Test serializing ProjectContext to JSON
+    #[test]
+    fn test_project_context_json_serialization() {
+        // Create a project context
+        let context = ProjectContext {
+            modules: vec!["test::module".to_string()],
+            module_root: "test".to_string(),
+            traits: vec![
+                TraitInfo {
+                    name: "test::Trait1".to_string(),
+                    implementors: vec!["Type1".to_string()],
+                }
+            ],
+        };
+        
+        // Serialize to JSON
+        let json = serde_json::to_string(&context).expect("Failed to serialize context");
+        
+        // Verify JSON contains expected data
+        assert!(json.contains("\"modules\":[\"test::module\"]"));
+        assert!(json.contains("\"module_root\":\"test\""));
+        assert!(json.contains("\"traits\":[{"));
+        assert!(json.contains("\"name\":\"test::Trait1\""));
+        assert!(json.contains("\"implementors\":[\"Type1\"]"));
+    }
+    
+    // Test deserializing ProjectContext from JSON
+    #[test]
+    fn test_project_context_json_deserialization() {
+        // Create a JSON string
+        let json = r#"
+        {
+            "modules": ["test::module"],
+            "module_root": "test",
+            "traits": [
+                {
+                    "name": "test::Trait1",
+                    "implementors": ["Type1"]
+                }
+            ]
+        }
+        "#;
+        
+        // Deserialize from JSON
+        let context: ProjectContext = serde_json::from_str(json).expect("Failed to deserialize context");
+        
+        // Verify context properties
+        assert_eq!(context.module_root, "test");
+        assert_eq!(context.modules.len(), 1);
+        assert_eq!(context.modules[0], "test::module");
+        assert_eq!(context.traits.len(), 1);
+        assert_eq!(context.traits[0].name, "test::Trait1");
+        assert_eq!(context.traits[0].implementors.len(), 1);
+        assert_eq!(context.traits[0].implementors[0], "Type1");
+    }
+}
