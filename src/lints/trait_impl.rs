@@ -279,10 +279,12 @@ test_trait_constraint:
             TraitInfo {
                 name: "test_crate::Display".to_string(),
                 implementors: vec!["test_crate::User".to_string(), "test_crate::Product".to_string()],
+                applicable_lints: vec![],
             },
             TraitInfo {
                 name: "test_crate::Serialize".to_string(),
                 implementors: vec!["test_crate::Config".to_string()],
+                applicable_lints: vec![],
             },
         ];
         
@@ -332,6 +334,7 @@ test_trait_constraint:
             TraitInfo {
                 name: "test_crate::EmptyTrait".to_string(),
                 implementors: vec![],  // No implementations
+                applicable_lints: vec![],
             },
         ];
         

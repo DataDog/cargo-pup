@@ -6,12 +6,35 @@ use std::path::{Path, PathBuf};
 pub const PUP_DIR: &str = ".pup";
 pub const CONTEXT_FILE_SUFFIX: &str = "_context.json";
 
+/// Information about a module and the lints that apply to it
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ModuleInfo {
+    /// Fully qualified module name
+    pub name: String,
+    /// List of lint names that apply to this module
+    #[serde(default)]
+    pub applicable_lints: Vec<String>,
+}
+
+// Add PartialEq implementation to allow comparisons with strings
+impl PartialEq<str> for ModuleInfo {
+    fn eq(&self, other: &str) -> bool {
+        self.name == other
+    }
+}
+
+impl PartialEq<&str> for ModuleInfo {
+    fn eq(&self, other: &&str) -> bool {
+        self.name == *other
+    }
+}
+
 /// Context for configuration generation containing compile-time discoverable
 /// context about the project we're running cargo-pup on.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProjectContext {
-    /// List of all modules, fully qualified
-    pub modules: Vec<String>,
+    /// List of all modules with their applicable lints, fully qualified
+    pub modules: Vec<ModuleInfo>,
     /// The top-level crate name (root module)
     pub module_root: String,
     /// List of all traits, fully qualified, and their implementations
@@ -28,6 +51,9 @@ pub struct TraitInfo {
     pub name: String,
     /// List of types implementing this trait
     pub implementors: Vec<String>,
+    /// List of lint names that apply to this trait
+    #[serde(default)]
+    pub applicable_lints: Vec<String>,
 }
 
 #[allow(dead_code)]
@@ -59,8 +85,16 @@ impl ProjectContext {
         module_root: String, 
         traits: Vec<TraitInfo>
     ) -> Self {
+        // Convert string modules to ModuleInfo
+        let module_infos = modules.into_iter()
+            .map(|name| ModuleInfo { 
+                name, 
+                applicable_lints: Vec::new() 
+            })
+            .collect();
+            
         Self {
-            modules,
+            modules: module_infos,
             module_root,
             traits,
             base_dir: PathBuf::from(PUP_DIR),
@@ -74,8 +108,16 @@ impl ProjectContext {
         traits: Vec<TraitInfo>,
         dir_path: impl AsRef<Path>
     ) -> Self {
+        // Convert string modules to ModuleInfo
+        let module_infos = modules.into_iter()
+            .map(|name| ModuleInfo { 
+                name, 
+                applicable_lints: Vec::new() 
+            })
+            .collect();
+            
         Self {
-            modules,
+            modules: module_infos,
             module_root,
             traits,
             base_dir: dir_path.as_ref().to_path_buf(),
@@ -233,13 +275,12 @@ impl ProjectContext {
         self.traits.extend(other.traits.clone());
     }
 
-    /// Deduplicates modules and sorts traits for consistent ordering
+    /// Sorts modules and traits for consistent ordering
     fn deduplicate(&mut self) {
-        // Sort and deduplicate modules
-        self.modules.sort();
-        self.modules.dedup();
+        // Sort modules by name
+        self.modules.sort_by(|a, b| a.name.cmp(&b.name));
 
-        // Sort traits by name for consistent ordering
+        // Sort traits by name
         self.traits.sort_by(|a, b| a.name.cmp(&b.name));
     }
 }
@@ -247,7 +288,7 @@ impl ProjectContext {
 /// Format and print the modules in the project context
 #[allow(dead_code)]
 pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> Result<()> {
-    use ansi_term::Colour::{Blue, Cyan};
+    use ansi_term::Colour::{Blue, Cyan, Green};
     use std::collections::BTreeMap;
     
     // Print a header
@@ -267,21 +308,21 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> Result
     println!();
     
     // Print modules with applicable lints
-    let mut modules_by_crate: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut modules_by_crate: BTreeMap<String, Vec<(&ModuleInfo, String)>> = BTreeMap::new();
     
     // Group modules by crate
-    for module_path in &context.modules {
+    for module_info in &context.modules {
         // Extract crate name from module path (everything before the first ::)
-        if let Some(idx) = module_path.find("::") {
-            let crate_name = &module_path[..idx];
-            let module_suffix = &module_path[idx..];
+        if let Some(idx) = module_info.name.find("::") {
+            let crate_name = &module_info.name[..idx];
+            let module_suffix = &module_info.name[idx..];
             
             modules_by_crate.entry(crate_name.to_string())
                 .or_insert_with(Vec::new)
-                .push(module_suffix.to_string());
+                .push((module_info, module_suffix.to_string()));
         } else {
             // Handle case where there's no :: in the path
-            modules_by_crate.entry(module_path.clone())
+            modules_by_crate.entry(module_info.name.clone())
                 .or_insert_with(Vec::new);
         }
     }
@@ -290,8 +331,12 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> Result
     for (crate_name, modules) in modules_by_crate {
         println!("{}", Blue.paint(&crate_name));
         
-        for module_suffix in modules {
-            println!("  {}", module_suffix);
+        for (module_info, module_suffix) in modules {
+            // Format applicable lints as a comma-separated string
+            let lints_str = module_info.applicable_lints.join(", ");
+            
+            // Use Blue for module names to match the style in print_traits
+            println!("  {} [{}]", Blue.paint(module_suffix), Green.paint(&lints_str));
         }
         println!();
     }
@@ -322,7 +367,7 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> Result<
     println!();
     
     // Print traits with their implementations
-    let mut traits_by_crate: BTreeMap<String, Vec<(&String, &Vec<String>)>> = BTreeMap::new();
+    let mut traits_by_crate: BTreeMap<String, Vec<&TraitInfo>> = BTreeMap::new();
     
     // Group traits by crate
     for trait_info in &context.traits {
@@ -332,7 +377,7 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> Result<
             
             traits_by_crate.entry(crate_name.to_string())
                 .or_insert_with(Vec::new)
-                .push((&trait_info.name, &trait_info.implementors));
+                .push(trait_info);
         } else {
             // Handle case where there's no :: in the path
             traits_by_crate.entry(trait_info.name.clone())
@@ -344,19 +389,23 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> Result<
     for (crate_name, traits) in traits_by_crate {
         println!("{}", Blue.paint(&crate_name));
         
-        for (trait_name, implementors) in traits {
+        for trait_info in traits {
             // Extract the part after the crate name
-            let trait_suffix = if let Some(idx) = trait_name.find("::") {
-                &trait_name[idx..]
+            let trait_suffix = if let Some(idx) = trait_info.name.find("::") {
+                &trait_info.name[idx..]
             } else {
-                trait_name
+                &trait_info.name
             };
             
-            println!("  {}", trait_suffix);
+            // Format applicable lints as a comma-separated string
+            let lints_str = trait_info.applicable_lints.join(", ");
+            
+            // Print trait name with applicable lints
+            println!("  {} [{}]", Blue.paint(trait_suffix), Green.paint(&lints_str));
             
             // Print implementors with indentation
-            if !implementors.is_empty() {
-                for implementor in implementors {
+            if !trait_info.implementors.is_empty() {
+                for implementor in &trait_info.implementors {
                     println!("    → {}", Green.paint(implementor));
                 }
             }
@@ -385,8 +434,14 @@ mod tests {
         let mut context = ProjectContext::new();
         context.module_root = "test_crate".to_string();
         context.modules = vec![
-            "test_crate::module1".to_string(),
-            "test_crate::module2".to_string(),
+            ModuleInfo {
+                name: "test_crate::module1".to_string(),
+                applicable_lints: vec!["lint1".to_string(), "lint2".to_string()],
+            },
+            ModuleInfo {
+                name: "test_crate::module2".to_string(),
+                applicable_lints: vec!["lint3".to_string()],
+            },
         ];
 
         context.traits = vec![TraitInfo {
@@ -395,6 +450,7 @@ mod tests {
                 "test_crate::Type1".to_string(),
                 "test_crate::Type2".to_string(),
             ],
+            applicable_lints: vec!["lint1".to_string()],
         }];
 
         // Serialize to JSON
@@ -407,16 +463,28 @@ mod tests {
         // Verify the deserialized context matches the original
         assert_eq!(deserialized.module_root, "test_crate");
         assert_eq!(deserialized.modules.len(), 2);
+        assert_eq!(deserialized.modules[0].name, "test_crate::module1");
+        assert_eq!(deserialized.modules[0].applicable_lints.len(), 2);
+        assert_eq!(deserialized.modules[1].name, "test_crate::module2");
+        assert_eq!(deserialized.modules[1].applicable_lints.len(), 1);
+        
         assert_eq!(deserialized.traits.len(), 1);
         assert_eq!(deserialized.traits[0].name, "test_crate::Trait1");
         assert_eq!(deserialized.traits[0].implementors.len(), 2);
+        assert_eq!(deserialized.traits[0].applicable_lints.len(), 1);
+        assert_eq!(deserialized.traits[0].applicable_lints[0], "lint1");
     }
 
     #[test]
     fn test_serialize_empty_module_root_error() {
         // Create a context with empty module_root
         let mut context = ProjectContext::new();
-        context.modules = vec!["test::module".to_string()];
+        context.modules = vec![
+            ModuleInfo {
+                name: "test::module".to_string(),
+                applicable_lints: vec![],
+            }
+        ];
 
         // This doesn't actually try to write to a file, just checks the validation logic
         let result = context.serialize_to_file();
@@ -429,8 +497,34 @@ mod tests {
         );
     }
 
-    // We no longer need these custom test implementations since we've incorporated
-    // the functionality into the main ProjectContext implementation
+    #[test]
+    fn test_with_data_conversion() {
+        // Test that the with_data method properly converts strings to ModuleInfo
+        let modules = vec![
+            "crate1::module1".to_string(),
+            "crate1::module2".to_string(),
+        ];
+        
+        let traits = vec![
+            TraitInfo {
+                name: "crate1::Trait1".to_string(),
+                implementors: vec!["Type1".to_string()],
+                applicable_lints: vec![],
+            }
+        ];
+        
+        let context = ProjectContext::with_data(
+            modules.clone(),
+            "crate1".to_string(),
+            traits
+        );
+        
+        assert_eq!(context.modules.len(), 2);
+        assert_eq!(context.modules[0].name, modules[0]);
+        assert_eq!(context.modules[1].name, modules[1]);
+        assert!(context.modules[0].applicable_lints.is_empty());
+        assert!(context.modules[1].applicable_lints.is_empty());
+    }
 
     #[test]
     fn roundtrip_through_files() {
@@ -444,13 +538,20 @@ mod tests {
         let mut context1 = ProjectContext::with_base_dir(test_dir_path);
         context1.module_root = "crate1".to_string();
         context1.modules = vec![
-            "crate1::module1".to_string(),
-            "crate1::module2".to_string(),
+            ModuleInfo {
+                name: "crate1::module1".to_string(),
+                applicable_lints: vec!["lint1".to_string()],
+            },
+            ModuleInfo {
+                name: "crate1::module2".to_string(),
+                applicable_lints: vec!["lint2".to_string()],
+            },
         ];
         context1.traits = vec![
             TraitInfo {
                 name: "crate1::Trait1".to_string(),
                 implementors: vec!["crate1::Type1".to_string()],
+                applicable_lints: vec!["lint3".to_string()],
             }
         ];
 
@@ -458,13 +559,20 @@ mod tests {
         let mut context2 = ProjectContext::with_base_dir(test_dir_path);
         context2.module_root = "crate2".to_string(); 
         context2.modules = vec![
-            "crate2::moduleA".to_string(),
-            "crate2::moduleB".to_string(),
+            ModuleInfo {
+                name: "crate2::moduleA".to_string(),
+                applicable_lints: vec!["lintA".to_string()],
+            },
+            ModuleInfo {
+                name: "crate2::moduleB".to_string(),
+                applicable_lints: vec!["lintB".to_string()],
+            },
         ];
         context2.traits = vec![
             TraitInfo {
                 name: "crate2::TraitX".to_string(),
                 implementors: vec!["crate2::TypeX".to_string()],
+                applicable_lints: vec!["lintX".to_string()],
             }
         ];
         
@@ -486,10 +594,15 @@ mod tests {
         
         // Should contain all modules from both contexts
         assert_eq!(loaded_context.modules.len(), 4, "Should have all 4 modules");
-        assert!(loaded_context.modules.contains(&"crate1::module1".to_string()));
-        assert!(loaded_context.modules.contains(&"crate1::module2".to_string()));
-        assert!(loaded_context.modules.contains(&"crate2::moduleA".to_string()));
-        assert!(loaded_context.modules.contains(&"crate2::moduleB".to_string()));
+        
+        // Check modules by name
+        let module_names: Vec<String> = loaded_context.modules.iter()
+            .map(|m| m.name.clone())
+            .collect();
+        assert!(module_names.contains(&"crate1::module1".to_string()));
+        assert!(module_names.contains(&"crate1::module2".to_string()));
+        assert!(module_names.contains(&"crate2::moduleA".to_string()));
+        assert!(module_names.contains(&"crate2::moduleB".to_string()));
         
         // Should have both traits
         assert_eq!(loaded_context.traits.len(), 2, "Should have both traits");
@@ -500,6 +613,8 @@ mod tests {
             .expect("Should find first trait");
         assert_eq!(trait1.implementors.len(), 1);
         assert_eq!(trait1.implementors[0], "crate1::Type1");
+        assert_eq!(trait1.applicable_lints.len(), 1);
+        assert_eq!(trait1.applicable_lints[0], "lint3");
         
         // Verify second trait exists
         let trait2 = loaded_context.traits.iter()
@@ -507,6 +622,8 @@ mod tests {
             .expect("Should find second trait");
         assert_eq!(trait2.implementors.len(), 1);
         assert_eq!(trait2.implementors[0], "crate2::TypeX");
+        assert_eq!(trait2.applicable_lints.len(), 1);
+        assert_eq!(trait2.applicable_lints[0], "lintX");
         
         // Verify both crate names were detected
         assert_eq!(crate_names.len(), 2, "Should have found 2 crate names");

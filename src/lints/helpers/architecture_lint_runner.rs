@@ -1,4 +1,3 @@
-use ansi_term::Color;
 use rustc_driver::Callbacks;
 use rustc_hir::ItemKind;
 use rustc_hir::def_id::LocalModDefId;
@@ -7,8 +6,8 @@ use rustc_span::Symbol;
 use std::sync::Arc;
 use std::{collections::BTreeSet, path::Path};
 
-use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
-use crate::utils::project_context::{ProjectContext, TraitInfo};
+use crate::lints::ArchitectureLintCollection;
+use crate::utils::project_context::ProjectContext;
 
 ///
 /// The mode our lint runner should operate in
@@ -93,66 +92,6 @@ impl ArchitectureLintRunner {
             .map(|ctx| serde_json::to_string(ctx).unwrap_or_else(|_| "{}".to_string()))
     }
 
-    ///
-    /// Prints traits in the project.
-    ///
-    fn print_traits(
-        &self,
-        tcx: TyCtxt<'_>,
-        _lints: &[Box<dyn ArchitectureLintRule + Send>],
-    ) -> String {
-        let mut trait_set: BTreeSet<(String, String)> = BTreeSet::new();
-
-        let module_items = tcx.hir_crate_items(());
-        for item_id in module_items.free_items() {
-            let item = tcx.hir_item(item_id);
-            if let ItemKind::Trait(..) = item.kind {
-                let trait_name = tcx.def_path_str(item.owner_id.to_def_id());
-                let module = tcx
-                    .crate_name(item.owner_id.to_def_id().krate)
-                    .to_ident_string();
-                trait_set.insert((module, trait_name));
-            }
-        }
-
-        let mut output = String::new();
-        for (module, trait_name) in &trait_set {
-            output.push_str(&format!("{}::{}\n", Color::Blue.paint(module), trait_name));
-        }
-        output
-    }
-
-    //
-    // Prints the namespaces in the project.
-    //
-    fn print_namespaces(
-        &self,
-        tcx: TyCtxt<'_>,
-        lints: &Vec<Box<dyn ArchitectureLintRule + Send>>,
-    ) -> String {
-        let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
-
-        // Start recursive traversal from crate root
-        collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
-
-        let mut output = String::new();
-        for (module, path) in &namespace_set {
-            let applicable_lints: Vec<String> = lints
-                .iter()
-                .filter(|lint| lint.applies_to_module(format!("{}::{}", module, path).as_str()))
-                .map(|lint| lint.name())
-                .collect();
-
-            output.push_str(&format!(
-                "{}::{} [{}]\n",
-                Color::Blue.paint(module),
-                path,
-                Color::Green.paint(applicable_lints.join(", "))
-            ));
-        }
-        output
-    }
-
     // Handle each mode and return Result
     fn handle_mode(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<()> {
         use anyhow::Context;
@@ -188,17 +127,12 @@ impl ArchitectureLintRunner {
 
     /// Build ProjectContext with modules and traits info common to multiple modes
     fn build_project_context(&self, tcx: TyCtxt<'_>) -> anyhow::Result<ProjectContext> {
+        use crate::utils::project_context::{ModuleInfo, TraitInfo};
         use std::collections::HashMap;
 
         // Create a namespace set with modules
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
         collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
-
-        // Collect all modules
-        let modules: Vec<String> = namespace_set
-            .iter()
-            .map(|(module, path)| format!("{}::{}", module, path))
-            .collect();
 
         // Get the current crate name (module root)
         // Just take the first entry's module name, which is the current crate
@@ -208,8 +142,29 @@ impl ArchitectureLintRunner {
             "unknown_crate".to_string()
         };
 
+        // Create ModuleInfo objects with applicable lints
+        let mut module_infos = Vec::new();
+        let lints = self.lint_collection.lints();
+
+        for (module, path) in &namespace_set {
+            let full_module_path = format!("{}::{}", module, path);
+
+            // Find lints that apply to this module
+            let applicable_lints: Vec<String> = lints
+                .iter()
+                .filter(|lint| lint.applies_to_module(&full_module_path))
+                .map(|lint| lint.name())
+                .collect();
+
+            // Create ModuleInfo with applicable lints
+            module_infos.push(ModuleInfo {
+                name: full_module_path,
+                applicable_lints,
+            });
+        }
+
         // Collect all traits and their implementors
-        let mut trait_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut trait_map: HashMap<String, (Vec<String>, Vec<String>)> = HashMap::new();
 
         // Find all traits in the crate
         let module_items = tcx.hir_crate_items(());
@@ -222,8 +177,10 @@ impl ArchitectureLintRunner {
                     .to_ident_string();
                 let full_trait_name = format!("{}::{}", module, trait_name);
 
-                // Initialize entry with empty vector
-                trait_map.entry(full_trait_name).or_default();
+                // Initialize entry with empty vectors for implementors and applicable lints
+                trait_map
+                    .entry(full_trait_name)
+                    .or_insert_with(|| (Vec::new(), Vec::new()));
             }
         }
 
@@ -243,9 +200,21 @@ impl ArchitectureLintRunner {
                     let impl_type = format!("{:?}", self_ty);
 
                     // Add implementor to trait
-                    if let Some(implementors) = trait_map.get_mut(&full_trait_name) {
+                    if let Some((implementors, _)) = trait_map.get_mut(&full_trait_name) {
                         implementors.push(impl_type);
                     }
+                }
+            }
+        }
+
+        // Find lints that apply to each trait
+        for (trait_name, (_, applicable_lints)) in &mut trait_map {
+            // Add lints that apply to this trait
+            for lint in lints.iter() {
+                // Since we don't have an explicit applies_to_trait method,
+                // we'll use the trait name as a module path to check
+                if lint.applies_to_module(trait_name) {
+                    applicable_lints.push(lint.name());
                 }
             }
         }
@@ -253,15 +222,20 @@ impl ArchitectureLintRunner {
         // Convert hashmap to vector of TraitInfo
         let traits: Vec<TraitInfo> = trait_map
             .into_iter()
-            .map(|(name, implementors)| TraitInfo { name, implementors })
+            .map(|(name, (implementors, applicable_lints))| TraitInfo {
+                name,
+                implementors,
+                applicable_lints,
+            })
             .collect();
 
-        // Return the context with our collected data
-        Ok(ProjectContext::with_data(
-            modules,
-            module_root,
-            traits
-        ))
+        // Build and return the context
+        let mut context = ProjectContext::new();
+        context.module_root = module_root;
+        context.modules = module_infos;
+        context.traits = traits;
+
+        Ok(context)
     }
 
     // Implementation function that returns Result
@@ -458,7 +432,8 @@ mod tests {
             vec![TraitInfo {
                 name: "test::Trait1".to_string(),
                 implementors: vec!["Type1".to_string(), "Type2".to_string()],
-            }]
+                applicable_lints: vec![],
+            }],
         );
 
         // Verify the context properties
@@ -481,14 +456,15 @@ mod tests {
             vec![TraitInfo {
                 name: "test::Trait1".to_string(),
                 implementors: vec!["Type1".to_string()],
-            }]
+                applicable_lints: vec![],
+            }],
         );
 
         // Serialize to JSON
         let json = serde_json::to_string(&context).expect("Failed to serialize context");
 
         // Verify JSON contains expected data
-        assert!(json.contains("\"modules\":[\"test::module\"]"));
+        assert!(json.contains("\"name\":\"test::module\""));
         assert!(json.contains("\"module_root\":\"test\""));
         assert!(json.contains("\"traits\":[{"));
         assert!(json.contains("\"name\":\"test::Trait1\""));
@@ -501,12 +477,18 @@ mod tests {
         // Create a JSON string
         let json = r#"
         {
-            "modules": ["test::module"],
+            "modules": [
+                {
+                    "name": "test::module",
+                    "applicable_lints": []
+                }
+            ],
             "module_root": "test",
             "traits": [
                 {
                     "name": "test::Trait1",
-                    "implementors": ["Type1"]
+                    "implementors": ["Type1"],
+                    "applicable_lints": []
                 }
             ]
         }
