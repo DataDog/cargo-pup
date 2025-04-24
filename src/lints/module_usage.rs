@@ -291,14 +291,14 @@ test_me_namespace_rule_two:
         let factory = ModuleUsageLintFactory::new();
         
         // Create a test context
-        let context = ProjectContext {
-            modules: vec![
+        let context = ProjectContext::with_data(
+            vec![
                 "test_crate".to_string(),
                 "test_crate::api".to_string(),
             ],
-            module_root: "test_crate".to_string(),
-            traits: Vec::new(),
-        };
+            "test_crate".to_string(),
+            Vec::new()
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;

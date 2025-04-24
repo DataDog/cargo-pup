@@ -219,14 +219,14 @@ enforce_empty_mod:
         let factory = EmptyModLintFactory::new();
 
         // Create a test context
-        let context = ProjectContext {
-            modules: vec![
+        let context = ProjectContext::with_data(
+            vec![
                 "test_crate".to_string(),
                 "test_crate::submodule".to_string(),
             ],
-            module_root: "test_crate".to_string(),
-            traits: Vec::new(),
-        };
+            "test_crate".to_string(),
+            Vec::new()
+        );
 
         // Generate config
         let configs = factory.generate_config(&context)?;

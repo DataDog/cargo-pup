@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub const PUP_DIR: &str = ".pup";
 pub const CONTEXT_FILE_SUFFIX: &str = "_context.json";
@@ -16,6 +16,9 @@ pub struct ProjectContext {
     pub module_root: String,
     /// List of all traits, fully qualified, and their implementations
     pub traits: Vec<TraitInfo>,
+    /// Base directory for storing context files (not serialized)
+    #[serde(skip)]
+    base_dir: PathBuf,
 }
 
 /// Information about a trait and its implementations
@@ -29,16 +32,57 @@ pub struct TraitInfo {
 
 #[allow(dead_code)]
 impl ProjectContext {
-    /// Creates a new empty project context
+    /// Creates a new empty project context with default base directory (.pup)
     pub fn new() -> Self {
         Self {
             modules: Vec::new(),
             module_root: String::new(),
             traits: Vec::new(),
+            base_dir: PathBuf::from(PUP_DIR),
+        }
+    }
+    
+    /// Creates a new empty project context with a custom base directory
+    pub fn with_base_dir(dir_path: impl AsRef<Path>) -> Self {
+        Self {
+            modules: Vec::new(),
+            module_root: String::new(),
+            traits: Vec::new(),
+            base_dir: dir_path.as_ref().to_path_buf(),
+        }
+    }
+    
+    /// Creates a project context with provided data and default base directory (.pup)
+    /// This helps migrate code that previously used struct initialization
+    pub fn with_data(
+        modules: Vec<String>, 
+        module_root: String, 
+        traits: Vec<TraitInfo>
+    ) -> Self {
+        Self {
+            modules,
+            module_root,
+            traits,
+            base_dir: PathBuf::from(PUP_DIR),
+        }
+    }
+    
+    /// Creates a project context with provided data and a custom base directory
+    pub fn with_data_and_base_dir(
+        modules: Vec<String>, 
+        module_root: String, 
+        traits: Vec<TraitInfo>,
+        dir_path: impl AsRef<Path>
+    ) -> Self {
+        Self {
+            modules,
+            module_root,
+            traits,
+            base_dir: dir_path.as_ref().to_path_buf(),
         }
     }
 
-    /// Serialize this project context to a file in the .pup directory
+    /// Serialize this project context to a file in the base directory
     /// with a name based on the module_root
     pub fn serialize_to_file(&self) -> Result<PathBuf> {
         if self.module_root.is_empty() {
@@ -47,13 +91,13 @@ impl ProjectContext {
             ));
         }
 
-        // Ensure the .pup directory exists
-        let pup_dir = PathBuf::from(PUP_DIR);
-        fs::create_dir_all(&pup_dir).context(format!("Failed to create directory: {}", PUP_DIR))?;
+        // Ensure the base directory exists
+        fs::create_dir_all(&self.base_dir)
+            .context(format!("Failed to create directory: {}", self.base_dir.display()))?;
 
         // Create a predictable filename using just the crate name
         let filename = format!("{}{}", self.module_root, CONTEXT_FILE_SUFFIX);
-        let file_path = pup_dir.join(&filename);
+        let file_path = self.base_dir.join(&filename);
 
         // Log the exact file we're writing to for debugging
         eprintln!("Writing ProjectContext to: {}", file_path.display());
@@ -76,29 +120,34 @@ impl ProjectContext {
         Ok(file_path)
     }
 
-    /// Load all project contexts from the .pup directory and return the merged result
+    /// Load all project contexts from the default .pup directory and return the merged result
     pub fn load_all_contexts() -> Result<ProjectContext> {
         let (context, _) = Self::load_all_contexts_with_crate_names()?;
         Ok(context)
     }
 
-    /// Load all project contexts from the .pup directory and return the merged result
+    /// Load all project contexts from the default .pup directory and return the merged result
     /// along with a list of all crate names that were found
     pub fn load_all_contexts_with_crate_names() -> Result<(ProjectContext, Vec<String>)> {
-        let pup_dir = PathBuf::from(PUP_DIR);
-        if !pup_dir.exists() {
-            return Err(anyhow::anyhow!("No .pup directory found"));
+        Self::load_all_contexts_from_dir(&PathBuf::from(PUP_DIR))
+    }
+
+    /// Load all project contexts from a specific directory and return the merged result
+    /// along with a list of all crate names that were found
+    pub fn load_all_contexts_from_dir(dir_path: &Path) -> Result<(ProjectContext, Vec<String>)> {
+        if !dir_path.exists() {
+            return Err(anyhow::anyhow!("Directory not found: {}", dir_path.display()));
         }
 
-        // Create aggregated context
-        let mut aggregated_context = ProjectContext::new();
+        // Create aggregated context with the specified base directory
+        let mut aggregated_context = ProjectContext::with_base_dir(dir_path);
 
         // Track crate names for better presentation
         let mut crate_names = Vec::new();
 
-        // Read all JSON files in .pup directory
-        let entries =
-            fs::read_dir(&pup_dir).context(format!("Failed to read directory: {}", PUP_DIR))?;
+        // Read all JSON files in the directory
+        let entries = fs::read_dir(dir_path)
+            .context(format!("Failed to read directory: {}", dir_path.display()))?;
 
         // Process each file
         let mut contexts_found = false;
@@ -130,7 +179,7 @@ impl ProjectContext {
         if !contexts_found {
             return Err(anyhow::anyhow!(
                 "No project context files found in {}",
-                PUP_DIR
+                dir_path.display()
             ));
         }
 
@@ -140,15 +189,14 @@ impl ProjectContext {
         Ok((aggregated_context, crate_names))
     }
 
-    /// Clean up all context files from the .pup directory
-    pub fn clean_context_files() -> Result<()> {
-        let pup_dir = PathBuf::from(PUP_DIR);
-        if !pup_dir.exists() {
+    /// Clean up all context files from the base directory
+    pub fn clean_context_files(&self) -> Result<()> {
+        if !self.base_dir.exists() {
             return Ok(()); // Nothing to clean if directory doesn't exist
         }
 
-        let entries =
-            fs::read_dir(&pup_dir).context(format!("Failed to read directory: {}", PUP_DIR))?;
+        let entries = fs::read_dir(&self.base_dir)
+            .context(format!("Failed to read directory: {}", self.base_dir.display()))?;
 
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
@@ -160,6 +208,12 @@ impl ProjectContext {
         }
 
         Ok(())
+    }
+
+    /// Clean up all context files from the default .pup directory
+    pub fn clean_default_context_files() -> Result<()> {
+        let default_context = ProjectContext::new();
+        default_context.clean_context_files()
     }
 
     // Private implementation methods
@@ -375,19 +429,19 @@ mod tests {
         );
     }
 
+    // We no longer need these custom test implementations since we've incorporated
+    // the functionality into the main ProjectContext implementation
+
     #[test]
     fn roundtrip_through_files() {
-        // Create temporary .pup directory for our test
-        let pup_dir = PathBuf::from(PUP_DIR);
-        if pup_dir.exists() {
-            // Clean up any existing context files first
-            ProjectContext::clean_context_files().expect("Failed to clean existing context files");
-        } else {
-            fs::create_dir_all(&pup_dir).expect("Failed to create .pup directory for test");
-        }
-
-        // Create first context
-        let mut context1 = ProjectContext::new();
+        use tempfile::TempDir;
+        
+        // Create a test-specific temp directory
+        let temp_dir = TempDir::new().expect("Failed to create temporary directory");
+        let test_dir_path = temp_dir.path();
+        
+        // Create first context with custom base directory
+        let mut context1 = ProjectContext::with_base_dir(test_dir_path);
         context1.module_root = "crate1".to_string();
         context1.modules = vec![
             "crate1::module1".to_string(),
@@ -400,9 +454,9 @@ mod tests {
             }
         ];
 
-        // Create second context with different module root
-        let mut context2 = ProjectContext::new();
-        context2.module_root = "crate2".to_string(); // Different module root
+        // Create second context with same custom base directory
+        let mut context2 = ProjectContext::with_base_dir(test_dir_path);
+        context2.module_root = "crate2".to_string(); 
         context2.modules = vec![
             "crate2::moduleA".to_string(),
             "crate2::moduleB".to_string(),
@@ -413,8 +467,8 @@ mod tests {
                 implementors: vec!["crate2::TypeX".to_string()],
             }
         ];
-
-        // Serialize both contexts to files
+        
+        // Serialize both contexts to the temp directory
         let file1 = context1.serialize_to_file().expect("Failed to serialize context1");
         let file2 = context2.serialize_to_file().expect("Failed to serialize context2");
 
@@ -422,15 +476,11 @@ mod tests {
         assert!(file1.exists(), "Context file 1 should exist");
         assert!(file2.exists(), "Context file 2 should exist");
 
-        // Load all contexts back
-        let loaded_context = ProjectContext::load_all_contexts().expect("Failed to load contexts");
-        
-        // Get the crate names from loading
-        let (_, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
-            .expect("Failed to load contexts with crate names");
+        // Load all contexts back from our test directory
+        let (loaded_context, crate_names) = ProjectContext::load_all_contexts_from_dir(test_dir_path)
+            .expect("Failed to load contexts");
 
         // Validate the loaded context
-        
         // Should have a valid module root
         assert!(!loaded_context.module_root.is_empty(), "Module root should not be empty");
         
@@ -463,7 +513,6 @@ mod tests {
         assert!(crate_names.contains(&"crate1".to_string()));
         assert!(crate_names.contains(&"crate2".to_string()));
         
-        // Clean up after ourselves
-        ProjectContext::clean_context_files().expect("Failed to clean context files");
+        // temp_dir will be automatically cleaned up when it goes out of scope
     }
 }

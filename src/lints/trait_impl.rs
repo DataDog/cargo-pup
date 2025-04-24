@@ -286,11 +286,11 @@ test_trait_constraint:
             },
         ];
         
-        let context = ProjectContext {
-            modules: vec!["test_crate".to_string()],
-            module_root: "test_crate".to_string(),
-            traits,
-        };
+        let context = ProjectContext::with_data(
+            vec!["test_crate".to_string()],
+            "test_crate".to_string(),
+            traits
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;
@@ -335,11 +335,11 @@ test_trait_constraint:
             },
         ];
         
-        let context = ProjectContext {
-            modules: vec!["test_crate".to_string()],
-            module_root: "test_crate".to_string(),
-            traits,
-        };
+        let context = ProjectContext::with_data(
+            vec!["test_crate".to_string()],
+            "test_crate".to_string(),
+            traits
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;

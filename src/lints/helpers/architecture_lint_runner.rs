@@ -256,12 +256,12 @@ impl ArchitectureLintRunner {
             .map(|(name, implementors)| TraitInfo { name, implementors })
             .collect();
 
-        // Return the context
-        Ok(ProjectContext {
+        // Return the context with our collected data
+        Ok(ProjectContext::with_data(
             modules,
             module_root,
-            traits,
-        })
+            traits
+        ))
     }
 
     // Implementation function that returns Result
@@ -452,14 +452,14 @@ mod tests {
     #[test]
     fn test_create_project_context() {
         // Create a project context
-        let context = ProjectContext {
-            modules: vec!["test::module1".to_string(), "test::module2".to_string()],
-            module_root: "test".to_string(),
-            traits: vec![TraitInfo {
+        let context = ProjectContext::with_data(
+            vec!["test::module1".to_string(), "test::module2".to_string()],
+            "test".to_string(),
+            vec![TraitInfo {
                 name: "test::Trait1".to_string(),
                 implementors: vec!["Type1".to_string(), "Type2".to_string()],
-            }],
-        };
+            }]
+        );
 
         // Verify the context properties
         assert_eq!(context.module_root, "test");
@@ -475,14 +475,14 @@ mod tests {
     #[test]
     fn test_project_context_json_serialization() {
         // Create a project context
-        let context = ProjectContext {
-            modules: vec!["test::module".to_string()],
-            module_root: "test".to_string(),
-            traits: vec![TraitInfo {
+        let context = ProjectContext::with_data(
+            vec!["test::module".to_string()],
+            "test".to_string(),
+            vec![TraitInfo {
                 name: "test::Trait1".to_string(),
                 implementors: vec!["Type1".to_string()],
-            }],
-        };
+            }]
+        );
 
         // Serialize to JSON
         let json = serde_json::to_string(&context).expect("Failed to serialize context");

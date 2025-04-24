@@ -821,6 +821,7 @@ mod tests {
     /// Tests for the process function
     mod process_tests {
         use super::*;
+        use std::path::PathBuf;
 
         // Mock Command for process tests that captures the command without executing it
         #[derive(Debug, Default, Clone)]
@@ -833,17 +834,38 @@ mod tests {
         
         #[test]
         fn test_process_generate_config() {
-            // Test the process function when handling generate-config
+            // Create a test-specific temporary directory that will be automatically cleaned up
             let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
-            let temp_path = temp_dir.path();
+            let temp_path = temp_dir.path().to_path_buf();
             
-            // Create a Cargo.toml file
+            // Create basic Cargo.toml for a rust project
             fs::write(temp_path.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n")
                 .expect("Failed to write Cargo.toml");
-                
-            // Change to the temporary directory
+            
+            // Also create a src directory with a basic main.rs to make it look like a real project
+            fs::create_dir_all(temp_path.join("src")).expect("Failed to create src directory");
+            fs::write(temp_path.join("src/main.rs"), "fn main() {}\n")
+                .expect("Failed to write main.rs");
+            
+            // Store the original directory
             let original_dir = env::current_dir().expect("Failed to get current dir");
-            env::set_current_dir(temp_path).expect("Failed to change directory");
+            
+            // Create a defer-like guard to ensure we always change back to the original directory
+            struct DirGuard {
+                original_dir: PathBuf,
+            }
+            
+            impl Drop for DirGuard {
+                fn drop(&mut self) {
+                    let _ = env::set_current_dir(&self.original_dir);
+                }
+            }
+            
+            // Create the guard
+            let _guard = DirGuard { original_dir: original_dir.clone() };
+            
+            // Change to the temporary directory
+            env::set_current_dir(&temp_path).expect("Failed to change directory");
             
             // Create test args for generate-config
             let args = vec![
@@ -851,20 +873,18 @@ mod tests {
                 "generate-config".to_string(),
             ];
 
-            // We don't actually run the command in the test, so we'll just check
-            // that the process function processes the args correctly
+            // Run the process function - we expect an error because cargo command will fail
+            // in a test environment, but we're just verifying it doesn't panic
             let result = process(args.into_iter());
+            assert!(result.is_err(), "Expected error due to cargo command failure");
             
-            // Since we can't actually run cargo, this will likely return an error
-            // but we're just making sure it doesn't panic
-            if result.is_err() {
-                // Expected since we're not actually running cargo
+            // Verify the expected exit code for a cargo command failure
+            // The actual value doesn't matter too much as long as it's consistent
+            if let Err(exit_status) = result {
+                assert!(exit_status.0 != 0, "Expected non-zero exit status");
             }
             
-            // Make sure to change back to the original directory before the temp directory is dropped
-            // This is important to avoid the "No such file or directory" error
-            let change_back_result = env::set_current_dir(&original_dir);
-            assert!(change_back_result.is_ok(), "Failed to change back to original directory");
+            // The guard will automatically change back to the original directory when it goes out of scope
         }
         
         #[test]
