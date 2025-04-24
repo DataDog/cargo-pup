@@ -1,12 +1,10 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::path::PathBuf;
 
-// Constants
-const PUP_DIR: &str = ".pup";
-const CONTEXT_FILE_SUFFIX: &str = "_context.json";
+pub const PUP_DIR: &str = ".pup";
+pub const CONTEXT_FILE_SUFFIX: &str = "_context.json";
 
 /// Context for configuration generation containing compile-time discoverable
 /// context about the project we're running cargo-pup on.
@@ -176,38 +174,173 @@ impl ProjectContext {
         // Add modules
         self.modules.extend(other.modules.clone());
 
-        // Add traits
+        // Add traits (since each trait has a unique fully-qualified name,
+        // we can just add them without worrying about duplicates)
         self.traits.extend(other.traits.clone());
     }
 
-    /// Deduplicates modules and traits after merging
+    /// Deduplicates modules and sorts traits for consistent ordering
     fn deduplicate(&mut self) {
         // Sort and deduplicate modules
         self.modules.sort();
         self.modules.dedup();
 
-        // Create a map for deduplicating traits
-        let mut trait_map: HashMap<String, TraitInfo> = HashMap::new();
+        // Sort traits by name for consistent ordering
+        self.traits.sort_by(|a, b| a.name.cmp(&b.name));
+    }
+}
 
-        // Deduplicate traits by name and merge implementors
-        for trait_info in self.traits.drain(..) {
-            trait_map
-                .entry(trait_info.name.clone())
-                .and_modify(|existing| {
-                    // Merge implementors
-                    for implementor in &trait_info.implementors {
-                        if !existing.implementors.contains(implementor) {
-                            existing.implementors.push(implementor.clone());
-                        }
-                    }
-                })
-                .or_insert(trait_info);
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_creates_empty_context() {
+        let context = ProjectContext::new();
+        assert!(context.modules.is_empty());
+        assert!(context.module_root.is_empty());
+        assert!(context.traits.is_empty());
+    }
+
+    #[test]
+    fn test_serialization_and_deserialization() {
+        // Create a test context
+        let mut context = ProjectContext::new();
+        context.module_root = "test_crate".to_string();
+        context.modules = vec![
+            "test_crate::module1".to_string(),
+            "test_crate::module2".to_string(),
+        ];
+
+        context.traits = vec![TraitInfo {
+            name: "test_crate::Trait1".to_string(),
+            implementors: vec![
+                "test_crate::Type1".to_string(),
+                "test_crate::Type2".to_string(),
+            ],
+        }];
+
+        // Serialize to JSON
+        let json = serde_json::to_string_pretty(&context).expect("Serialization failed");
+
+        // Deserialize back to ProjectContext
+        let deserialized: ProjectContext =
+            serde_json::from_str(&json).expect("Deserialization failed");
+
+        // Verify the deserialized context matches the original
+        assert_eq!(deserialized.module_root, "test_crate");
+        assert_eq!(deserialized.modules.len(), 2);
+        assert_eq!(deserialized.traits.len(), 1);
+        assert_eq!(deserialized.traits[0].name, "test_crate::Trait1");
+        assert_eq!(deserialized.traits[0].implementors.len(), 2);
+    }
+
+    #[test]
+    fn test_serialize_empty_module_root_error() {
+        // Create a context with empty module_root
+        let mut context = ProjectContext::new();
+        context.modules = vec!["test::module".to_string()];
+
+        // This doesn't actually try to write to a file, just checks the validation logic
+        let result = context.serialize_to_file();
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("empty module_root")
+        );
+    }
+
+    #[test]
+    fn roundtrip_through_files() {
+        // Create temporary .pup directory for our test
+        let pup_dir = PathBuf::from(PUP_DIR);
+        if pup_dir.exists() {
+            // Clean up any existing context files first
+            ProjectContext::clean_context_files().expect("Failed to clean existing context files");
+        } else {
+            fs::create_dir_all(&pup_dir).expect("Failed to create .pup directory for test");
         }
 
-        // Convert back to vector
-        self.traits = trait_map.into_values().collect();
+        // Create first context
+        let mut context1 = ProjectContext::new();
+        context1.module_root = "crate1".to_string();
+        context1.modules = vec![
+            "crate1::module1".to_string(),
+            "crate1::module2".to_string(),
+        ];
+        context1.traits = vec![
+            TraitInfo {
+                name: "crate1::Trait1".to_string(),
+                implementors: vec!["crate1::Type1".to_string()],
+            }
+        ];
 
-        // Sort traits by name
-        self.traits.sort_by(|a, b| a.name.cmp(&b.name));
+        // Create second context with different module root
+        let mut context2 = ProjectContext::new();
+        context2.module_root = "crate2".to_string(); // Different module root
+        context2.modules = vec![
+            "crate2::moduleA".to_string(),
+            "crate2::moduleB".to_string(),
+        ];
+        context2.traits = vec![
+            TraitInfo {
+                name: "crate2::TraitX".to_string(),
+                implementors: vec!["crate2::TypeX".to_string()],
+            }
+        ];
+
+        // Serialize both contexts to files
+        let file1 = context1.serialize_to_file().expect("Failed to serialize context1");
+        let file2 = context2.serialize_to_file().expect("Failed to serialize context2");
+
+        // Verify files exist
+        assert!(file1.exists(), "Context file 1 should exist");
+        assert!(file2.exists(), "Context file 2 should exist");
+
+        // Load all contexts back
+        let loaded_context = ProjectContext::load_all_contexts().expect("Failed to load contexts");
+        
+        // Get the crate names from loading
+        let (_, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
+            .expect("Failed to load contexts with crate names");
+
+        // Validate the loaded context
+        
+        // Should have a valid module root
+        assert!(!loaded_context.module_root.is_empty(), "Module root should not be empty");
+        
+        // Should contain all modules from both contexts
+        assert_eq!(loaded_context.modules.len(), 4, "Should have all 4 modules");
+        assert!(loaded_context.modules.contains(&"crate1::module1".to_string()));
+        assert!(loaded_context.modules.contains(&"crate1::module2".to_string()));
+        assert!(loaded_context.modules.contains(&"crate2::moduleA".to_string()));
+        assert!(loaded_context.modules.contains(&"crate2::moduleB".to_string()));
+        
+        // Should have both traits
+        assert_eq!(loaded_context.traits.len(), 2, "Should have both traits");
+        
+        // Verify first trait exists
+        let trait1 = loaded_context.traits.iter()
+            .find(|t| t.name == "crate1::Trait1")
+            .expect("Should find first trait");
+        assert_eq!(trait1.implementors.len(), 1);
+        assert_eq!(trait1.implementors[0], "crate1::Type1");
+        
+        // Verify second trait exists
+        let trait2 = loaded_context.traits.iter()
+            .find(|t| t.name == "crate2::TraitX")
+            .expect("Should find second trait");
+        assert_eq!(trait2.implementors.len(), 1);
+        assert_eq!(trait2.implementors[0], "crate2::TypeX");
+        
+        // Verify both crate names were detected
+        assert_eq!(crate_names.len(), 2, "Should have found 2 crate names");
+        assert!(crate_names.contains(&"crate1".to_string()));
+        assert!(crate_names.contains(&"crate2".to_string()));
+        
+        // Clean up after ourselves
+        ProjectContext::clean_context_files().expect("Failed to clean context files");
     }
 }
