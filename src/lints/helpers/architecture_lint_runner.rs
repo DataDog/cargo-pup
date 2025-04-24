@@ -4,8 +4,8 @@ use rustc_hir::ItemKind;
 use rustc_hir::def_id::LocalModDefId;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
-use std::{collections::BTreeSet, path::Path};
 use std::sync::Arc;
+use std::{collections::BTreeSet, path::Path};
 
 use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
 use crate::utils::project_context::{ProjectContext, TraitInfo};
@@ -48,7 +48,7 @@ pub struct ArchitectureLintRunner {
     // Callback mechanism, we need somewhere we can stash our
     // results internally.
     result_text: String,
-    
+
     // Store the ProjectContext for serialization
     project_context: Option<ProjectContext>,
 }
@@ -76,21 +76,21 @@ impl ArchitectureLintRunner {
     pub fn lint_results_text(&self) -> &String {
         &self.result_text
     }
-    
+
     ///
     /// Get the built ProjectContext if available
     ///
     pub fn get_project_context(&self) -> Option<&ProjectContext> {
         self.project_context.as_ref()
     }
-    
+
     ///
     /// Serialize the ProjectContext to JSON format
     ///
     pub fn context_as_json(&self) -> Option<String> {
-        self.project_context.as_ref().map(|ctx| {
-            serde_json::to_string(ctx).unwrap_or_else(|_| "{}".to_string())
-        })
+        self.project_context
+            .as_ref()
+            .map(|ctx| serde_json::to_string(ctx).unwrap_or_else(|_| "{}".to_string()))
     }
 
     ///
@@ -164,9 +164,18 @@ impl ArchitectureLintRunner {
             }
             Mode::PrintModules => {
                 // Build the project context first
-                self.build_project_context(tcx)
+                let context = self
+                    .build_project_context(tcx)
                     .context("Failed to build project context for print-modules mode")?;
-                
+
+                // Serialize the context to a file
+                if let Err(e) = context.serialize_to_file() {
+                    eprintln!("Warning: Failed to serialize project context: {}", e);
+                }
+
+                // Store the context for later use
+                self.project_context = Some(context);
+
                 // Then get lints and print namespaces
                 let lints = self.lint_collection.lints();
                 self.result_text = self.print_namespaces(tcx, lints);
@@ -174,46 +183,47 @@ impl ArchitectureLintRunner {
             }
             Mode::PrintTraits => {
                 // Build the project context first
-                self.build_project_context(tcx)
+                let context = self
+                    .build_project_context(tcx)
                     .context("Failed to build project context for print-traits mode")?;
-                
+
+                // Serialize the context to a file
+                if let Err(e) = context.serialize_to_file() {
+                    eprintln!("Warning: Failed to serialize project context: {}", e);
+                }
+
+                // Store the context for later use
+                self.project_context = Some(context);
+
                 // Then get lints and print traits
                 let lints = self.lint_collection.lints();
                 self.result_text = self.print_traits(tcx, lints);
+
                 Ok(())
             }
             Mode::GenerateConfig => {
                 // For config generation, get the result and update result_text
-                let result = self.generate_config_impl(tcx)?;
+                let result = self.generate_config(tcx)?;
                 self.result_text = result;
                 Ok(())
             }
         }
     }
 
-    /// Called back from the compiler
-    fn callback(&mut self, tcx: TyCtxt<'_>) {
-        if let Err(e) = self.handle_mode(tcx) {
-            // For fatal errors, print the error and exit
-            eprintln!("Error: {:#}", e);
-            std::process::exit(1);
-        }
-    }
-
     /// Build ProjectContext with modules and traits info common to multiple modes
-    fn build_project_context(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<()> {
+    fn build_project_context(&self, tcx: TyCtxt<'_>) -> anyhow::Result<ProjectContext> {
         use std::collections::HashMap;
-        
+
         // Create a namespace set with modules
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
         collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
-        
+
         // Collect all modules
         let modules: Vec<String> = namespace_set
             .iter()
             .map(|(module, path)| format!("{}::{}", module, path))
             .collect();
-            
+
         // Get the current crate name (module root)
         // Just take the first entry's module name, which is the current crate
         let module_root = if let Some((crate_name, _)) = namespace_set.iter().next() {
@@ -221,10 +231,10 @@ impl ArchitectureLintRunner {
         } else {
             "unknown_crate".to_string()
         };
-        
+
         // Collect all traits and their implementors
         let mut trait_map: HashMap<String, Vec<String>> = HashMap::new();
-        
+
         // Find all traits in the crate
         let module_items = tcx.hir_crate_items(());
         for item_id in module_items.free_items() {
@@ -235,12 +245,12 @@ impl ArchitectureLintRunner {
                     .crate_name(item.owner_id.to_def_id().krate)
                     .to_ident_string();
                 let full_trait_name = format!("{}::{}", module, trait_name);
-                
+
                 // Initialize entry with empty vector
                 trait_map.entry(full_trait_name).or_default();
             }
         }
-        
+
         // Find implementations
         for item_id in module_items.free_items() {
             let item = tcx.hir_item(item_id);
@@ -249,15 +259,13 @@ impl ArchitectureLintRunner {
                     // This is a trait implementation
                     let trait_def_id = trait_ref.path.res.def_id();
                     let trait_name = tcx.def_path_str(trait_def_id);
-                    let trait_module = tcx
-                        .crate_name(trait_def_id.krate)
-                        .to_ident_string();
+                    let trait_module = tcx.crate_name(trait_def_id.krate).to_ident_string();
                     let full_trait_name = format!("{}::{}", trait_module, trait_name);
-                    
+
                     // Get the implementing type
                     let self_ty = tcx.type_of(item.owner_id).skip_binder();
                     let impl_type = format!("{:?}", self_ty);
-                    
+
                     // Add implementor to trait
                     if let Some(implementors) = trait_map.get_mut(&full_trait_name) {
                         implementors.push(impl_type);
@@ -265,45 +273,46 @@ impl ArchitectureLintRunner {
                 }
             }
         }
-        
+
         // Convert hashmap to vector of TraitInfo
         let traits: Vec<TraitInfo> = trait_map
             .into_iter()
             .map(|(name, implementors)| TraitInfo { name, implementors })
             .collect();
-            
-        // Create the context
-        self.project_context = Some(ProjectContext {
-            modules, 
+
+        // Return the context
+        Ok(ProjectContext {
+            modules,
             module_root,
-            traits 
-        });
-        
-        Ok(())
+            traits,
+        })
     }
-    
+
     // Implementation function that returns Result
-    fn generate_config_impl(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<String> {
-        use anyhow::Context;
+    fn generate_config(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<String> {
         use crate::utils::configuration_factory::LintConfigurationFactory;
-        
-        // Build the project context first
-        self.build_project_context(tcx)?;
-        
-        let context = self.project_context.as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Failed to build project context"))?;
-            
+        use anyhow::Context;
+
+        // Build the project context
+        let context = self
+            .build_project_context(tcx)
+            .context("Failed to build project context")?;
+
         // Create filename with module root that we'll use later
         let config_filename = format!("pup.generated.{}.yaml", context.module_root);
-        
+
         // Generate config file
-        let yaml = LintConfigurationFactory::generate_yaml(context)
+        let yaml = LintConfigurationFactory::generate_yaml(&context)
             .context("Failed to generate YAML configuration")?;
-        
+
         // Write to file
-        LintConfigurationFactory::generate_config_file(context, &config_filename)
-            .context(format!("Failed to write configuration to {}", config_filename))?;
-            
+        LintConfigurationFactory::generate_config_file(&context, &config_filename).context(
+            format!("Failed to write configuration to {}", config_filename),
+        )?;
+
+        // Store the context for later use
+        self.project_context = Some(context);
+
         // Return success message
         Ok(format!("{}\n\nConfig written to {}", yaml, config_filename))
     }
@@ -367,7 +376,11 @@ impl Callbacks for ArchitectureLintRunner {
         _compiler: &rustc_interface::interface::Compiler,
         tcx: TyCtxt<'_>,
     ) -> rustc_driver::Compilation {
-        self.callback(tcx);
+        if let Err(e) = self.handle_mode(tcx) {
+            // For fatal errors, print the error and exit
+            eprintln!("Error: {:#}", e);
+            std::process::exit(1);
+        };
         rustc_driver::Compilation::Continue
     }
 
