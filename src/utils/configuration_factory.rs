@@ -5,7 +5,8 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 
-use crate::{lints::ArchitectureLintRule, utils::project_context::ProjectContext};
+use super::project_context::ProjectContext;
+use crate::lints::ArchitectureLintRule;
 use anyhow::{Result, anyhow};
 
 pub trait LintFactory: Send + Sync {

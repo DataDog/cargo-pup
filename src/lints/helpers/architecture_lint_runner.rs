@@ -8,11 +8,12 @@ use std::{collections::BTreeSet, path::Path};
 use std::sync::Arc;
 
 use crate::lints::{ArchitectureLintCollection, ArchitectureLintRule};
+use crate::utils::project_context::{ProjectContext, TraitInfo};
 
 ///
 /// The mode our lint runner should operate in
 ///
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Mode {
     /// Run the lints
     Check,
@@ -47,6 +48,9 @@ pub struct ArchitectureLintRunner {
     // Callback mechanism, we need somewhere we can stash our
     // results internally.
     result_text: String,
+    
+    // Store the ProjectContext for serialization
+    project_context: Option<ProjectContext>,
 }
 
 impl ArchitectureLintRunner {
@@ -57,6 +61,7 @@ impl ArchitectureLintRunner {
             result_text: String::new(),
             cli_args,
             cargo_args: Vec::new(),
+            project_context: None,
         }
     }
 
@@ -70,6 +75,22 @@ impl ArchitectureLintRunner {
     ///
     pub fn lint_results_text(&self) -> &String {
         &self.result_text
+    }
+    
+    ///
+    /// Get the built ProjectContext if available
+    ///
+    pub fn get_project_context(&self) -> Option<&ProjectContext> {
+        self.project_context.as_ref()
+    }
+    
+    ///
+    /// Serialize the ProjectContext to JSON format
+    ///
+    pub fn context_as_json(&self) -> Option<String> {
+        self.project_context.as_ref().map(|ctx| {
+            serde_json::to_string(ctx).unwrap_or_else(|_| "{}".to_string())
+        })
     }
 
     ///
@@ -134,27 +155,36 @@ impl ArchitectureLintRunner {
 
     /// Called back from the compiler
     fn callback(&mut self, tcx: TyCtxt<'_>) {
-        let lints = self.lint_collection.lints();
         match self.mode {
             Mode::Check => {
                 // Do nothing. Checking happens as part of the lints.
+                let _ = self.lint_collection.lints();
             }
             Mode::PrintModules => {
+                // Build the project context first
+                self.build_project_context(tcx);
+                
+                // Then get lints and print namespaces
+                let lints = self.lint_collection.lints();
                 self.result_text = self.print_namespaces(tcx, lints);
             }
             Mode::PrintTraits => {
+                // Build the project context first
+                self.build_project_context(tcx);
+                
+                // Then get lints and print traits
+                let lints = self.lint_collection.lints();
                 self.result_text = self.print_traits(tcx, lints);
             }
             Mode::GenerateConfig => self.generate_config(tcx),
         }
     }
 
-    fn generate_config(&mut self, tcx: TyCtxt<'_>) {
-        use crate::utils::project_context::{ProjectContext, TraitInfo};
-        use crate::utils::configuration_factory::LintConfigurationFactory;
+    /// Build ProjectContext with modules and traits info common to multiple modes
+    fn build_project_context(&mut self, tcx: TyCtxt<'_>) {
         use std::collections::HashMap;
         
-        // Create a GenerationContext with modules and traits info
+        // Create a namespace set with modules
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
         collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
         
@@ -172,9 +202,6 @@ impl ArchitectureLintRunner {
             "unknown_crate".to_string()
         };
         
-        // Create filename with module root that we'll use later
-        let config_filename = format!("pup.generated.{}.yaml", module_root);
-            
         // Collect all traits and their implementors
         let mut trait_map: HashMap<String, Vec<String>> = HashMap::new();
         
@@ -226,27 +253,41 @@ impl ArchitectureLintRunner {
             .collect();
             
         // Create the context
-        let context = ProjectContext {
+        self.project_context = Some(ProjectContext {
             modules, 
             module_root,
             traits 
-        };
+        });
+    }
+    
+    fn generate_config(&mut self, tcx: TyCtxt<'_>) {
+        use crate::utils::configuration_factory::LintConfigurationFactory;
         
-        // Generate config file
-        match LintConfigurationFactory::generate_yaml(&context) {
-            Ok(yaml) => {
-                // Print the generated YAML to the result
-                self.result_text = yaml;
-                
-                // Also write to file
-                match LintConfigurationFactory::generate_config_file(&context, &config_filename) {
-                    Ok(_) => self.result_text.push_str(&format!("\n\nConfig written to {}", config_filename)),
-                    Err(e) => self.result_text.push_str(&format!("\n\nError writing file: {}", e)),
+        // Build the project context first
+        self.build_project_context(tcx);
+        
+        if let Some(context) = &self.project_context {
+            // Create filename with module root that we'll use later
+            let config_filename = format!("pup.generated.{}.yaml", context.module_root);
+            
+            // Generate config file
+            match LintConfigurationFactory::generate_yaml(context) {
+                Ok(yaml) => {
+                    // Print the generated YAML to the result
+                    self.result_text = yaml;
+                    
+                    // Also write to file
+                    match LintConfigurationFactory::generate_config_file(context, &config_filename) {
+                        Ok(_) => self.result_text.push_str(&format!("\n\nConfig written to {}", config_filename)),
+                        Err(e) => self.result_text.push_str(&format!("\n\nError writing file: {}", e)),
+                    }
+                },
+                Err(e) => {
+                    self.result_text = format!("Error generating configuration: {}", e);
                 }
-            },
-            Err(e) => {
-                self.result_text = format!("Error generating configuration: {}", e);
             }
+        } else {
+            self.result_text = "Error: Failed to build project context".to_string();
         }
     }
 }
