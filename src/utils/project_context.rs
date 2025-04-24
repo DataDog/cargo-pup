@@ -190,6 +190,129 @@ impl ProjectContext {
     }
 }
 
+/// Format and print the modules in the project context
+pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> Result<()> {
+    use ansi_term::Colour::{Blue, Green, Red, Yellow, Cyan};
+    use ansi_term::Style;
+    use std::collections::BTreeMap;
+    
+    // Print a header
+    println!("{}", Cyan.paint(r#"
+     / \__
+    (    @\___
+    /         O
+   /   (_____/
+  /_____/   U
+"#));
+    
+    if crate_names.len() > 1 {
+        println!("Modules from multiple crates: {}", crate_names.join(", "));
+    } else {
+        println!("Modules from crate: {}", context.module_root);
+    }
+    println!();
+    
+    // Print modules with applicable lints
+    let mut modules_by_crate: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    
+    // Group modules by crate
+    for module_path in &context.modules {
+        // Extract crate name from module path (everything before the first ::)
+        if let Some(idx) = module_path.find("::") {
+            let crate_name = &module_path[..idx];
+            let module_suffix = &module_path[idx..];
+            
+            modules_by_crate.entry(crate_name.to_string())
+                .or_insert_with(Vec::new)
+                .push(module_suffix.to_string());
+        } else {
+            // Handle case where there's no :: in the path
+            modules_by_crate.entry(module_path.clone())
+                .or_insert_with(Vec::new);
+        }
+    }
+    
+    // Print modules organized by crate
+    for (crate_name, modules) in modules_by_crate {
+        println!("{}", Blue.paint(&crate_name));
+        
+        for module_suffix in modules {
+            println!("  {}", module_suffix);
+        }
+        println!();
+    }
+    
+    Ok(())
+}
+
+/// Format and print the traits in the project context
+pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> Result<()> {
+    use ansi_term::Colour::{Blue, Green, Red, Yellow, Cyan};
+    use ansi_term::Style;
+    use std::collections::BTreeMap;
+    
+    // Print a header
+    println!("{}", Cyan.paint(r#"
+     / \__
+    (    @\___
+    /         O
+   /   (_____/
+  /_____/   U
+"#));
+    
+    if crate_names.len() > 1 {
+        println!("Traits from multiple crates: {}", crate_names.join(", "));
+    } else {
+        println!("Traits from crate: {}", context.module_root);
+    }
+    println!();
+    
+    // Print traits with their implementations
+    let mut traits_by_crate: BTreeMap<String, Vec<(&String, &Vec<String>)>> = BTreeMap::new();
+    
+    // Group traits by crate
+    for trait_info in &context.traits {
+        // Extract crate name from trait path (everything before the first ::)
+        if let Some(idx) = trait_info.name.find("::") {
+            let crate_name = &trait_info.name[..idx];
+            
+            traits_by_crate.entry(crate_name.to_string())
+                .or_insert_with(Vec::new)
+                .push((&trait_info.name, &trait_info.implementors));
+        } else {
+            // Handle case where there's no :: in the path
+            traits_by_crate.entry(trait_info.name.clone())
+                .or_insert_with(Vec::new);
+        }
+    }
+    
+    // Print traits organized by crate
+    for (crate_name, traits) in traits_by_crate {
+        println!("{}", Blue.paint(&crate_name));
+        
+        for (trait_name, implementors) in traits {
+            // Extract the part after the crate name
+            let trait_suffix = if let Some(idx) = trait_name.find("::") {
+                &trait_name[idx..]
+            } else {
+                trait_name
+            };
+            
+            println!("  {}", trait_suffix);
+            
+            // Print implementors with indentation
+            if !implementors.is_empty() {
+                for implementor in implementors {
+                    println!("    → {}", Green.paint(implementor));
+                }
+            }
+        }
+        println!();
+    }
+    
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

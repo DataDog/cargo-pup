@@ -58,9 +58,26 @@
 //!
 
 #![feature(rustc_private)]
+#![feature(let_chains)]
+#![feature(array_windows)]
+#![feature(try_blocks)]
+
 #![warn(rust_2018_idioms, unused_lifetimes)]
 
+extern crate rustc_driver;
+extern crate rustc_errors;
+extern crate rustc_hir;
+extern crate rustc_infer;
+extern crate rustc_interface;
+extern crate rustc_lint;
+extern crate rustc_middle;
+extern crate rustc_session;
+extern crate rustc_span;
+extern crate rustc_trait_selection;
+
 mod cli;
+mod utils;
+mod lints;
 
 use cli::{PupArgs, PupCli};
 
@@ -77,6 +94,13 @@ enum ProjectType {
     ConfiguredPupProject,
     RustProject,
     OtherDirectory,
+}
+
+#[derive(Debug, PartialEq)]
+enum CommandType {
+    PrintModules,
+    PrintTraits,
+    Other,
 }
 
 /// Simple error type that wraps a command exit code
@@ -210,10 +234,44 @@ pub fn main() {
         }
     }
 
-    let process_result = process(env::args());
-
-    if let Err(code) = process_result {
-        exit(code.0);
+    // Parse command line args once
+    let args: Vec<String> = env::args().collect();
+    
+    // Check for print commands
+    let command = get_command_type(&args);
+    
+    // Process the command
+    match command {
+        CommandType::PrintModules => {
+            // First run normal process to generate context data
+            if let Err(code) = process(env::args()) {
+                exit(code.0);
+            }
+            
+            // Then load and display the generated data
+            if let Err(e) = process_print_modules() {
+                eprintln!("Error: {}", e);
+                exit(1);
+            }
+        },
+        CommandType::PrintTraits => {
+            // First run normal process to generate context data
+            if let Err(code) = process(env::args()) {
+                exit(code.0);
+            }
+            
+            // Then load and display the generated data
+            if let Err(e) = process_print_traits() {
+                eprintln!("Error: {}", e);
+                exit(1);
+            }
+        },
+        CommandType::Other => {
+            // Run normal process flow
+            if let Err(code) = process(env::args()) {
+                exit(code.0);
+            }
+        }
     }
 }
 
@@ -400,6 +458,57 @@ fn run_pup_driver(toolchain: &str) -> Result<(), CommandExitStatus> {
     } else {
         Err(CommandExitStatus(exit_status.code().unwrap_or(-1)))
     }
+}
+
+/// Determine which command the user is running
+fn get_command_type(args: &[String]) -> CommandType {
+    // Check for print-modules command
+    let is_print_modules = args.len() > 1 && 
+        ((args.len() > 2 && args[1] == "pup" && args[2] == "print-modules") || 
+         (args[1] == "print-modules"));
+    
+    // Check for print-traits command
+    let is_print_traits = args.len() > 1 && 
+        ((args.len() > 2 && args[1] == "pup" && args[2] == "print-traits") || 
+         (args[1] == "print-traits"));
+    
+    if is_print_modules {
+        CommandType::PrintModules
+    } else if is_print_traits {
+        CommandType::PrintTraits
+    } else {
+        CommandType::Other
+    }
+}
+
+/// Process the print-modules command by loading contexts from disk and displaying them
+fn process_print_modules() -> anyhow::Result<()> {
+    use crate::utils::project_context::{self, ProjectContext};
+    use anyhow::Context;
+
+    // Load all context data from .pup directory
+    let (context, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
+        .context("Failed to load project context data")?;
+    
+    // Use the utility function to print the modules
+    project_context::print_modules(&context, &crate_names)?;
+    
+    Ok(())
+}
+
+/// Process the print-traits command by loading contexts from disk and displaying them
+fn process_print_traits() -> anyhow::Result<()> {
+    use crate::utils::project_context::{self, ProjectContext};
+    use anyhow::Context;
+    
+    // Load all context data from .pup directory
+    let (context, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
+        .context("Failed to load project context data")?;
+    
+    // Use the utility function to print the traits
+    project_context::print_traits(&context, &crate_names)?;
+    
+    Ok(())
 }
 
 fn get_toolchain() -> String {
