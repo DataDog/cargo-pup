@@ -153,35 +153,55 @@ impl ArchitectureLintRunner {
         output
     }
 
-    /// Called back from the compiler
-    fn callback(&mut self, tcx: TyCtxt<'_>) {
+    // Handle each mode and return Result
+    fn handle_mode(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<()> {
+        use anyhow::Context;
         match self.mode {
             Mode::Check => {
                 // Do nothing. Checking happens as part of the lints.
                 let _ = self.lint_collection.lints();
+                Ok(())
             }
             Mode::PrintModules => {
                 // Build the project context first
-                self.build_project_context(tcx);
+                self.build_project_context(tcx)
+                    .context("Failed to build project context for print-modules mode")?;
                 
                 // Then get lints and print namespaces
                 let lints = self.lint_collection.lints();
                 self.result_text = self.print_namespaces(tcx, lints);
+                Ok(())
             }
             Mode::PrintTraits => {
                 // Build the project context first
-                self.build_project_context(tcx);
+                self.build_project_context(tcx)
+                    .context("Failed to build project context for print-traits mode")?;
                 
                 // Then get lints and print traits
                 let lints = self.lint_collection.lints();
                 self.result_text = self.print_traits(tcx, lints);
+                Ok(())
             }
-            Mode::GenerateConfig => self.generate_config(tcx),
+            Mode::GenerateConfig => {
+                // For config generation, get the result and update result_text
+                let result = self.generate_config_impl(tcx)?;
+                self.result_text = result;
+                Ok(())
+            }
+        }
+    }
+
+    /// Called back from the compiler
+    fn callback(&mut self, tcx: TyCtxt<'_>) {
+        if let Err(e) = self.handle_mode(tcx) {
+            // For fatal errors, print the error and exit
+            eprintln!("Error: {:#}", e);
+            std::process::exit(1);
         }
     }
 
     /// Build ProjectContext with modules and traits info common to multiple modes
-    fn build_project_context(&mut self, tcx: TyCtxt<'_>) {
+    fn build_project_context(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<()> {
         use std::collections::HashMap;
         
         // Create a namespace set with modules
@@ -258,37 +278,34 @@ impl ArchitectureLintRunner {
             module_root,
             traits 
         });
+        
+        Ok(())
     }
     
-    fn generate_config(&mut self, tcx: TyCtxt<'_>) {
+    // Implementation function that returns Result
+    fn generate_config_impl(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<String> {
+        use anyhow::Context;
         use crate::utils::configuration_factory::LintConfigurationFactory;
         
         // Build the project context first
-        self.build_project_context(tcx);
+        self.build_project_context(tcx)?;
         
-        if let Some(context) = &self.project_context {
-            // Create filename with module root that we'll use later
-            let config_filename = format!("pup.generated.{}.yaml", context.module_root);
+        let context = self.project_context.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Failed to build project context"))?;
             
-            // Generate config file
-            match LintConfigurationFactory::generate_yaml(context) {
-                Ok(yaml) => {
-                    // Print the generated YAML to the result
-                    self.result_text = yaml;
-                    
-                    // Also write to file
-                    match LintConfigurationFactory::generate_config_file(context, &config_filename) {
-                        Ok(_) => self.result_text.push_str(&format!("\n\nConfig written to {}", config_filename)),
-                        Err(e) => self.result_text.push_str(&format!("\n\nError writing file: {}", e)),
-                    }
-                },
-                Err(e) => {
-                    self.result_text = format!("Error generating configuration: {}", e);
-                }
-            }
-        } else {
-            self.result_text = "Error: Failed to build project context".to_string();
-        }
+        // Create filename with module root that we'll use later
+        let config_filename = format!("pup.generated.{}.yaml", context.module_root);
+        
+        // Generate config file
+        let yaml = LintConfigurationFactory::generate_yaml(context)
+            .context("Failed to generate YAML configuration")?;
+        
+        // Write to file
+        LintConfigurationFactory::generate_config_file(context, &config_filename)
+            .context(format!("Failed to write configuration to {}", config_filename))?;
+            
+        // Return success message
+        Ok(format!("{}\n\nConfig written to {}", yaml, config_filename))
     }
 }
 
