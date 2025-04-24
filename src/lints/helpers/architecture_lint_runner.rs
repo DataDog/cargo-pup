@@ -266,7 +266,7 @@ impl ArchitectureLintRunner {
 
     // Implementation function that returns Result
     fn generate_config(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<String> {
-        use crate::utils::configuration_factory::LintConfigurationFactory;
+        use crate::lints::LintConfigurationFactory;
         use anyhow::Context;
 
         // Build the project context

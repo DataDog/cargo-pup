@@ -57,27 +57,15 @@
 //!
 //!
 
-#![feature(rustc_private)]
 #![feature(let_chains)]
 #![feature(array_windows)]
 #![feature(try_blocks)]
 
 #![warn(rust_2018_idioms, unused_lifetimes)]
 
-extern crate rustc_driver;
-extern crate rustc_errors;
-extern crate rustc_hir;
-extern crate rustc_infer;
-extern crate rustc_interface;
-extern crate rustc_lint;
-extern crate rustc_middle;
-extern crate rustc_session;
-extern crate rustc_span;
-extern crate rustc_trait_selection;
-
 mod cli;
 mod utils;
-mod lints;
+
 
 use cli::{PupArgs, PupCli};
 

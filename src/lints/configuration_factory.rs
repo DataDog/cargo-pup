@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 
-use super::project_context::ProjectContext;
+use crate::utils::project_context::ProjectContext;
 use crate::lints::ArchitectureLintRule;
 use anyhow::{Result, anyhow};
 

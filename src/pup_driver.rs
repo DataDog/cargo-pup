@@ -18,7 +18,7 @@ use anyhow::Result;
 use cli::{PupCli, PupCommand};
 use lints::{ArchitectureLintRunner, Mode};
 
-use crate::lints::{ArchitectureLintCollection, register_all_lints};
+use crate::lints::{ArchitectureLintCollection, register_all_lints, LintConfigurationFactory, setup_lints_yaml};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{
     env,
@@ -28,7 +28,6 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-use utils::configuration_factory::{LintConfigurationFactory, setup_lints_yaml};
 
 mod cli;
 mod lints;

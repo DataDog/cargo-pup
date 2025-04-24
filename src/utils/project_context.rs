@@ -245,9 +245,9 @@ impl ProjectContext {
 }
 
 /// Format and print the modules in the project context
+#[allow(dead_code)]
 pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> Result<()> {
-    use ansi_term::Colour::{Blue, Green, Red, Yellow, Cyan};
-    use ansi_term::Style;
+    use ansi_term::Colour::{Blue, Cyan};
     use std::collections::BTreeMap;
     
     // Print a header
@@ -300,9 +300,9 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> Result
 }
 
 /// Format and print the traits in the project context
+#[allow(dead_code)]
 pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> Result<()> {
-    use ansi_term::Colour::{Blue, Green, Red, Yellow, Cyan};
-    use ansi_term::Style;
+    use ansi_term::Colour::{Blue, Green, Cyan};
     use std::collections::BTreeMap;
     
     // Print a header

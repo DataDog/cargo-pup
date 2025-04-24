@@ -3,7 +3,7 @@ use crate::lints::helpers::clippy_utils::span_lint_and_help;
 use crate::lints::helpers::queries::implements_error_trait;
 use crate::{
     declare_variable_severity_lint,
-    utils::configuration_factory::{LintConfigurationFactory, LintFactory},
+    lints::{LintConfigurationFactory, LintFactory},
 };
 use regex::Regex;
 use rustc_hir::{Item, ItemKind};
