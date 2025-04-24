@@ -240,7 +240,7 @@ pub mod tests {
 
     use super::*;
     use crate::utils::project_context::{ProjectContext, TraitInfo};
-    use crate::utils::configuration_factory::LintConfigurationFactory;
+    use LintConfigurationFactory;
 
 
 

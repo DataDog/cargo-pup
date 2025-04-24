@@ -243,7 +243,6 @@ mod tests {
 
     use super::*;
     use crate::utils::project_context::ProjectContext;
-    use crate::utils::configuration_factory::LintConfigurationFactory;
 
 
     const CONFIGURATION_YAML: &str = "

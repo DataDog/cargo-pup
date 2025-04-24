@@ -200,7 +200,7 @@ impl ArchitectureLintRule for FunctionLengthLintProcessor {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::configuration_factory::LintConfigurationFactory;
+    use LintConfigurationFactory;
     use crate::utils::project_context::ProjectContext;
     use super::*;
 

@@ -200,7 +200,7 @@ impl LintFactory for ItemTypeLintFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::configuration_factory::LintConfigurationFactory;
+    use LintConfigurationFactory;
     use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "

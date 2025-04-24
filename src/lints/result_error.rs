@@ -208,8 +208,8 @@ impl LintFactory for ResultErrorLintFactory {
 
 #[cfg(test)]
 pub mod test {
+    use crate::lints::{LintConfigurationFactory, LintFactory};
     use crate::lints::result_error::ResultErrorLintFactory;
-    use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
     use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "

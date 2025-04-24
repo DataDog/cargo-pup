@@ -189,7 +189,7 @@ impl LintFactory for EmptyModLintFactory {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
+    use {LintConfigurationFactory, LintFactory};
     use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
