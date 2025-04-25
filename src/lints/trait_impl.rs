@@ -167,6 +167,10 @@ impl ArchitectureLintRule for TraitImplLintProcessor {
     fn applies_to_module(&self, _namespace: &str) -> bool {
         false
     }
+    fn applies_to_trait(&self, trait_path: &str) -> bool {
+        // Check if this lint applies to the given trait based on the source_name pattern
+        self.name_regex.is_match(trait_path)
+    }
 }
 
 /// Factory for creating trait implementation lint processors

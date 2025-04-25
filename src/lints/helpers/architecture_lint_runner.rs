@@ -211,9 +211,8 @@ impl ArchitectureLintRunner {
         for (trait_name, (_, applicable_lints)) in &mut trait_map {
             // Add lints that apply to this trait
             for lint in lints.iter() {
-                // Since we don't have an explicit applies_to_trait method,
-                // we'll use the trait name as a module path to check
-                if lint.applies_to_module(trait_name) {
+                // Use the applies_to_trait method to check if lint applies to this trait
+                if lint.applies_to_trait(trait_name) {
                     applicable_lints.push(lint.name());
                 }
             }
