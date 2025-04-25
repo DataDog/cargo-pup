@@ -315,12 +315,12 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> Result
             let module_suffix = &module_info.name[idx..];
             
             modules_by_crate.entry(crate_name.to_string())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push((module_info, module_suffix.to_string()));
         } else {
             // Handle case where there's no :: in the path
             modules_by_crate.entry(module_info.name.clone())
-                .or_insert_with(Vec::new);
+                .or_default();
         }
     }
     
@@ -373,12 +373,12 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> Result<
             let crate_name = &trait_info.name[..idx];
             
             traits_by_crate.entry(crate_name.to_string())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(trait_info);
         } else {
             // Handle case where there's no :: in the path
             traits_by_crate.entry(trait_info.name.clone())
-                .or_insert_with(Vec::new);
+                .or_default();
         }
     }
     
