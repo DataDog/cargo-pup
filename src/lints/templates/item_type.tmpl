@@ -11,11 +11,12 @@
 #   denied_items: list of item types to disallow (struct, enum, trait, module, etc.)
 #   severity: Error or Warn
 #
-type: item_type
-modules:
-  - "^{1}::interfaces$"  # e.g., for an interfaces directory
-denied_items:
-  - struct
-  - enum
-  - impl
-severity: Warn
+# Example:
+# type: item_type
+# modules:
+#   - "^{1}::interfaces$"  # e.g., for an interfaces directory
+# denied_items:
+#   - struct
+#   - enum
+#   - impl
+# severity: Warn
