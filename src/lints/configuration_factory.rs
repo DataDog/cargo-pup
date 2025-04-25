@@ -166,9 +166,8 @@ pub fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
     let yaml_content = match fs::read_to_string("pup.yaml") {
         Ok(content) => content,
         Err(e) => {
-            // If file doesn't exist, return an empty list of rules
+            // If file doesn't exist, return an empty list of rules without a warning
             if e.kind() == std::io::ErrorKind::NotFound {
-                println!("Warning: pup.yaml not found, using empty lint configuration");
                 return Ok(Vec::new());
             }
             return Err(anyhow::Error::from(e));

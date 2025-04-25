@@ -187,13 +187,20 @@ pub fn main() {
     // Normal invocation - process args and run cargo
     let args: Vec<String> = env::args().collect();
     
-    // Check if we're running generate-config
+    // Check command type
+    let command = get_command_type(&args);
+    
+    // Get if we're running generate-config
     let is_generate_config = args.len() > 1 && 
         ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
          (args[1] == "generate-config"));
-
-    // Skip environment checks if we're generating a config
-    if !is_generate_config {
+    
+    // Skip environment checks if we're generating a config or running print commands
+    let skip_checks = is_generate_config || 
+                     command == CommandType::PrintModules || 
+                     command == CommandType::PrintTraits;
+    
+    if !skip_checks {
         match validate_project() {
             ProjectType::ConfiguredPupProject => {
                 // Good to go - continue with normal operation
@@ -222,11 +229,8 @@ pub fn main() {
         }
     }
 
-    // Parse command line args once
-    let args: Vec<String> = env::args().collect();
-    
-    // Check for print commands
-    let command = get_command_type(&args);
+    // Parse command line args once (we've already collected args above)
+    // Command type is already assigned to the 'command' variable above
     
     // Process the command
     match command {
