@@ -58,3 +58,17 @@ enforce_result_error:
     - "^cargo_pup::"
     - "^pup_driver::"
   severity: Error
+
+# Prevent cargo-pup from importing anything from lints.
+# Lints needs rustc internals, which we can never allow in cargo-pup,
+# because of the need for the rustup bootstrapping process to deal with
+# dynamic linking.
+cargo_pup_no_lints_imports:
+  type: module_usage
+  modules:
+    - "^cargo_pup::"  # Apply this rule to all cargo_pup modules
+  rules:
+    - type: Deny
+      denied_modules:
+        - "::lints"  # Deny importing anything from lints directory
+      severity: Error
