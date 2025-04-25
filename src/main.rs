@@ -285,7 +285,32 @@ where
 
     // Check if we're generating config and the file already exists
     if command == cli::PupCommand::GenerateConfig {
-        // Check for any existing generated config files
+        // Check for any existing generated config files in the .pup directory
+        let pup_dir = Path::new(utils::project_context::PUP_DIR);
+        if pup_dir.exists() {
+            let entries = std::fs::read_dir(pup_dir).expect("Failed to read .pup directory");
+            let existing_configs: Vec<_> = entries
+                .filter_map(Result::ok)
+                .filter(|entry| {
+                    if let Some(name) = entry.file_name().to_str() {
+                        name.starts_with("pup.generated.") && name.ends_with(".yaml")
+                    } else {
+                        false
+                    }
+                })
+                .collect();
+            
+            if !existing_configs.is_empty() {
+                println!("Error: Generated config files already exist in .pup directory:");
+                for entry in existing_configs {
+                    println!("  - {}/{}", utils::project_context::PUP_DIR, entry.file_name().to_str().unwrap());
+                }
+                println!("Remove these files if you want to regenerate the configuration.");
+                return Err(CommandExitStatus(1));
+            }
+        }
+        
+        // Also check for any legacy config files in the root directory
         let entries = std::fs::read_dir(".").expect("Failed to read current directory");
         let existing_configs: Vec<_> = entries
             .filter_map(Result::ok)
@@ -299,7 +324,7 @@ where
             .collect();
         
         if !existing_configs.is_empty() {
-            println!("Error: Generated config files already exist:");
+            println!("Error: Generated config files already exist in project root:");
             for entry in existing_configs {
                 println!("  - {}", entry.file_name().to_str().unwrap());
             }
@@ -361,8 +386,14 @@ where
 
     // If we just ran generate-config and it succeeded, check for generated files
     if exit_status.success() && command == cli::PupCommand::GenerateConfig {
-        // Look for generated config files
-        let entries = std::fs::read_dir(".").expect("Failed to read current directory");
+        // Look for generated config files in the .pup directory
+        let pup_dir = Path::new(utils::project_context::PUP_DIR);
+        if !pup_dir.exists() {
+            // No .pup directory, so there are no config files to process
+            return Ok(());
+        }
+        
+        let entries = std::fs::read_dir(pup_dir).expect("Failed to read .pup directory");
         let generated_configs: Vec<_> = entries
             .filter_map(Result::ok)
             .filter(|entry| {
@@ -374,11 +405,13 @@ where
             })
             .collect();
         
-        // If there's exactly one generated file and pup.yaml doesn't exist, rename it
+        // If there's exactly one generated file and pup.yaml doesn't exist, copy it to the project root
         if generated_configs.len() == 1 && !Path::exists(Path::new("./pup.yaml")) {
             let generated_path = generated_configs[0].path();
-            if let Err(e) = std::fs::rename(&generated_path, "pup.yaml") {
-                println!("Warning: Failed to rename generated config to pup.yaml: {}", e);
+            let target_path = Path::new("pup.yaml");
+            
+            if let Err(e) = std::fs::copy(&generated_path, target_path) {
+                println!("Warning: Failed to copy config to pup.yaml: {}", e);
             } else {
                 println!("Created pup.yaml from {}", generated_path.file_name().unwrap().to_string_lossy());
             }
