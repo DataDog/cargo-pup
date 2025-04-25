@@ -205,10 +205,10 @@ impl LintFactory for TraitImplLintFactory {
         for (i, trait_info) in context.traits.iter().enumerate().take(3) {
             // Only generate for traits that have implementations
             if !trait_info.implementors.is_empty() {
-                // Create a rule name based on the trait
+                // Create a rule name based on the trait, prefixed with module root
                 let trait_parts: Vec<&str> = trait_info.name.split("::").collect();
                 let trait_simple_name = trait_parts.last().unwrap_or(&"unknown");
-                let rule_name = format!("enforce_{}_impl", trait_simple_name.to_lowercase());
+                let rule_name = format!("{}_enforce_{}_impl", context.module_root, trait_simple_name.to_lowercase());
     
                 // Load template from file and format it
                 let template = include_str!("templates/trait_impl.tmpl");
@@ -230,7 +230,7 @@ impl LintFactory for TraitImplLintFactory {
         // If no traits with impls were found, create a generic example
         if configs.is_empty() {
             let template = include_str!("templates/trait_impl_generic.tmpl");
-            configs.insert("enforce_trait_impl".to_string(), template.to_string());
+            configs.insert(format!("{}_enforce_trait_impl", context.module_root), template.to_string());
         }
     
         Ok(configs)
@@ -302,14 +302,17 @@ test_trait_constraint:
         // We should have 2 configs for the 2 traits
         assert_eq!(configs.len(), 2, "Should generate 1 config per trait with implementations");
         
-        // Check if the keys exist
-        assert!(configs.contains_key("enforce_display_impl"), 
-                "Should contain key for Display trait");
-        assert!(configs.contains_key("enforce_serialize_impl"), 
-                "Should contain key for Serialize trait");
+        // Check if the keys exist with module root prefix
+        let display_key = format!("{}_enforce_display_impl", context.module_root);
+        let serialize_key = format!("{}_enforce_serialize_impl", context.module_root);
+        
+        assert!(configs.contains_key(&display_key), 
+                "Should contain key for Display trait with module root prefix");
+        assert!(configs.contains_key(&serialize_key), 
+                "Should contain key for Serialize trait with module root prefix");
         
         // Get the Display config
-        let display_config = configs.get("enforce_display_impl").unwrap();
+        let display_config = configs.get(&display_key).unwrap();
         
         // Verify content contains expected elements
         assert!(display_config.contains("type: trait_impl"), 
@@ -352,12 +355,13 @@ test_trait_constraint:
         // Should use the fallback generic template
         assert_eq!(configs.len(), 1, "Should generate 1 fallback config");
         
-        // Check if the fallback key exists
-        assert!(configs.contains_key("enforce_trait_impl"), 
-                "Should contain fallback key");
+        // Check if the fallback key exists with module root prefix
+        let fallback_key = format!("{}_enforce_trait_impl", context.module_root);
+        assert!(configs.contains_key(&fallback_key), 
+                "Should contain fallback key with module root prefix");
         
         // Get the config
-        let config = configs.get("enforce_trait_impl").unwrap();
+        let config = configs.get(&fallback_key).unwrap();
         
         // Verify content contains expected elements from the generic template
         assert!(config.contains("Example trait implementation rule"), 

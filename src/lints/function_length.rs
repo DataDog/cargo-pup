@@ -90,8 +90,8 @@ impl LintFactory for FunctionLengthLintFactory {
     fn generate_config(&self, context: &project_context::ProjectContext) -> anyhow::Result<HashMap<String, String>> {
         let mut configs = HashMap::new();
         
-        // Create a single rule for the entire project
-        let rule_name = "max_function_length".to_string();
+        // Create a single rule for the entire project, prefixed with module root
+        let rule_name = format!("{}_max_function_length", context.module_root);
         
         // Create regex pattern that matches the root module and all submodules
         // The ^ ensures it starts with the module root, no need for $ or ::
@@ -250,11 +250,12 @@ deny_long_functions:
         // Verify the configs map
         assert_eq!(configs.len(), 1, "Should generate exactly 1 config");
         
-        // Check if the key exists
-        assert!(configs.contains_key("max_function_length"), "Should contain 'max_function_length' key");
+        // Check if the key includes the module root prefix
+        let expected_key = format!("{}_max_function_length", context.module_root);
+        assert!(configs.contains_key(&expected_key), "Should contain '{}' key", expected_key);
         
-        // Get the config
-        let config = configs.get("max_function_length").unwrap();
+        // Get the config using the expected key
+        let config = configs.get(&expected_key).unwrap();
         
         // Verify content contains expected elements
         assert!(config.contains("type: function_length"), "Config should specify function_length type");
