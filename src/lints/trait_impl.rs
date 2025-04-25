@@ -1,7 +1,7 @@
 use super::{ArchitectureLintRule, Severity};
 use crate::declare_variable_severity_lint;
 use crate::lints::helpers::clippy_utils::span_lint_and_help;
-use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
+use crate::lints::{LintConfigurationFactory, LintFactory};
 use regex::Regex;
 use rustc_hir::{Item, ItemKind, Node};
 use rustc_lint::{LateContext, LateLintPass, Lint};
@@ -57,13 +57,11 @@ impl<'tcx> LateLintPass<'tcx> for TraitImplLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &Item<'tcx>) {
         if let ItemKind::Impl(impl_item) = &item.kind {
             if let Some(trait_ref) = &impl_item.of_trait {
-                // Construct the full, crate-qualified name of the trait
-                let module = cx
-                    .tcx
-                    .crate_name(item.owner_id.to_def_id().krate)
-                    .to_ident_string();
-                let trait_name = cx.tcx.def_path_str(trait_ref.trait_def_id().unwrap());
-                let full_trait_name = format!("{}::{}", module, trait_name);
+                // We no longer need to construct the module name here since we use the helper
+                
+                // Get the canonical trait name using the centralized helper
+                let trait_def_id = trait_ref.trait_def_id().unwrap();
+                let full_trait_name = crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(&cx.tcx, trait_def_id);
 
                 // Do we match?
                 if self.name_regex.is_match(&full_trait_name) {
@@ -167,6 +165,10 @@ impl ArchitectureLintRule for TraitImplLintProcessor {
     fn applies_to_module(&self, _namespace: &str) -> bool {
         false
     }
+    fn applies_to_trait(&self, trait_path: &str) -> bool {
+        // Check if this lint applies to the given trait based on the source_name pattern
+        self.name_regex.is_match(trait_path)
+    }
 }
 
 /// Factory for creating trait implementation lint processors
@@ -240,7 +242,7 @@ pub mod tests {
 
     use super::*;
     use crate::utils::project_context::{ProjectContext, TraitInfo};
-    use crate::utils::configuration_factory::LintConfigurationFactory;
+    use LintConfigurationFactory;
 
 
 
@@ -279,18 +281,20 @@ test_trait_constraint:
             TraitInfo {
                 name: "test_crate::Display".to_string(),
                 implementors: vec!["test_crate::User".to_string(), "test_crate::Product".to_string()],
+                applicable_lints: vec![],
             },
             TraitInfo {
                 name: "test_crate::Serialize".to_string(),
                 implementors: vec!["test_crate::Config".to_string()],
+                applicable_lints: vec![],
             },
         ];
         
-        let context = ProjectContext {
-            modules: vec!["test_crate".to_string()],
-            module_root: "test_crate".to_string(),
-            traits,
-        };
+        let context = ProjectContext::with_data(
+            vec!["test_crate".to_string()],
+            "test_crate".to_string(),
+            traits
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;
@@ -332,14 +336,15 @@ test_trait_constraint:
             TraitInfo {
                 name: "test_crate::EmptyTrait".to_string(),
                 implementors: vec![],  // No implementations
+                applicable_lints: vec![],
             },
         ];
         
-        let context = ProjectContext {
-            modules: vec!["test_crate".to_string()],
-            module_root: "test_crate".to_string(),
-            traits,
-        };
+        let context = ProjectContext::with_data(
+            vec!["test_crate".to_string()],
+            "test_crate".to_string(),
+            traits
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;

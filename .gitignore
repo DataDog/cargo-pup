@@ -4,5 +4,4 @@ mod
 .pup
 .cursor
 *.generated.*
-
 CLAUDE.md

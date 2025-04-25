@@ -2,7 +2,7 @@ use super::{ArchitectureLintRule, Severity};
 use crate::declare_variable_severity_lint;
 use crate::lints::helpers::clippy_utils::span_lint_and_help;
 use crate::lints::helpers::queries::get_full_module_name;
-use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
+use crate::lints::{LintConfigurationFactory, LintFactory};
 use regex::Regex;
 use rustc_hir::{Item, ItemKind, OwnerId, UseKind};
 use rustc_lint::{LateContext, LateLintPass, Lint};
@@ -243,7 +243,6 @@ mod tests {
 
     use super::*;
     use crate::utils::project_context::ProjectContext;
-    use crate::utils::configuration_factory::LintConfigurationFactory;
 
 
     const CONFIGURATION_YAML: &str = "
@@ -291,14 +290,14 @@ test_me_namespace_rule_two:
         let factory = ModuleUsageLintFactory::new();
         
         // Create a test context
-        let context = ProjectContext {
-            modules: vec![
+        let context = ProjectContext::with_data(
+            vec![
                 "test_crate".to_string(),
                 "test_crate::api".to_string(),
             ],
-            module_root: "test_crate".to_string(),
-            traits: Vec::new(),
-        };
+            "test_crate".to_string(),
+            Vec::new()
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;

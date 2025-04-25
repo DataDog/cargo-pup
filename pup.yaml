@@ -5,7 +5,7 @@
 # Implementations of our lint rules ... 
 architecture_lint_rules:
   type: trait_impl
-  source_name: "lints::architecture_lint_rule::ArchitectureLintRule"
+  source_name: "^pup_driver::lints::architecture_lint_rule::ArchitectureLintRule"
   # Must be named consistently
   name_must_match: ".*LintProcessor$"
   # ... and must be public
@@ -15,7 +15,7 @@ architecture_lint_rules:
 # Implementations of our lint factories
 configuration_factories:
   type: trait_impl
-  source_name: "utils::configuration_factory::LintFactory"
+  source_name: "^pup_driver::lints::configuration_factory::LintFactory"
   # ... must be named consistently
   name_must_match: ".*LintFactory$"
   # ... and must be private
@@ -28,9 +28,8 @@ configuration_factories:
 empty_mods:
   type: empty_mod
   modules:
-    - "lints"
-    - "utils"
-    - "^cargo_pup"
+    - "^cargo_pup::"
+    - "^pup_driver::"
   severity: Warn
 
 # Keep helpers implementation details private
@@ -56,6 +55,6 @@ utils_no_structs_or_traits:
 enforce_result_error:
   type: result_error
   modules:
-    - "^cargo_pup"
-    - "^pup_driver"
+    - "^cargo_pup::"
+    - "^pup_driver::"
   severity: Error

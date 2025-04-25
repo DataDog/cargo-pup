@@ -3,7 +3,7 @@ use crate::lints::helpers::clippy_utils::span_lint_and_help;
 use crate::lints::helpers::queries::implements_error_trait;
 use crate::{
     declare_variable_severity_lint,
-    utils::configuration_factory::{LintConfigurationFactory, LintFactory},
+    lints::{LintConfigurationFactory, LintFactory},
 };
 use regex::Regex;
 use rustc_hir::{Item, ItemKind};
@@ -208,8 +208,8 @@ impl LintFactory for ResultErrorLintFactory {
 
 #[cfg(test)]
 pub mod test {
+    use crate::lints::{LintConfigurationFactory, LintFactory};
     use crate::lints::result_error::ResultErrorLintFactory;
-    use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
     use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
@@ -235,14 +235,14 @@ enforce_result_error:
         let factory = ResultErrorLintFactory::new();
         
         // Create a test context
-        let context = ProjectContext {
-            modules: vec![
+        let context = ProjectContext::with_data(
+            vec![
                 "test_crate".to_string(),
                 "test_crate::module1".to_string(),
             ],
-            module_root: "test_crate".to_string(),
-            traits: Vec::new(),
-        };
+            "test_crate".to_string(),
+            Vec::new()
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;

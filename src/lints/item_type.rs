@@ -2,7 +2,7 @@ use super::{ArchitectureLintRule, Severity};
 use crate::declare_variable_severity_lint;
 use crate::lints::helpers::clippy_utils::span_lint_and_help;
 use crate::lints::helpers::queries::get_full_module_name;
-use crate::utils::configuration_factory::{LintConfigurationFactory, LintFactory};
+use crate::lints::{LintConfigurationFactory, LintFactory};
 use regex::Regex;
 use rustc_hir::{Item, ItemKind};
 use rustc_lint::{LateContext, LateLintPass, Lint};
@@ -64,7 +64,7 @@ impl ItemTypeLintProcessor {
         }
     }
 
-    fn applies_to_module(&self, tcx: &TyCtxt<'_>, module_def_id: &rustc_hir::OwnerId) -> bool {
+    fn check_if_module_matches(&self, tcx: &TyCtxt<'_>, module_def_id: &rustc_hir::OwnerId) -> bool {
         let full_name = get_full_module_name(tcx, module_def_id);
         self.module_regexps
             .iter()
@@ -112,7 +112,7 @@ impl<'tcx> LateLintPass<'tcx> for ItemTypeLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
         let module = cx.tcx.hir_get_parent_item(item.hir_id());
 
-        if !self.applies_to_module(&cx.tcx, &module) {
+        if !self.check_if_module_matches(&cx.tcx, &module) {
             return;
         }
 
@@ -149,6 +149,24 @@ impl ArchitectureLintRule for ItemTypeLintProcessor {
 
     fn applies_to_module(&self, module: &str) -> bool {
         self.module_regexps.iter().any(|r| r.is_match(module))
+    }
+    
+    fn applies_to_trait(&self, trait_path: &str) -> bool {
+        // This lint applies to traits if:
+        // 1. The trait is in a module that matches our module patterns
+        // 2. Traits are in the denied_items list
+        if !self.rule.denied_items.contains(&DeniedItemType::Trait) {
+            return false;
+        }
+        
+        // Get the module part of the trait path
+        if let Some(last_separator) = trait_path.rfind("::") {
+            let module_path = &trait_path[0..last_separator];
+            // Check if any of our module regexes match
+            return self.module_regexps.iter().any(|r| r.is_match(module_path));
+        }
+        
+        false
     }
 }
 
@@ -200,7 +218,7 @@ impl LintFactory for ItemTypeLintFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::configuration_factory::LintConfigurationFactory;
+    
     use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
@@ -228,14 +246,14 @@ test_item_type:
         let factory = ItemTypeLintFactory::new();
         
         // Create a test context
-        let context = ProjectContext {
-            modules: vec![
+        let context = ProjectContext::with_data(
+            vec![
                 "test_crate".to_string(),
                 "test_crate::interfaces".to_string(),
             ],
-            module_root: "test_crate".to_string(),
-            traits: Vec::new(),
-        };
+            "test_crate".to_string(),
+            Vec::new()
+        );
         
         // Generate config
         let configs = factory.generate_config(&context)?;
