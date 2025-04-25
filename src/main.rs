@@ -191,9 +191,15 @@ pub fn main() {
     let command = get_command_type(&args);
     
     // Get if we're running generate-config
-    let is_generate_config = args.len() > 1 && 
-        ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
-         (args[1] == "generate-config"));
+    let is_generate_config = if args.len() <= 1 {
+        false
+    // Check for "cargo pup generate-config" pattern
+    } else if args.len() > 2 && args[1] == "pup" {
+        args[2] == "generate-config"
+    } else {
+        // Direct "generate-config" pattern
+        args[1] == "generate-config"
+    };
     
     // Skip environment checks if we're generating a config or running print commands
     let skip_checks = is_generate_config || 
@@ -869,7 +875,7 @@ mod tests {
         fn test_process_with_existing_generated_configs() {
             // Test the process function behavior when there are existing generated configs
             let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
-            let temp_path = temp_dir.path();
+            let temp_path = temp_dir.path().to_path_buf();
             
             // Create a Cargo.toml file
             fs::write(temp_path.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n")
@@ -879,9 +885,24 @@ mod tests {
             fs::write(temp_path.join("pup.generated.test.yaml"), "# Test generated config\n")
                 .expect("Failed to write pup.generated.test.yaml");
                 
-            // Change to the temporary directory
+            // Create a guard to ensure we always clean up properly
+            struct DirectoryGuard {
+                original_dir: PathBuf,
+            }
+            
+            impl Drop for DirectoryGuard {
+                fn drop(&mut self) {
+                    // Best-effort attempt to change back; ignore errors in drop
+                    let _ = env::set_current_dir(&self.original_dir);
+                }
+            }
+            
+            // Store original directory and create guard
             let original_dir = env::current_dir().expect("Failed to get current dir");
-            env::set_current_dir(temp_path).expect("Failed to change directory");
+            let _guard = DirectoryGuard { original_dir: original_dir.clone() };
+            
+            // Change to the temporary directory
+            env::set_current_dir(&temp_path).expect("Failed to change directory");
             
             // Create test args for generate-config
             let args = vec![
@@ -900,8 +921,7 @@ mod tests {
                 assert_ne!(code, 0, "Error code should be non-zero for existing configs");
             }
             
-            // Change back to original directory
-            env::set_current_dir(original_dir).expect("Failed to change back to original directory");
+            // The DirectoryGuard will automatically change back to the original directory
         }
         
         #[test]
@@ -1142,38 +1162,40 @@ mod tests {
         
         #[test]
         fn test_is_generate_config_detection() {
-            // Test that generate-config command is properly detected
+            // Test direct invocation
+            {
+                let args = vec!["cargo-pup".to_string(), "generate-config".to_string()];
+                
+                let is_generate_config = check_is_generate_config(&args);
+                assert!(is_generate_config, "Should detect generate-config command");
+            }
             
-            // Direct invocation
-            let args = ["cargo-pup".to_string(),
-                "generate-config".to_string()];
+            // Test via cargo pup
+            {
+                let args = vec!["cargo".to_string(), "pup".to_string(), "generate-config".to_string()];
+                
+                let is_generate_config = check_is_generate_config(&args);
+                assert!(is_generate_config, "Should detect generate-config command via cargo pup");
+            }
             
-            let is_generate_config = args.len() > 1 && 
-                ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
-                 (args[1] == "generate-config"));
-                 
-            assert!(is_generate_config, "Should detect generate-config command");
-            
-            // Via cargo pup
-            let args = ["cargo".to_string(),
-                "pup".to_string(),
-                "generate-config".to_string()];
-            
-            let is_generate_config = args.len() > 1 && 
-                ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
-                 (args[1] == "generate-config"));
-                 
-            assert!(is_generate_config, "Should detect generate-config command via cargo pup");
-            
-            // Other command
-            let args = ["cargo-pup".to_string(),
-                "check".to_string()];
-            
-            let is_generate_config = args.len() > 1 && 
-                ((args.len() > 2 && args[1] == "pup" && args[2] == "generate-config") || 
-                 (args[1] == "generate-config"));
-                 
-            assert!(!is_generate_config, "Should not detect generate-config for check command");
+            // Test other command
+            {
+                let args = vec!["cargo-pup".to_string(), "check".to_string()];
+                
+                let is_generate_config = check_is_generate_config(&args);
+                assert!(!is_generate_config, "Should not detect generate-config for check command");
+            }
+        }
+        
+        // Helper function for testing generate-config detection
+        fn check_is_generate_config(args: &[String]) -> bool {
+            if args.len() <= 1 {
+                false
+            } else if args.len() > 2 && args[1] == "pup" {
+                args.len() > 2 && args[2] == "generate-config"
+            } else {
+                args[1] == "generate-config"
+            }
         }
         
         #[test]
