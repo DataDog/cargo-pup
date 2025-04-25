@@ -47,9 +47,6 @@ pub struct ArchitectureLintRunner {
     // Callback mechanism, we need somewhere we can stash our
     // results internally.
     result_text: String,
-
-    // Store the ProjectContext for serialization
-    project_context: Option<ProjectContext>,
 }
 
 impl ArchitectureLintRunner {
@@ -60,7 +57,6 @@ impl ArchitectureLintRunner {
             result_text: String::new(),
             cli_args,
             cargo_args: Vec::new(),
-            project_context: None,
         }
     }
 
@@ -76,23 +72,7 @@ impl ArchitectureLintRunner {
         &self.result_text
     }
 
-    ///
-    /// Get the built ProjectContext if available
-    ///
-    pub fn get_project_context(&self) -> Option<&ProjectContext> {
-        self.project_context.as_ref()
-    }
-
-    ///
-    /// Serialize the ProjectContext to JSON format
-    ///
-    pub fn context_as_json(&self) -> Option<String> {
-        self.project_context
-            .as_ref()
-            .map(|ctx| serde_json::to_string(ctx).unwrap_or_else(|_| "{}".to_string()))
-    }
-
-    // Handle each mode and return Result
+    // Handles the different execution modes we have, potentially returning a failure
     fn handle_mode(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<()> {
         use anyhow::Context;
         match self.mode {
@@ -105,6 +85,9 @@ impl ArchitectureLintRunner {
                 // For these modes, we build the project context, then serialize it
                 // out to .pup. The outer call - e.g. cargo-pup - then grabs it all
                 // and uses it to produce a complete view of all the nested projects.
+                //
+                // We don't print any of our own output! We're just discovering project
+                // structure info for cargo-pup.
                 let context = self
                     .build_project_context(tcx)
                     .context("Failed to build project context for print-modules mode")?;
@@ -117,7 +100,8 @@ impl ArchitectureLintRunner {
                 Ok(())
             }
             Mode::GenerateConfig => {
-                // For config generation, get the result and update result_text
+                // For config generation, get the result and update result_text. We're
+                // actually writing the project config template out.
                 let result = self.generate_config(tcx)?;
                 self.result_text = result;
                 Ok(())
@@ -125,7 +109,9 @@ impl ArchitectureLintRunner {
         }
     }
 
-    /// Build ProjectContext with modules and traits info common to multiple modes
+    /// Build ProjectContext. This includes module and trait information - and is typically
+    /// used by cargo-pup - on the outside of the pup-driver execution - to display project
+    /// info to the user.
     fn build_project_context(&self, tcx: TyCtxt<'_>) -> anyhow::Result<ProjectContext> {
         use crate::utils::project_context::{ModuleInfo, TraitInfo};
         use std::collections::HashMap;
@@ -173,9 +159,12 @@ impl ArchitectureLintRunner {
             if let ItemKind::Trait(..) = item.kind {
                 // Get the canonical trait name using the centralized helper
                 let def_id = item.owner_id.to_def_id();
-                let canonical_full_name = crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(&tcx, def_id);
-                
-                // Use the canonical name as the map key 
+                let canonical_full_name =
+                    crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(
+                        &tcx, def_id,
+                    );
+
+                // Use the canonical name as the map key
                 trait_map
                     .entry(canonical_full_name)
                     .or_insert_with(|| (Vec::new(), Vec::new()));
@@ -190,14 +179,19 @@ impl ArchitectureLintRunner {
                     // This is a trait implementation
                     // Get the canonical trait name using the centralized helper
                     let trait_def_id = trait_ref.path.res.def_id();
-                    let canonical_full_name = crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(&tcx, trait_def_id);
+                    let canonical_full_name =
+                        crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(
+                            &tcx,
+                            trait_def_id,
+                        );
 
                     // Get the implementing type and clean up the display
                     let self_ty = tcx.type_of(item.owner_id).skip_binder();
                     let impl_type_raw = format!("{}", self_ty);
-                    
+
                     // Clean up implementation type by removing generic parameters using the centralized helper
-                    let impl_type = crate::lints::helpers::queries::get_canonical_type_name(&impl_type_raw);
+                    let impl_type =
+                        crate::lints::helpers::queries::get_canonical_type_name(&impl_type_raw);
 
                     // Add implementor to trait if it's not already in the list
                     if let Some((implementors, _)) = trait_map.get_mut(&canonical_full_name) {
@@ -261,9 +255,6 @@ impl ArchitectureLintRunner {
         LintConfigurationFactory::generate_config_file(&context, &config_filename).context(
             format!("Failed to write configuration to {}", config_filename),
         )?;
-
-        // Store the context for later use
-        self.project_context = Some(context);
 
         // Return success message
         Ok(format!("{}\n\nConfig written to {}", yaml, config_filename))
