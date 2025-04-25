@@ -229,10 +229,18 @@ impl LintFactory for ModuleUsageLintFactory {
         // Generate a sample configuration for wildcard imports
         let rule_name = format!("module_usage_wildcard_{}", context.module_root);
         
-        // Load template from file. We've got no automatic suggestions, so we have
-        // no substitutions.
-        let template = include_str!("templates/module_usage.tmpl").to_string();
-        configs.insert(rule_name, template);
+        // Load template from file and replace placeholders
+        let template = include_str!("templates/module_usage.tmpl");
+        
+        // Create a regex pattern that matches the module root
+        let module_pattern = context.module_root.clone();
+        
+        // Replace the placeholders with actual values
+        let config = template
+            .replace("{0}", &context.module_root)
+            .replace("{1}", &module_pattern);
+            
+        configs.insert(rule_name, config);
         
         Ok(configs)
     }
