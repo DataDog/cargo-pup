@@ -141,9 +141,6 @@ impl ProjectContext {
         let filename = format!("{}{}", self.module_root, CONTEXT_FILE_SUFFIX);
         let file_path = self.base_dir.join(&filename);
 
-        // Log the exact file we're writing to for debugging
-        eprintln!("Writing ProjectContext to: {}", file_path.display());
-
         let file = OpenOptions::new()
             .create(true)
             .write(true)

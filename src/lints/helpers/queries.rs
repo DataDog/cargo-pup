@@ -66,3 +66,51 @@ pub fn implements_error_trait<'tcx>(
         !ty.is_primitive()
     }
 }
+
+/// Creates a canonical trait name from a potentially generic trait name.
+/// This removes any generic parameters (including lifetimes) from the trait name.
+/// 
+/// Example: "Iterator<'a, T>" becomes "Iterator"
+///
+/// Used to standardize trait names for display and for lint rule matching.
+pub fn get_canonical_trait_name(trait_name: &str) -> String {
+    if let Some(pos) = trait_name.find('<') {
+        trait_name[0..pos].to_string()
+    } else {
+        trait_name.to_string()
+    }
+}
+
+/// Creates a fully qualified canonical trait name with crate prefix.
+/// 
+/// Example: if crate_name = "std" and trait_name = "Iterator<'a, T>",
+/// returns "std::Iterator"
+pub fn get_full_canonical_trait_name(crate_name: &str, trait_name: &str) -> String {
+    let canonical_name = get_canonical_trait_name(trait_name);
+    format!("{}::{}", crate_name, canonical_name)
+}
+
+/// Gets the canonical trait name from TyCtxt and DefId.
+/// Combines getting the trait name from compiler's DefId and canonicalizing it.
+pub fn get_canonical_trait_name_from_def_id(tcx: &TyCtxt<'_>, def_id: DefId) -> String {
+    let raw_trait_name = tcx.def_path_str(def_id);
+    get_canonical_trait_name(&raw_trait_name)
+}
+
+/// Gets the fully qualified canonical trait name with crate from TyCtxt and DefId.
+pub fn get_full_canonical_trait_name_from_def_id(tcx: &TyCtxt<'_>, def_id: DefId) -> String {
+    let crate_name = tcx.crate_name(def_id.krate).to_string();
+    let raw_trait_name = tcx.def_path_str(def_id);
+    get_full_canonical_trait_name(&crate_name, &raw_trait_name)
+}
+
+/// Creates a canonical type representation by removing generic parameters.
+/// 
+/// Example: "Vec<String>" becomes "Vec"
+pub fn get_canonical_type_name(type_name: &str) -> String {
+    if let Some(pos) = type_name.find('<') {
+        type_name[0..pos].to_string()
+    } else {
+        type_name.to_string()
+    }
+}

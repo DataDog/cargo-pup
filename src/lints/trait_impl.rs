@@ -57,13 +57,11 @@ impl<'tcx> LateLintPass<'tcx> for TraitImplLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &Item<'tcx>) {
         if let ItemKind::Impl(impl_item) = &item.kind {
             if let Some(trait_ref) = &impl_item.of_trait {
-                // Construct the full, crate-qualified name of the trait
-                let module = cx
-                    .tcx
-                    .crate_name(item.owner_id.to_def_id().krate)
-                    .to_ident_string();
-                let trait_name = cx.tcx.def_path_str(trait_ref.trait_def_id().unwrap());
-                let full_trait_name = format!("{}::{}", module, trait_name);
+                // We no longer need to construct the module name here since we use the helper
+                
+                // Get the canonical trait name using the centralized helper
+                let trait_def_id = trait_ref.trait_def_id().unwrap();
+                let full_trait_name = crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(&cx.tcx, trait_def_id);
 
                 // Do we match?
                 if self.name_regex.is_match(&full_trait_name) {

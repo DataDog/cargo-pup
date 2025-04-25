@@ -171,15 +171,13 @@ impl ArchitectureLintRunner {
         for item_id in module_items.free_items() {
             let item = tcx.hir_item(item_id);
             if let ItemKind::Trait(..) = item.kind {
-                let trait_name = tcx.def_path_str(item.owner_id.to_def_id());
-                let module = tcx
-                    .crate_name(item.owner_id.to_def_id().krate)
-                    .to_ident_string();
-                let full_trait_name = format!("{}::{}", module, trait_name);
-
-                // Initialize entry with empty vectors for implementors and applicable lints
+                // Get the canonical trait name using the centralized helper
+                let def_id = item.owner_id.to_def_id();
+                let canonical_full_name = crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(&tcx, def_id);
+                
+                // Use the canonical name as the map key 
                 trait_map
-                    .entry(full_trait_name)
+                    .entry(canonical_full_name)
                     .or_insert_with(|| (Vec::new(), Vec::new()));
             }
         }
@@ -190,29 +188,34 @@ impl ArchitectureLintRunner {
             if let ItemKind::Impl(impl_data) = &item.kind {
                 if let Some(trait_ref) = impl_data.of_trait {
                     // This is a trait implementation
+                    // Get the canonical trait name using the centralized helper
                     let trait_def_id = trait_ref.path.res.def_id();
-                    let trait_name = tcx.def_path_str(trait_def_id);
-                    let trait_module = tcx.crate_name(trait_def_id.krate).to_ident_string();
-                    let full_trait_name = format!("{}::{}", trait_module, trait_name);
+                    let canonical_full_name = crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(&tcx, trait_def_id);
 
-                    // Get the implementing type
+                    // Get the implementing type and clean up the display
                     let self_ty = tcx.type_of(item.owner_id).skip_binder();
-                    let impl_type = format!("{:?}", self_ty);
+                    let impl_type_raw = format!("{}", self_ty);
+                    
+                    // Clean up implementation type by removing generic parameters using the centralized helper
+                    let impl_type = crate::lints::helpers::queries::get_canonical_type_name(&impl_type_raw);
 
-                    // Add implementor to trait
-                    if let Some((implementors, _)) = trait_map.get_mut(&full_trait_name) {
-                        implementors.push(impl_type);
+                    // Add implementor to trait if it's not already in the list
+                    if let Some((implementors, _)) = trait_map.get_mut(&canonical_full_name) {
+                        if !implementors.contains(&impl_type) {
+                            implementors.push(impl_type);
+                        }
                     }
                 }
             }
         }
 
         // Find lints that apply to each trait
-        for (trait_name, (_, applicable_lints)) in &mut trait_map {
+        for (canonical_name, (_, applicable_lints)) in &mut trait_map {
             // Add lints that apply to this trait
             for lint in lints.iter() {
-                // Use the applies_to_trait method to check if lint applies to this trait
-                if lint.applies_to_trait(trait_name) {
+                // Use the canonical name (without generics or lifetimes) for matching
+                // This ensures consistent behavior across all lint rules
+                if lint.applies_to_trait(canonical_name) {
                     applicable_lints.push(lint.name());
                 }
             }
