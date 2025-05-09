@@ -75,7 +75,7 @@ use std::error::Error;
 use std::fmt;
 use std::path::Path;
 use std::process::{exit, Command};
-use crate::utils::project_context::ProjectContext;
+use cargo_pup_common::project_context::ProjectContext;
 
 #[derive(Debug, PartialEq)]
 enum ProjectType {
@@ -481,7 +481,7 @@ fn get_command_type(args: &[String]) -> CommandType {
 
 /// Process the print-modules command by loading contexts from disk and displaying them
 fn process_print_modules() -> anyhow::Result<()> {
-    use crate::utils::project_context::{self, ProjectContext};
+    use cargo_pup_common::project_context::{ProjectContext};
     use anyhow::Context;
 
     // Load all context data from .pup directory
@@ -496,7 +496,7 @@ fn process_print_modules() -> anyhow::Result<()> {
 
 /// Process the print-traits command by loading contexts from disk and displaying them
 fn process_print_traits() -> anyhow::Result<()> {
-    use crate::utils::project_context::{self, ProjectContext};
+    use cargo_pup_common::project_context::{ProjectContext};
     use anyhow::Context;
     
     // Load all context data from .pup directory
@@ -567,7 +567,7 @@ Any additional arguments will be passed directly to cargo:
 pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
     use ansi_term::Colour::{Blue, Cyan, Green};
     use std::collections::BTreeMap;
-    use crate::utils::project_context::ModuleInfo;
+    use cargo_pup_common::project_context::ModuleInfo;
 
     // Print a header
     println!("{}", Cyan.paint(r#"
@@ -653,7 +653,7 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
 pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
     use ansi_term::Colour::{Blue, Green, Cyan};
     use std::collections::BTreeMap;
-    use crate::utils::project_context::TraitInfo;
+    use cargo_pup_common::project_context::TraitInfo;
 
     // Print a header
     println!("{}", Cyan.paint(r#"

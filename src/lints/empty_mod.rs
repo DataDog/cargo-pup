@@ -10,6 +10,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use rustc_span::FileName;
 use serde::Deserialize;
+use cargo_pup_common::project_context::ProjectContext;
 
 /// Configuration for empty module lint rule
 #[derive(Debug, Deserialize, Clone)]
@@ -166,7 +167,7 @@ impl LintFactory for EmptyModLintFactory {
 
     fn generate_config(
         &self,
-        context: &crate::utils::project_context::ProjectContext,
+        context: &ProjectContext,
     ) -> anyhow::Result<std::collections::HashMap<String, String>> {
         use std::collections::HashMap;
 
@@ -190,7 +191,7 @@ impl LintFactory for EmptyModLintFactory {
 pub mod tests {
     use super::*;
     use {LintConfigurationFactory, LintFactory};
-    use crate::utils::project_context::ProjectContext;
+    use cargo_pup_common::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
 enforce_empty_mod:
