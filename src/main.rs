@@ -63,11 +63,10 @@
 
 #![warn(rust_2018_idioms, unused_lifetimes)]
 
-mod cli;
 mod utils;
 
 
-use cli::{PupArgs, PupCli};
+use cargo_pup_common::cli::{PupArgs, PupCli, PupCommand};
 
 use ansi_term::Colour::{Blue, Green, Red, Yellow, Cyan};
 use ansi_term::Style;
@@ -284,7 +283,7 @@ where
     let command = pup_args.command.clone();
 
     // Check if we're generating config and the file already exists
-    if command == cli::PupCommand::GenerateConfig {
+    if command == PupCommand::GenerateConfig {
         // Check for any existing generated config files
         let entries = std::fs::read_dir(".").expect("Failed to read current directory");
         let existing_configs: Vec<_> = entries
@@ -360,7 +359,7 @@ where
         .expect("failed to wait for cargo?");
 
     // If we just ran generate-config and it succeeded, check for generated files
-    if exit_status.success() && command == cli::PupCommand::GenerateConfig {
+    if exit_status.success() && command == PupCommand::GenerateConfig {
         // Look for generated config files
         let entries = std::fs::read_dir(".").expect("Failed to read current directory");
         let generated_configs: Vec<_> = entries
@@ -1120,6 +1119,7 @@ mod tests {
     
     /// Tests for command line processing
     mod command_line_processing_tests {
+        use cargo_pup_common::cli::PupCommand;
         use crate::cli::{PupArgs, PupCommand};
         
         #[test]

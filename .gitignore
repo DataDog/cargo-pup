@@ -5,3 +5,4 @@ mod
 .cursor
 *.generated.*
 CLAUDE.md
+.claude

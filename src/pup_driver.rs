@@ -15,7 +15,7 @@ extern crate rustc_span;
 extern crate rustc_trait_selection;
 
 use anyhow::Result;
-use cli::{PupCli, PupCommand};
+use cargo_pup_common::cli::{PupCli, PupCommand};
 use lints::{ArchitectureLintRunner, Mode};
 
 use crate::lints::{ArchitectureLintCollection, register_all_lints, LintConfigurationFactory, setup_lints_yaml};
@@ -29,7 +29,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-mod cli;
 mod lints;
 mod utils;
 
