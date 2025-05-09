@@ -68,13 +68,14 @@ mod utils;
 
 use cargo_pup_common::cli::{PupArgs, PupCli, PupCommand};
 
-use ansi_term::Colour::{Blue, Green, Red, Yellow, Cyan};
+use ansi_term::Colour::{Blue, Cyan, Green, Red, Yellow};
 use ansi_term::Style;
 use std::env;
 use std::error::Error;
 use std::fmt;
 use std::path::Path;
-use std::process::{Command, exit};
+use std::process::{exit, Command};
+use crate::utils::project_context::ProjectContext;
 
 #[derive(Debug, PartialEq)]
 enum ProjectType {
@@ -488,7 +489,7 @@ fn process_print_modules() -> anyhow::Result<()> {
         .context("Failed to load project context data")?;
     
     // Use the utility function to print the modules
-    project_context::print_modules(&context, &crate_names)?;
+    print_modules(&context, &crate_names)?;
     
     Ok(())
 }
@@ -503,7 +504,7 @@ fn process_print_traits() -> anyhow::Result<()> {
         .context("Failed to load project context data")?;
     
     // Use the utility function to print the traits
-    project_context::print_traits(&context, &crate_names)?;
+    print_traits(&context, &crate_names)?;
     
     Ok(())
 }
@@ -559,6 +560,170 @@ Any additional arguments will be passed directly to cargo:
         generate_config = Green.paint("generate-config"),
         options_label = Blue.bold().paint("Options"),
         note = Yellow.paint("You can use tool lints"))
+}
+
+
+/// Format and print the modules in the project context
+pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
+    use ansi_term::Colour::{Blue, Cyan, Green};
+    use std::collections::BTreeMap;
+    use crate::utils::project_context::ModuleInfo;
+
+    // Print a header
+    println!("{}", Cyan.paint(r#"
+     / \__
+    (    @\___
+    /         O
+   /   (_____/
+  /_____/   U
+"#));
+
+    if crate_names.len() > 1 {
+        println!("Modules from multiple crates: {}", crate_names.join(", "));
+    } else {
+        println!("Modules from crate: {}", context.module_root);
+    }
+    println!();
+
+    // Group modules by crate
+    let mut modules_by_crate: BTreeMap<String, Vec<&ModuleInfo>> = BTreeMap::new();
+
+    for module_info in &context.modules {
+        // Extract crate name from module path (everything before the first ::)
+        if let Some(idx) = module_info.name.find("::") {
+            let crate_name = &module_info.name[..idx];
+
+            modules_by_crate.entry(crate_name.to_string())
+                .or_default()
+                .push(module_info);
+        } else {
+            // Handle case where there's no :: in the path
+            modules_by_crate.entry(module_info.name.clone())
+                .or_default();
+        }
+    }
+
+    // Print modules organized by crate
+    for (crate_name, modules) in modules_by_crate {
+        println!("{}", Blue.paint(&crate_name));
+
+        // Group modules by their path structure and display them hierarchically
+        let mut module_map: BTreeMap<String, Vec<String>> = BTreeMap::new();
+
+        for module_info in modules {
+            // Get the crate-relative module path (everything after crate_name::)
+            let module_path = if module_info.name.starts_with(&format!("{}::", crate_name)) {
+                // For modules from this crate, remove the crate name prefix
+                module_info.name[crate_name.len() + 2..].to_string()
+            } else {
+                // For modules without the expected prefix, use the full name
+                module_info.name.clone()
+            };
+
+            // Format applicable lints as a comma-separated string
+            let lints_str = module_info.applicable_lints.join(", ");
+
+            // If module path is empty, it's the root module, otherwise add it to the map
+            if module_path.is_empty() {
+                println!("  :: [{}]", Green.paint(&lints_str));
+            } else {
+                module_map.entry(module_path).or_default().push(lints_str);
+            }
+        }
+
+        // Print module paths with their lints
+        for (module_path, lints_list) in module_map {
+            // Join all lints for this module path
+            let combined_lints = if lints_list.iter().all(|s| s.is_empty()) {
+                "".to_string()
+            } else {
+                lints_list.join(", ")
+            };
+
+            println!("  ::{} [{}]", Blue.paint(&module_path), Green.paint(&combined_lints));
+        }
+
+        println!();
+    }
+
+    Ok(())
+}
+
+/// Format and print the traits in the project context
+pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
+    use ansi_term::Colour::{Blue, Green, Cyan};
+    use std::collections::BTreeMap;
+    use crate::utils::project_context::TraitInfo;
+
+    // Print a header
+    println!("{}", Cyan.paint(r#"
+     / \__
+    (    @\___
+    /         O
+   /   (_____/
+  /_____/   U
+"#));
+
+    if crate_names.len() > 1 {
+        println!("Traits from multiple crates: {}", crate_names.join(", "));
+    } else {
+        println!("Traits from crate: {}", context.module_root);
+    }
+    println!();
+
+    // Group traits by crate
+    let mut traits_by_crate: BTreeMap<String, Vec<&TraitInfo>> = BTreeMap::new();
+
+    for trait_info in &context.traits {
+        // Extract crate name from trait path (everything before the first ::)
+        if let Some(idx) = trait_info.name.find("::") {
+            let crate_name = &trait_info.name[..idx];
+
+            traits_by_crate.entry(crate_name.to_string())
+                .or_default()
+                .push(trait_info);
+        } else {
+            // Handle case where there's no :: in the path
+            traits_by_crate.entry(trait_info.name.clone())
+                .or_default();
+        }
+    }
+
+    // Print traits organized by crate
+    for (crate_name, traits) in traits_by_crate {
+        println!("{}", Blue.paint(&crate_name));
+
+        for trait_info in traits {
+            // Get the crate-relative trait path (everything after crate_name::)
+            let trait_path = if trait_info.name.starts_with(&format!("{}::", crate_name)) {
+                // For traits from this crate, remove the crate name prefix
+                trait_info.name[crate_name.len() + 2..].to_string()
+            } else {
+                // For traits without the expected prefix, use the full name
+                trait_info.name.clone()
+            };
+
+            // Format applicable lints as a comma-separated string
+            let lints_str = trait_info.applicable_lints.join(", ");
+
+            // If trait path is empty, it's the root trait, otherwise add it to the map
+            if trait_path.is_empty() {
+                println!("  :: [{}]", Green.paint(&lints_str));
+            } else {
+                println!("  ::{} [{}]", Blue.paint(&trait_path), Green.paint(&lints_str));
+            }
+
+            // Print implementors with indentation
+            if !trait_info.implementors.is_empty() {
+                for implementor in &trait_info.implementors {
+                    println!("    → {}", Green.paint(implementor));
+                }
+            }
+        }
+        println!();
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
