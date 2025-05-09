@@ -164,6 +164,7 @@ dependencies = [
  "anyhow",
  "cargo_metadata 0.19.1",
  "cargo_pup_common",
+ "cargo_pup_lint_impl",
  "clap",
  "ctor",
  "log",
@@ -221,6 +222,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "tempfile",
 ]
 
 [[package]]
@@ -238,9 +240,11 @@ name = "cargo_pup_lint_impl"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cargo_pup_common",
  "cargo_pup_lint_config",
  "regex",
  "serde",
+ "serde_json",
  "serde_yaml",
 ]
 

@@ -57,6 +57,7 @@
 //!
 //!
 
+
 #![feature(let_chains)]
 #![feature(array_windows)]
 #![feature(try_blocks)]
@@ -409,7 +410,7 @@ where
 
             // Collect and sort configs by name for consistent ordering
             let mut sorted_configs: Vec<_> = generated_configs.iter().collect();
-            sorted_configs.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+            sorted_configs.sort_by_key(|a| a.file_name());
 
             // Process each config file
             for (idx, entry) in sorted_configs.iter().enumerate() {

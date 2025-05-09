@@ -1,9 +1,9 @@
 use super::{ArchitectureLintRule, Severity};
-use crate::lints::helpers::clippy_utils::span_lint_and_help;
-use crate::lints::helpers::queries::implements_error_trait;
+use crate::helpers::clippy_utils::span_lint_and_help;
+use crate::helpers::queries::implements_error_trait;
 use crate::{
     declare_variable_severity_lint,
-    lints::{LintConfigurationFactory, LintFactory},
+    {LintConfigurationFactory, LintFactory},
 };
 use regex::Regex;
 use rustc_hir::{Item, ItemKind};
@@ -210,8 +210,8 @@ impl LintFactory for ResultErrorLintFactory {
 #[cfg(test)]
 pub mod test {
     use cargo_pup_common::project_context::ProjectContext;
-    use crate::lints::{LintConfigurationFactory, LintFactory};
-    use crate::lints::result_error::ResultErrorLintFactory;
+    use crate::{LintConfigurationFactory, LintFactory};
+    use crate::result_error::ResultErrorLintFactory;
 
     const CONFIGURATION_YAML: &str = "
 enforce_result_error:

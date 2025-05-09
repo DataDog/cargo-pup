@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 
-use crate::lints::ArchitectureLintRule;
+use crate::ArchitectureLintRule;
 use cargo_pup_common::project_context::ProjectContext;
 use anyhow::{Result, anyhow};
 
@@ -167,15 +167,27 @@ impl LintConfigurationFactory {
 
 pub fn setup_lints_yaml() -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
     use std::fs;
-
-    // Attempt to load configuration from `pup.yaml`
+    
+    // First try the current directory
     let yaml_content = match fs::read_to_string("pup.yaml") {
         Ok(content) => content,
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                return Ok(Vec::new());
+        Err(_e) => {
+            // If that fails, try the parent directory (in case we're in a subdirectory)
+            match fs::read_to_string("../pup.yaml") {
+                Ok(content) => content,
+                Err(_) => {
+                    // If that fails too, try the original relative path
+                    match fs::read_to_string("../../pup.yaml") {
+                        Ok(content) => content,
+                        Err(e) => {
+                            if e.kind() == std::io::ErrorKind::NotFound {
+                                return Ok(Vec::new());
+                            }
+                            return Err(anyhow::Error::from(e));
+                        }
+                    }
+                }
             }
-            return Err(anyhow::Error::from(e));
         }
     };
 

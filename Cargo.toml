@@ -18,7 +18,7 @@ serde_json = "1.0.138"
 serde_yaml = "0.9.34"
 anyhow = "1.0.95"
 regex = "1.11.1"
-
+tempfile = "3.14.0"
 [dependencies]
 ansi_term = "0.12.1"
 clap = {version = "4.5.23", features = ["derive"] }
@@ -32,8 +32,9 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 anyhow = { workspace = true }
 regex = { workspace = true }
-tempfile = "3.14.0"
+tempfile = { workspace = true }
 cargo_pup_common = { path = "cargo_pup_common" }
+cargo_pup_lint_impl = { path = "cargo_pup_lint_impl" }
 
 termize = "0.1.1"
 

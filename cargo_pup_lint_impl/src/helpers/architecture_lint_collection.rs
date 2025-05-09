@@ -1,8 +1,8 @@
-use crate::lints::empty_mod::EmptyModLintFactory;
-use crate::lints::module_usage::ModuleUsageLintFactory;
-use crate::lints::configuration_factory::LintFactory;
+use crate::empty_mod::EmptyModLintFactory;
+use crate::module_usage::ModuleUsageLintFactory;
+use crate::configuration_factory::LintFactory;
 
-use crate::lints::{
+use crate::{
     ArchitectureLintRule, function_length::FunctionLengthLintFactory,
     item_type::ItemTypeLintFactory, result_error::ResultErrorLintFactory,
     trait_impl::TraitImplLintFactory,

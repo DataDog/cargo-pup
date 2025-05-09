@@ -16,9 +16,7 @@ extern crate rustc_trait_selection;
 
 use anyhow::Result;
 use cargo_pup_common::cli::{PupCli, PupCommand};
-use lints::{ArchitectureLintRunner, Mode};
 
-use crate::lints::{ArchitectureLintCollection, register_all_lints, LintConfigurationFactory, setup_lints_yaml};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{
     env,
@@ -28,8 +26,7 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-
-mod lints;
+use cargo_pup_lint_impl::{register_all_lints, setup_lints_yaml, ArchitectureLintCollection, ArchitectureLintRunner, LintConfigurationFactory, Mode};
 
 pub fn main() -> Result<()> {
     register_all_lints();

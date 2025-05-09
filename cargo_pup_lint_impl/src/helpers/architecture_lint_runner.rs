@@ -6,7 +6,7 @@ use rustc_span::Symbol;
 use std::sync::Arc;
 use std::{collections::BTreeSet, path::Path};
 use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo, PUP_DIR};
-use crate::lints::ArchitectureLintCollection;
+use crate::ArchitectureLintCollection;
 
 ///
 /// The mode our lint runner should operate in
@@ -158,7 +158,7 @@ impl ArchitectureLintRunner {
                 // Get the canonical trait name using the centralized helper
                 let def_id = item.owner_id.to_def_id();
                 let canonical_full_name =
-                    crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(
+                    crate::helpers::queries::get_full_canonical_trait_name_from_def_id(
                         &tcx, def_id,
                     );
 
@@ -178,7 +178,7 @@ impl ArchitectureLintRunner {
                     // Get the canonical trait name using the centralized helper
                     let trait_def_id = trait_ref.path.res.def_id();
                     let canonical_full_name =
-                        crate::lints::helpers::queries::get_full_canonical_trait_name_from_def_id(
+                        crate::helpers::queries::get_full_canonical_trait_name_from_def_id(
                             &tcx,
                             trait_def_id,
                         );
@@ -189,7 +189,7 @@ impl ArchitectureLintRunner {
 
                     // Clean up implementation type by removing generic parameters using the centralized helper
                     let impl_type =
-                        crate::lints::helpers::queries::get_canonical_type_name(&impl_type_raw);
+                        crate::helpers::queries::get_canonical_type_name(&impl_type_raw);
 
                     // Add implementor to trait if it's not already in the list
                     if let Some((implementors, _)) = trait_map.get_mut(&canonical_full_name) {
@@ -234,7 +234,7 @@ impl ArchitectureLintRunner {
 
     // Implementation function that returns Result
     fn generate_config(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<String> {
-        use crate::lints::LintConfigurationFactory;
+        use crate::LintConfigurationFactory;
         use anyhow::Context;
 
         // Build the project context
