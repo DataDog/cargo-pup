@@ -9,6 +9,7 @@ use rustc_lint::{LateContext, LateLintPass, Lint};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
+use cargo_pup_common::project_context::ProjectContext;
 
 /// Configuration for module usage lint rule
 #[derive(Debug, Deserialize, Clone)]
@@ -221,7 +222,7 @@ impl LintFactory for ModuleUsageLintFactory {
         ))])
     }
     
-    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+    fn generate_config(&self, context: &ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
         use std::collections::HashMap;
         
         let mut configs = HashMap::new();
@@ -250,7 +251,6 @@ impl LintFactory for ModuleUsageLintFactory {
 mod tests {
 
     use super::*;
-    use crate::utils::project_context::ProjectContext;
 
 
     const CONFIGURATION_YAML: &str = "

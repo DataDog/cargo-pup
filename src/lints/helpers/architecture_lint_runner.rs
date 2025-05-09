@@ -5,9 +5,8 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 use std::sync::Arc;
 use std::{collections::BTreeSet, path::Path};
-
+use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo, PUP_DIR};
 use crate::lints::ArchitectureLintCollection;
-use crate::utils::project_context::ProjectContext;
 
 ///
 /// The mode our lint runner should operate in
@@ -113,7 +112,6 @@ impl ArchitectureLintRunner {
     /// used by cargo-pup - on the outside of the pup-driver execution - to display project
     /// info to the user.
     fn build_project_context(&self, tcx: TyCtxt<'_>) -> anyhow::Result<ProjectContext> {
-        use crate::utils::project_context::{ModuleInfo, TraitInfo};
         use std::collections::HashMap;
 
         // Create a namespace set with modules
@@ -248,7 +246,7 @@ impl ArchitectureLintRunner {
         let config_filename = format!("pup.generated.{}.yaml", context.module_root);
         
         // Ensure .pup directory exists
-        let pup_dir = std::path::Path::new(crate::utils::project_context::PUP_DIR);
+        let pup_dir = std::path::Path::new(PUP_DIR);
         if !pup_dir.exists() {
             std::fs::create_dir_all(pup_dir)
                 .context(format!("Failed to create directory: {}", pup_dir.display()))?;
@@ -381,7 +379,6 @@ fn collect_modules(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::project_context::TraitInfo;
 
     // Test the Mode enum
     #[test]

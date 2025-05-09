@@ -11,6 +11,7 @@ use rustc_lint::{LateContext, LateLintPass, Lint};
 use rustc_middle::ty::TyKind;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
+use cargo_pup_common::project_context::ProjectContext;
 
 /// Configuration for Result error type lint rule
 #[derive(Debug, Deserialize, Clone)]
@@ -184,7 +185,7 @@ impl LintFactory for ResultErrorLintFactory {
         ))])
     }
     
-    fn generate_config(&self, context: &crate::utils::project_context::ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
+    fn generate_config(&self, context: &ProjectContext) -> anyhow::Result<std::collections::HashMap<String, String>> {
         use std::collections::HashMap;
         
         let mut configs = HashMap::new();
@@ -208,9 +209,9 @@ impl LintFactory for ResultErrorLintFactory {
 
 #[cfg(test)]
 pub mod test {
+    use cargo_pup_common::project_context::ProjectContext;
     use crate::lints::{LintConfigurationFactory, LintFactory};
     use crate::lints::result_error::ResultErrorLintFactory;
-    use crate::utils::project_context::ProjectContext;
 
     const CONFIGURATION_YAML: &str = "
 enforce_result_error:

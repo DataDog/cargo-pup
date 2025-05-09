@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::lints::ArchitectureLintRule;
-use crate::utils::project_context::ProjectContext;
+use cargo_pup_common::project_context::ProjectContext;
 use anyhow::{Result, anyhow};
 
 pub trait LintFactory: Send + Sync {

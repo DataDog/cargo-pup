@@ -28,8 +28,7 @@ configuration_factories:
 empty_mods:
   type: empty_mod
   modules:
-    - "^cargo_pup::"
-    - "^pup_driver::"
+    - ".*"
   severity: Warn
 
 # Keep helpers implementation details private
@@ -55,8 +54,7 @@ utils_no_structs_or_traits:
 enforce_result_error:
   type: result_error
   modules:
-    - "^cargo_pup::"
-    - "^pup_driver::"
+    - ".*"
   severity: Error
 
 # Prevent cargo-pup from importing anything from lints.

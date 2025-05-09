@@ -10,7 +10,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use serde::Deserialize;
 use std::collections::HashMap;
-use crate::utils::project_context;
+use cargo_pup_common::project_context::ProjectContext;
 
 /// Represents a set of function length lint rules for a module
 #[derive(Debug, Deserialize, Clone)]
@@ -87,7 +87,7 @@ impl LintFactory for FunctionLengthLintFactory {
         )) as Box<dyn ArchitectureLintRule + Send>])
     }
     
-    fn generate_config(&self, context: &project_context::ProjectContext) -> anyhow::Result<HashMap<String, String>> {
+    fn generate_config(&self, context: &ProjectContext) -> anyhow::Result<HashMap<String, String>> {
         let mut configs = HashMap::new();
         
         // Create a single rule for the entire project, prefixed with module root
@@ -201,7 +201,6 @@ impl ArchitectureLintRule for FunctionLengthLintProcessor {
 #[cfg(test)]
 mod tests {
     use LintConfigurationFactory;
-    use crate::utils::project_context::ProjectContext;
     use super::*;
 
 
