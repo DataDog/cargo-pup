@@ -1119,9 +1119,8 @@ mod tests {
     
     /// Tests for command line processing
     mod command_line_processing_tests {
-        use cargo_pup_common::cli::PupCommand;
-        use crate::cli::{PupArgs, PupCommand};
-        
+        use cargo_pup_common::cli::{PupArgs, PupCli, PupCommand};
+
         #[test]
         fn test_arguments_parsing() {
             // Test different argument combinations
@@ -1201,8 +1200,7 @@ mod tests {
         #[test]
         fn test_pup_cli_serialization() {
             // Test that PupCli can be serialized and deserialized correctly
-            use crate::cli::PupCli;
-            
+
             // Create a PupCli with a test command
             let pup_cli = PupCli {
                 command: PupCommand::PrintModules,
