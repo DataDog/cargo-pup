@@ -30,7 +30,6 @@ use std::{
 };
 
 mod lints;
-mod utils;
 
 pub fn main() -> Result<()> {
     register_all_lints();

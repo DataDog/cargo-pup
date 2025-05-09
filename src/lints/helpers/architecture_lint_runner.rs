@@ -5,7 +5,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 use std::sync::Arc;
 use std::{collections::BTreeSet, path::Path};
-use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo};
+use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo, PUP_DIR};
 use crate::lints::ArchitectureLintCollection;
 
 ///
@@ -244,18 +244,28 @@ impl ArchitectureLintRunner {
 
         // Create filename with module root that we'll use later
         let config_filename = format!("pup.generated.{}.yaml", context.module_root);
+        
+        // Ensure .pup directory exists
+        let pup_dir = std::path::Path::new(PUP_DIR);
+        if !pup_dir.exists() {
+            std::fs::create_dir_all(pup_dir)
+                .context(format!("Failed to create directory: {}", pup_dir.display()))?;
+        }
+        
+        // Full path in the .pup directory
+        let config_path = pup_dir.join(&config_filename);
 
         // Generate config file
         let yaml = LintConfigurationFactory::generate_yaml(&context)
             .context("Failed to generate YAML configuration")?;
 
         // Write to file
-        LintConfigurationFactory::generate_config_file(&context, &config_filename).context(
-            format!("Failed to write configuration to {}", config_filename),
+        LintConfigurationFactory::generate_config_file(&context, config_path.to_str().unwrap()).context(
+            format!("Failed to write configuration to {}", config_path.display()),
         )?;
 
         // Return success message
-        Ok(format!("{}\n\nConfig written to {}", yaml, config_filename))
+        Ok(format!("{}\n\nConfig written to {}", yaml, config_path.display()))
     }
 }
 
