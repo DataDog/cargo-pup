@@ -5,7 +5,8 @@ use anyhow::Result;
 use cargo_pup_common::project_context::ProjectContext;
 use cargo_pup_lint_config::ConfiguredLint;
 use cargo_pup_lint_config::lint_builder::LintBuilder;
-use crate::lints::module::module_lint::ModuleLint;
+use crate::lints::module_lint::module_lint::ModuleLint;
+use crate::lints::struct_lint::StructLint;
 
 // Supercedes the old LintConfigurationFactory
 pub struct LintConfigurationFactory {
@@ -33,7 +34,7 @@ impl LintConfigurationFactory {
         Ok(lint_builder.lints.iter().map(|l| {
             match l {
                 ConfiguredLint::Module(config) => ModuleLint::new(l),
-                ConfiguredLint::Struct(_) => { panic!("Not implemented"); }
+                ConfiguredLint::Struct(_) => StructLint::new(l),
                 ConfiguredLint::Function(_) => {panic!("Not implemented"); }
             }
         }).collect())

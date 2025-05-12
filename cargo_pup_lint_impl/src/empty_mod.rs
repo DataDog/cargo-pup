@@ -12,14 +12,14 @@ use rustc_span::FileName;
 use serde::Deserialize;
 use cargo_pup_common::project_context::ProjectContext;
 
-/// Configuration for empty module lint rule
+/// Configuration for empty module_lint lint rule
 #[derive(Debug, Deserialize, Clone)]
 pub struct EmptyModConfiguration {
     pub modules: Vec<String>,
     pub severity: Severity,
 }
 
-/// Empty module lint processor
+/// Empty module_lint lint processor
 struct EmptyModLintProcessor {
     name: String,
     rule: EmptyModConfiguration,
@@ -91,11 +91,11 @@ impl<'tcx> LateLintPass<'tcx> for EmptyModLintProcessor {
                                 self.name().as_str(),
                                 span.shrink_to_lo(),
                                 format!(
-                                    "Item {} disallowed in mod.rs due to empty-module policy",
+                                    "Item {} disallowed in mod.rs due to empty-module_lint policy",
                                     item_name
                                 ),
                                 None,
-                                "Remove this definition from the module.",
+                                "Remove this definition from the module_lint.",
                             );
                         }
                         ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => {
@@ -105,11 +105,11 @@ impl<'tcx> LateLintPass<'tcx> for EmptyModLintProcessor {
                                 self.name().as_str(),
                                 span,
                                 format!(
-                                    "Item {} disallowed in mod.rs due to empty-module policy",
+                                    "Item {} disallowed in mod.rs due to empty-module_lint policy",
                                     item_name
                                 ),
                                 None,
-                                "Remove this implementation from the module.",
+                                "Remove this implementation from the module_lint.",
                             );
                         }
                         _ => {}
@@ -139,7 +139,7 @@ impl ArchitectureLintRule for EmptyModLintProcessor {
     }
 }
 
-/// Factory for creating empty module lint processors
+/// Factory for creating empty module_lint lint processors
 pub(crate) struct EmptyModLintFactory {}
 
 impl EmptyModLintFactory {
@@ -257,7 +257,7 @@ enforce_empty_mod:
 
         // Ensure the template was correctly loaded
         assert!(
-            config.contains("Empty module enforcer for the entire crate"),
+            config.contains("Empty module_lint enforcer for the entire crate"),
             "Config should contain text from template"
         );
 

@@ -11,14 +11,14 @@ use rustc_session::impl_lint_pass;
 use serde::Deserialize;
 use cargo_pup_common::project_context::ProjectContext;
 
-/// Configuration for module usage lint rule
+/// Configuration for module_lint usage lint rule
 #[derive(Debug, Deserialize, Clone)]
 pub struct ModuleUsageConfiguration {
     pub modules: Vec<String>,
     pub rules: Vec<ModuleUsageLintRule>,
 }
 
-/// Represents a single module usage lint rule
+/// Represents a single module_lint usage lint rule
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum ModuleUsageLintRule {
@@ -74,7 +74,7 @@ impl ModuleUsageLintProcessor {
             .any(|r| r.is_match(full_name.as_str()))
     }
     
-    /// Helper function to compile a module pattern string to regex
+    /// Helper function to compile a module_lint pattern string to regex
     fn compile_module_regex(pattern: &str) -> anyhow::Result<Regex> {
         Ok(Regex::new(pattern)?)
     }
@@ -84,7 +84,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
         let module_def_id = cx.tcx.hir_get_parent_item(item.hir_id());
         
-        // Ensure we apply the lint to the right module
+        // Ensure we apply the lint to the right module_lint
         if !self.applies_to_module(&cx.tcx, &module_def_id) {
             return;
         }
@@ -121,7 +121,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                                 self.name().as_str(),
                                 item.span,
                                 format!(
-                                    "Use of module '{}' is not allowed; only {:?} are permitted.",
+                                    "Use of module_lint '{}' is not allowed; only {:?} are permitted.",
                                     import_module, allowed_modules
                                 ),
                                 None,
@@ -150,7 +150,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                                 self.name().as_str(),
                                 item.span,
                                 format!(
-                                    "Use of module '{}' is denied; {:?} are not permitted.",
+                                    "Use of module_lint '{}' is denied; {:?} are not permitted.",
                                     import_module, denied_modules
                                 ),
                                 None,
@@ -197,7 +197,7 @@ impl ArchitectureLintRule for ModuleUsageLintProcessor {
     }
 }
 
-/// Factory for creating module usage lint processors
+/// Factory for creating module_lint usage lint processors
 pub(crate) struct ModuleUsageLintFactory {}
 
 impl ModuleUsageLintFactory {
@@ -233,7 +233,7 @@ impl LintFactory for ModuleUsageLintFactory {
         // Load template from file and replace placeholders
         let template = include_str!("templates/module_usage.tmpl");
         
-        // Create a regex pattern that matches the module root
+        // Create a regex pattern that matches the module_lint root
         let module_pattern = context.module_root.clone();
         
         // Replace the placeholders with actual values

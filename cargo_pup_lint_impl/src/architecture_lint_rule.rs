@@ -19,9 +19,9 @@ pub trait ArchitectureLintRule: Sync + Send {
     fn name(&self) -> String;
 
     ///
-    /// Returns true if the given lint applies to the particular module, false
-    /// otherwise. A lint only applies to a module if it is directly constraining
-    /// it in some fashion - not if it applies to _some element_ in the module.
+    /// Returns true if the given lint applies to the particular module_lint, false
+    /// otherwise. A lint only applies to a module_lint if it is directly constraining
+    /// it in some fashion - not if it applies to _some element_ in the module_lint.
     /// In practice, this means configured lints that have a property like "module_name:".
     ///
     /// This is used to annotate the diagnostic tree of `cargo pup print-namespaces` to indicate

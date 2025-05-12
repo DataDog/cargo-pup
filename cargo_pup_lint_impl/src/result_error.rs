@@ -55,7 +55,7 @@ impl ResultErrorLintProcessor {
 
 impl<'tcx> LateLintPass<'tcx> for ResultErrorLintProcessor {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
-        // Add debug output to see if the module name matches any regex
+        // Add debug output to see if the module_lint name matches any regex
         // let matches = self.applies_to_module(&ctx.tcx, &item.owner_id);
         let module_id = ctx.tcx.parent_module(item.hir_id());
         let module_def_id = module_id.to_def_id();

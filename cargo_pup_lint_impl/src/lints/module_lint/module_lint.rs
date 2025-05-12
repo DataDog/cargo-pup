@@ -94,16 +94,16 @@ impl ModuleLint {
         }
     }
     
-    // Method to check if a module path matches our configured module patterns
+    // Method to check if a module_lint path matches our configured module_lint patterns
     fn matches_module(&self, module_path: &str) -> bool {
         self.evaluate_module_match(&self.matches, module_path)
     }
     
-    // Helper method to evaluate a ModuleMatch against a module path
+    // Helper method to evaluate a ModuleMatch against a module_lint path
     fn evaluate_module_match(&self, module_match: &ModuleMatch, module_path: &str) -> bool {
         match module_match {
             ModuleMatch::Module(pattern) => {
-                // Try to compile the pattern as a regex and match against module path
+                // Try to compile the pattern as a regex and match against module_lint path
                 match Regex::new(pattern) {
                     Ok(regex) => regex.is_match(module_path),
                     Err(_) => {
@@ -144,7 +144,7 @@ impl ModuleLint {
     }
 }
 
-// Declare the module lint with variable severity
+// Declare the module_lint lint with variable severity
 declare_variable_severity_lint!(
     pub,
     MODULE_LINT,
@@ -186,11 +186,11 @@ impl ArchitectureLintRule for ModuleLint {
 
 impl<'tcx> LateLintPass<'tcx> for ModuleLint {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
-        // Get the full module path
+        // Get the full module_lint path
         let parent_item = ctx.tcx.hir_get_parent_item(item.hir_id());
         let module_path = get_full_module_name(&ctx.tcx, &parent_item);
         
-        // Check if this module matches our patterns
+        // Check if this module_lint matches our patterns
         if !self.matches_module(&module_path) {
             return;
         }
@@ -203,16 +203,16 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         let item_name_str = item_name.to_string();
                         
-                        // Check if module name matches the pattern
+                        // Check if module_lint name matches the pattern
                         if !self.string_matches_pattern(&item_name_str, pattern) {
                             let pattern_type = self.describe_pattern(pattern);
                             let message = format!("Module must match {} '{}', found '{}'", 
                                                 pattern_type, pattern, item_name_str);
                             
                             let help = if pattern_type == "pattern" {
-                                format!("Rename this module to match the pattern '{}'", pattern)
+                                format!("Rename this module_lint to match the pattern '{}'", pattern)
                             } else {
-                                format!("Rename this module to '{}'", pattern)
+                                format!("Rename this module_lint to '{}'", pattern)
                             };
                             
                             span_lint_and_help(
@@ -232,7 +232,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         let item_name_str = item_name.to_string();
                         
-                        // Check if module name matches the pattern (which it shouldn't)
+                        // Check if module_lint name matches the pattern (which it shouldn't)
                         if self.string_matches_pattern(&item_name_str, pattern) {
                             let pattern_type = self.describe_pattern(pattern);
                             let message = format!("Module must not match {} '{}'", 
@@ -241,7 +241,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             let help = if pattern_type == "pattern" {
                                 "Choose a name that doesn't match this pattern"
                             } else {
-                                "Choose a different name for this module"
+                                "Choose a different name for this module_lint"
                             };
                             
                             span_lint_and_help(
@@ -266,7 +266,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 item.span,
                                 "Module must not be empty",
                                 None,
-                                "Add content to this module or remove it",
+                                "Add content to this module_lint or remove it",
                             );
                         }
                     }
@@ -290,7 +290,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             });
                             
                             if !is_allowed {
-                                let message = format!("Use of module '{}' is not allowed; only {:?} are permitted", 
+                                let message = format!("Use of module_lint '{}' is not allowed; only {:?} are permitted",
                                         import_module, allowed);
                                 
                                 span_lint_and_help(
@@ -300,7 +300,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                     item.span,
                                     message,
                                     None,
-                                    "Use only allowed module imports",
+                                    "Use only allowed module_lint imports",
                                 );
                             }
                         }
@@ -315,7 +315,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             });
                             
                             if is_denied {
-                                let message = format!("Use of module '{}' is denied", import_module);
+                                let message = format!("Use of module_lint '{}' is denied", import_module);
                                 
                                 span_lint_and_help(
                                     ctx,

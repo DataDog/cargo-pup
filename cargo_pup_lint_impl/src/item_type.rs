@@ -46,7 +46,7 @@ declare_variable_severity_lint!(
     ITEM_TYPE,
     ITEM_TYPE_DENY,
     ITEM_TYPE_WARN,
-    "Item types not allowed in this module"
+    "Item types not allowed in this module_lint"
 );
 impl_lint_pass!(ItemTypeLintProcessor => [ITEM_TYPE_DENY, ITEM_TYPE_WARN]);
 
@@ -78,7 +78,7 @@ impl ItemTypeLintProcessor {
                 Some("enum")
             }
             ItemKind::Struct(..) if self.rule.denied_items.contains(&DeniedItemType::Struct) => {
-                Some("struct")
+                Some("struct_lint")
             }
             ItemKind::Trait(..) if self.rule.denied_items.contains(&DeniedItemType::Trait) => {
                 Some("trait")
@@ -93,7 +93,7 @@ impl ItemTypeLintProcessor {
                 has_body: _,
             } if self.rule.denied_items.contains(&DeniedItemType::Function) => Some("function"),
             ItemKind::Mod(..) if self.rule.denied_items.contains(&DeniedItemType::Module) => {
-                Some("module")
+                Some("module_lint")
             }
             ItemKind::Static(..) if self.rule.denied_items.contains(&DeniedItemType::Static) => {
                 Some("static")
@@ -125,11 +125,11 @@ impl<'tcx> LateLintPass<'tcx> for ItemTypeLintProcessor {
                 self.name().as_str(),
                 item.span,
                 format!(
-                    "{} '{}' is not allowed in this module",
+                    "{} '{}' is not allowed in this module_lint",
                     item_type, item_name
                 ),
                 None,
-                "Consider moving this item to a different module",
+                "Consider moving this item to a different module_lint",
             );
         }
     }
@@ -154,16 +154,16 @@ impl ArchitectureLintRule for ItemTypeLintProcessor {
     
     fn applies_to_trait(&self, trait_path: &str) -> bool {
         // This lint applies to traits if:
-        // 1. The trait is in a module that matches our module patterns
+        // 1. The trait is in a module_lint that matches our module_lint patterns
         // 2. Traits are in the denied_items list
         if !self.rule.denied_items.contains(&DeniedItemType::Trait) {
             return false;
         }
         
-        // Get the module part of the trait path
+        // Get the module_lint part of the trait path
         if let Some(last_separator) = trait_path.rfind("::") {
             let module_path = &trait_path[0..last_separator];
-            // Check if any of our module regexes match
+            // Check if any of our module_lint regexes match
             return self.module_regexps.iter().any(|r| r.is_match(module_path));
         }
         
@@ -226,7 +226,7 @@ test_item_type:
   modules:
     - \"test_module\"
   denied_items:
-    - struct
+    - struct_lint
     - enum
   severity: Warn
 ";

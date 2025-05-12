@@ -12,7 +12,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use cargo_pup_common::project_context::ProjectContext;
 
-/// Represents a set of function length lint rules for a module
+/// Represents a set of function length lint rules for a module_lint
 #[derive(Debug, Deserialize, Clone)]
 pub struct FunctionLengthConfiguration {
     pub namespace: String,
@@ -90,11 +90,11 @@ impl LintFactory for FunctionLengthLintFactory {
     fn generate_config(&self, context: &ProjectContext) -> anyhow::Result<HashMap<String, String>> {
         let mut configs = HashMap::new();
         
-        // Create a single rule for the entire project, prefixed with module root
+        // Create a single rule for the entire project, prefixed with module_lint root
         let rule_name = format!("{}_max_function_length", context.module_root);
         
-        // Create regex pattern that matches the root module and all submodules
-        // The ^ ensures it starts with the module root, no need for $ or ::
+        // Create regex pattern that matches the root module_lint and all submodules
+        // The ^ ensures it starts with the module_lint root, no need for $ or ::
         let module_pattern = format!("^{}", context.module_root);
         
         // Load template from file and format it
@@ -249,7 +249,7 @@ deny_long_functions:
         // Verify the configs map
         assert_eq!(configs.len(), 1, "Should generate exactly 1 config");
         
-        // Check if the key includes the module root prefix
+        // Check if the key includes the module_lint root prefix
         let expected_key = format!("{}_max_function_length", context.module_root);
         assert!(configs.contains_key(&expected_key), "Should contain '{}' key", expected_key);
         

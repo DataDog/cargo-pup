@@ -58,7 +58,7 @@ impl<'tcx> LateLintPass<'tcx> for TraitImplLintProcessor {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &Item<'tcx>) {
         if let ItemKind::Impl(impl_item) = &item.kind {
             if let Some(trait_ref) = &impl_item.of_trait {
-                // We no longer need to construct the module name here since we use the helper
+                // We no longer need to construct the module_lint name here since we use the helper
                 
                 // Get the canonical trait name using the centralized helper
                 let trait_def_id = trait_ref.trait_def_id().unwrap();
@@ -74,7 +74,7 @@ impl<'tcx> LateLintPass<'tcx> for TraitImplLintProcessor {
                         {
                             if let Node::Item(struct_item) = struct_node {
                                 if let ItemKind::Struct(_, _) = struct_item.kind {
-                                    let struct_span = struct_item.span; // Span of the struct definition
+                                    let struct_span = struct_item.span; // Span of the struct_lint definition
                                     let struct_name =
                                         path.segments.last().map(|s| s.ident.to_string());
 
@@ -94,7 +94,7 @@ impl<'tcx> LateLintPass<'tcx> for TraitImplLintProcessor {
                                                         struct_name, name_pattern
                                                     ),
                                                     None,
-                                                    "Consider renaming the struct.",
+                                                    "Consider renaming the struct_lint.",
                                                 );
                                             }
                                         }
@@ -206,7 +206,7 @@ impl LintFactory for TraitImplLintFactory {
         for (i, trait_info) in context.traits.iter().enumerate().take(3) {
             // Only generate for traits that have implementations
             if !trait_info.implementors.is_empty() {
-                // Create a rule name based on the trait, prefixed with module root
+                // Create a rule name based on the trait, prefixed with module_lint root
                 let trait_parts: Vec<&str> = trait_info.name.split("::").collect();
                 let trait_simple_name = trait_parts.last().unwrap_or(&"unknown");
                 let rule_name = format!("{}_enforce_{}_impl", context.module_root, trait_simple_name.to_lowercase());
@@ -303,7 +303,7 @@ test_trait_constraint:
         // We should have 2 configs for the 2 traits
         assert_eq!(configs.len(), 2, "Should generate 1 config per trait with implementations");
         
-        // Check if the keys exist with module root prefix
+        // Check if the keys exist with module_lint root prefix
         let display_key = format!("{}_enforce_display_impl", context.module_root);
         let serialize_key = format!("{}_enforce_serialize_impl", context.module_root);
         
@@ -356,7 +356,7 @@ test_trait_constraint:
         // Should use the fallback generic template
         assert_eq!(configs.len(), 1, "Should generate 1 fallback config");
         
-        // Check if the fallback key exists with module root prefix
+        // Check if the fallback key exists with module_lint root prefix
         let fallback_key = format!("{}_enforce_trait_impl", context.module_root);
         assert!(configs.contains_key(&fallback_key), 
                 "Should contain fallback key with module root prefix");
