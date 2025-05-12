@@ -45,7 +45,7 @@ impl LintBuilder {
 mod tests {
     use super::*;
     use tempfile::NamedTempFile;
-    use crate::{ConfiguredLint, ModuleMatch, ModuleRule, module_matcher, struct_matcher};
+    use crate::{ConfiguredLint, ModuleMatch, ModuleRule, module_matcher, struct_matcher, Severity};
     use crate::module_lint::{ModuleLint, ModuleLintExt};
     use crate::struct_lint::{StructMatch, StructRule, StructLintExt};
 
@@ -53,17 +53,19 @@ mod tests {
     fn test_write_to_file() {
         let mut builder = LintBuilder::new();
 
-        // Use a more complex matcher to demonstrate the DSL capabilities
+        // Use a more complex matcher to demonstrate the DSL capabilities with regex
         builder.module()
             .matching(|m| 
-                m.namespace("core::models")
-                    .and(m.path_contains("src/domain"))
+                m.namespace_regex("^core::(models|entities)$")
+                    .and(m.path_regex("src/domain/.*\\.rs$"))
                     .or(
                         m.namespace("api::controllers")
                             .and(m.path_contains("tests").not())
                     )
             )
+            .with_severity(Severity::Deny)
             .must_be_named("domain_entity".into())
+            .with_severity(Severity::Warn)
             .no_wildcard_imports()
             .build();
 
@@ -81,15 +83,17 @@ mod tests {
 
         // Use the same complex matcher as in test_write_to_file
         builder.module()
-            .matching(|m|
-                m.namespace("core::models")
-                    .and(m.path_contains("src/domain"))
+            .matching(|m| 
+                m.namespace_regex("^core::(models|entities)$")
+                    .and(m.path_regex("src/domain/.*\\.rs$"))
                     .or(
                         m.namespace("api::controllers")
                             .and(m.path_contains("tests").not())
                     )
             )
+            .with_severity(Severity::Deny)
             .must_be_named("domain_entity".into())
+            .with_severity(Severity::Warn)
             .no_wildcard_imports()
             .build();
 
@@ -109,15 +113,82 @@ mod tests {
             if let ModuleMatch::OrMatches(left, right) = &module_lint.matches {
                 // We don't check the entire structure, just that the serialization/deserialization worked
                 assert!(matches!(**left, ModuleMatch::AndMatches(_, _)));
-                assert!(matches!(**right, ModuleMatch::AndMatches(_, _)));
+                
+                // Check that the left side uses a regex namespace matcher
+                if let ModuleMatch::AndMatches(ref left_and_left, _) = **left {
+                    if let ModuleMatch::NamespaceRegex(pattern) = &**left_and_left {
+                        assert_eq!(pattern, "^core::(models|entities)$");
+                    } else {
+                        panic!("Expected NamespaceRegex");
+                    }
+                }
             } else {
                 panic!("Expected OrMatches at top level");
             }
             
-            // Check rules
+            // Check rules and their severity levels
             assert_eq!(module_lint.rules.len(), 2);
-            assert!(matches!(module_lint.rules[0], ModuleRule::MustBeNamed(_)));
-            assert!(matches!(module_lint.rules[1], ModuleRule::NoWildcardImports));
+            
+            // First rule should be MustBeNamed with Deny severity
+            if let ModuleRule::MustBeNamed(name, severity) = &module_lint.rules[0] {
+                assert_eq!(name, "domain_entity");
+                assert_eq!(severity, &Severity::Deny);
+            } else {
+                panic!("Expected MustBeNamed with Deny severity");
+            }
+            
+            // Second rule should be NoWildcardImports with Warn severity
+            if let ModuleRule::NoWildcardImports(severity) = &module_lint.rules[1] {
+                assert_eq!(severity, &Severity::Warn);
+            } else {
+                panic!("Expected NoWildcardImports with Warn severity");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+
+    #[test]
+    fn test_regex_struct_matcher() {
+        let mut builder = LintBuilder::new();
+        
+        // Test regex capabilities for struct matching
+        builder.struct_lint()
+            .matching(|m| 
+                m.name_regex("^[A-Z][a-z]+Model$")
+                    .and(m.attribute_regex("derive\\(.*Debug.*\\)"))
+            )
+            .with_severity(Severity::Deny)
+            .must_be_named("EntityModel".into())
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
+            // Check that the matcher is an AND with regex patterns
+            if let StructMatch::AndMatches(left, right) = &struct_lint.matches {
+                if let StructMatch::NameRegex(pattern) = &**left {
+                    assert_eq!(pattern, "^[A-Z][a-z]+Model$");
+                } else {
+                    panic!("Expected NameRegex");
+                }
+                
+                if let StructMatch::AttributeRegex(pattern) = &**right {
+                    assert_eq!(pattern, "derive\\(.*Debug.*\\)");
+                } else {
+                    panic!("Expected AttributeRegex");
+                }
+            } else {
+                panic!("Expected AndMatches");
+            }
+            
+            // Check rule and severity
+            assert_eq!(struct_lint.rules.len(), 1);
+            if let StructRule::MustBeNamed(name, severity) = &struct_lint.rules[0] {
+                assert_eq!(name, "EntityModel");
+                assert_eq!(severity, &Severity::Deny);
+            } else {
+                panic!("Expected MustBeNamed with Deny severity");
+            }
         } else {
             panic!("Unexpected lint type");
         }
@@ -136,8 +207,8 @@ mod tests {
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
             assert_eq!(module_lint.rules.len(), 1);
-            if let ModuleRule::MustNotBeEmpty = &module_lint.rules[0] {
-                // Test passes if we can match the pattern
+            if let ModuleRule::MustNotBeEmpty(severity) = &module_lint.rules[0] {
+                assert_eq!(severity, &Severity::Warn); // Default severity is Warn
             } else {
                 panic!("Expected MustNotBeEmpty rule");
             }
@@ -159,8 +230,8 @@ mod tests {
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
             assert_eq!(module_lint.rules.len(), 1);
-            if let ModuleRule::NoWildcardImports = &module_lint.rules[0] {
-                // Test passes if we can match the pattern
+            if let ModuleRule::NoWildcardImports(severity) = &module_lint.rules[0] {
+                assert_eq!(severity, &Severity::Warn); // Default severity is Warn
             } else {
                 panic!("Expected NoWildcardImports rule");
             }
@@ -184,9 +255,10 @@ mod tests {
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
             assert_eq!(module_lint.rules.len(), 1);
-            if let ModuleRule::RestrictImports { allowed_only, denied: denied_mods } = &module_lint.rules[0] {
+            if let ModuleRule::RestrictImports { allowed_only, denied: denied_mods, severity } = &module_lint.rules[0] {
                 assert_eq!(allowed_only.as_ref().unwrap(), &allowed);
                 assert_eq!(denied_mods.as_ref().unwrap(), &denied);
+                assert_eq!(severity, &Severity::Warn); // Default severity is Warn
             } else {
                 panic!("Expected RestrictImports rule");
             }
@@ -212,22 +284,23 @@ mod tests {
             assert_eq!(module_lint.rules.len(), 3);
             
             // Check first rule - MustNotBeEmpty
-            if let ModuleRule::MustNotBeEmpty = &module_lint.rules[0] {
-                // First rule is correct
+            if let ModuleRule::MustNotBeEmpty(severity) = &module_lint.rules[0] {
+                assert_eq!(severity, &Severity::Warn); // Default severity
             } else {
                 panic!("Expected MustNotBeEmpty as first rule");
             }
             
             // Check second rule - NoWildcardImports
-            if let ModuleRule::NoWildcardImports = &module_lint.rules[1] {
-                // Second rule is correct
+            if let ModuleRule::NoWildcardImports(severity) = &module_lint.rules[1] {
+                assert_eq!(severity, &Severity::Warn); // Default severity
             } else {
                 panic!("Expected NoWildcardImports as second rule");
             }
             
             // Check third rule - MustBeNamed
-            if let ModuleRule::MustBeNamed(name) = &module_lint.rules[2] {
+            if let ModuleRule::MustBeNamed(name, severity) = &module_lint.rules[2] {
                 assert_eq!(name, "core");
+                assert_eq!(severity, &Severity::Warn); // Default severity
             } else {
                 panic!("Expected MustBeNamed as third rule");
             }
@@ -260,15 +333,17 @@ mod tests {
             assert_eq!(struct_lint.rules.len(), 2);
             
             // Check first rule - MustBeNamed
-            if let StructRule::MustBeNamed(name) = &struct_lint.rules[0] {
+            if let StructRule::MustBeNamed(name, severity) = &struct_lint.rules[0] {
                 assert_eq!(name, "User");
+                assert_eq!(severity, &Severity::Warn); // Default severity
             } else {
                 panic!("Expected MustBeNamed as first rule");
             }
             
             // Check second rule - MustNotBeNamed
-            if let StructRule::MustNotBeNamed(name) = &struct_lint.rules[1] {
+            if let StructRule::MustNotBeNamed(name, severity) = &struct_lint.rules[1] {
                 assert_eq!(name, "UserStruct");
+                assert_eq!(severity, &Severity::Warn); // Default severity
             } else {
                 panic!("Expected MustNotBeNamed as second rule");
             }

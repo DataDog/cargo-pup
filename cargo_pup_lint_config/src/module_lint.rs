@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::lint_builder::LintBuilder;
-use super::{ConfiguredLint};
+use super::{ConfiguredLint, Severity};
+use regex::Regex;
 
 // === Module Matcher DSL === //
 
@@ -13,6 +14,15 @@ impl ModuleMatcher {
     
     pub fn path_contains(&self, path: impl Into<String>) -> ModuleMatchNode {
         ModuleMatchNode::Leaf(ModuleMatch::PathContains(path.into()))
+    }
+    
+    // Add regex-based matchers
+    pub fn namespace_regex(&self, pattern: impl Into<String>) -> ModuleMatchNode {
+        ModuleMatchNode::Leaf(ModuleMatch::NamespaceRegex(pattern.into()))
+    }
+    
+    pub fn path_regex(&self, pattern: impl Into<String>) -> ModuleMatchNode {
+        ModuleMatchNode::Leaf(ModuleMatch::PathRegex(pattern.into()))
     }
 }
 
@@ -75,6 +85,10 @@ where
 pub enum ModuleMatch {
     NamespaceEquals(String),
     PathContains(String),
+    // Add regex-based matchers
+    NamespaceRegex(String),
+    PathRegex(String),
+    // Logical operations
     AndMatches(Box<ModuleMatch>, Box<ModuleMatch>),
     OrMatches(Box<ModuleMatch>, Box<ModuleMatch>),
     NotMatch(Box<ModuleMatch>),
@@ -89,14 +103,15 @@ pub struct ModuleLint {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ModuleRule {
-    MustBeNamed(String),
-    MustNotBeNamed(String),
-    MustNotBeEmpty,
+    MustBeNamed(String, Severity),
+    MustNotBeNamed(String, Severity),
+    MustNotBeEmpty(Severity),
     RestrictImports {
         allowed_only: Option<Vec<String>>,
         denied: Option<Vec<String>>,
+        severity: Severity,
     },
-    NoWildcardImports,
+    NoWildcardImports(Severity),
     And(Box<ModuleRule>, Box<ModuleRule>),
     Or(Box<ModuleRule>, Box<ModuleRule>),
     Not(Box<ModuleRule>),
@@ -118,14 +133,17 @@ pub struct ModuleMatchBuilder<'a> {
 }
 
 impl<'a> ModuleMatchBuilder<'a> {
+    // Original matches method
     pub fn matches(self, m: ModuleMatch) -> ModuleConstraintBuilder<'a> {
         ModuleConstraintBuilder {
             parent: self.parent,
             match_: m,
             rules: Vec::new(),
+            current_severity: Severity::default(),
         }
     }
     
+    // New matcher method using the DSL
     pub fn matching<F>(self, f: F) -> ModuleConstraintBuilder<'a>
     where
         F: FnOnce(&ModuleMatcher) -> ModuleMatchNode
@@ -139,11 +157,18 @@ pub struct ModuleConstraintBuilder<'a> {
     parent: &'a mut LintBuilder,
     match_: ModuleMatch,
     rules: Vec<ModuleRule>,
+    current_severity: Severity,
 }
 
 impl<'a> ModuleConstraintBuilder<'a> {
-    pub fn add_rule(mut self, rule: ModuleRule) -> Self {
+    // Private method to add a rule directly to self
+    fn add_rule_internal(&mut self, rule: ModuleRule) {
         self.rules.push(rule);
+    }
+    
+    // Public API method that takes and returns self
+    pub fn add_rule(mut self, rule: ModuleRule) -> Self {
+        self.add_rule_internal(rule);
         self
     }
     
@@ -157,30 +182,45 @@ impl<'a> ModuleConstraintBuilder<'a> {
         self.parent
     }
     
-    pub fn must_not_be_empty(self) -> Self {
-        self.add_rule(ModuleRule::MustNotBeEmpty)
+    // Set the severity level for subsequent rules
+    pub fn with_severity(mut self, severity: Severity) -> Self {
+        self.current_severity = severity;
+        self
     }
     
-    pub fn no_wildcard_imports(self) -> Self {
-        self.add_rule(ModuleRule::NoWildcardImports)
+    // Helper method for feature #10: Empty Module Detection
+    pub fn must_not_be_empty(mut self) -> Self {
+        self.add_rule_internal(ModuleRule::MustNotBeEmpty(self.current_severity));
+        self
     }
     
+    // Helper method for feature #5: Wildcard Imports Detection
+    pub fn no_wildcard_imports(mut self) -> Self {
+        self.add_rule_internal(ModuleRule::NoWildcardImports(self.current_severity));
+        self
+    }
+    
+    // Helper method for feature #4: Fine-grained Module Import Rules
     pub fn restrict_imports(
-        self, 
+        mut self, 
         allowed_only: Option<Vec<String>>, 
         denied: Option<Vec<String>>
     ) -> Self {
-        self.add_rule(ModuleRule::RestrictImports { 
+        self.add_rule_internal(ModuleRule::RestrictImports { 
             allowed_only, 
-            denied 
-        })
+            denied,
+            severity: self.current_severity
+        });
+        self
     }
     
-    pub fn must_be_named(self, name: String) -> Self {
-        self.add_rule(ModuleRule::MustBeNamed(name))
+    pub fn must_be_named(mut self, name: String) -> Self {
+        self.add_rule_internal(ModuleRule::MustBeNamed(name, self.current_severity));
+        self
     }
     
-    pub fn must_not_be_named(self, name: String) -> Self {
-        self.add_rule(ModuleRule::MustNotBeNamed(name))
+    pub fn must_not_be_named(mut self, name: String) -> Self {
+        self.add_rule_internal(ModuleRule::MustNotBeNamed(name, self.current_severity));
+        self
     }
 }

@@ -10,6 +10,21 @@ use serde::{Deserialize, Serialize};
 use crate::module_lint::ModuleLint;
 use crate::struct_lint::StructLint;
 
+/// Severity level for lint rules
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Severity {
+    /// Warning - prints a warning but doesn't cause failure
+    Warn,
+    /// Deny - causes the lint check to fail
+    Deny,
+}
+
+impl Default for Severity {
+    fn default() -> Self {
+        Severity::Warn
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ConfiguredLint {
     Module(ModuleLint),
