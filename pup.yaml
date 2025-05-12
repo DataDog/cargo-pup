@@ -15,7 +15,7 @@ architecture_lint_rules:
 # Implementations of our lint factories
 configuration_factories:
   type: trait_impl
-  source_name: "^pup_driver::lints::configuration_factory::LintFactory"
+  source_name: "^pup_driver::lints::configuration_factory.rs::LintFactory"
   # ... must be named consistently
   name_must_match: ".*LintFactory$"
   # ... and must be private
