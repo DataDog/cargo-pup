@@ -8,21 +8,26 @@ use regex::Regex;
 pub struct StructMatcher;
 
 impl StructMatcher {
+    /// Matches structs by name
+    /// 
+    /// The name parameter can be either:
+    /// - An exact struct name (e.g., "User")
+    /// - A regular expression pattern (e.g., "^[A-Z][a-z]+Model$")
+    ///
+    /// The implementation will determine if it's a regex based on the presence of special regex characters.
     pub fn name(&self, name: impl Into<String>) -> StructMatchNode {
-        StructMatchNode::Leaf(StructMatch::NameEquals(name.into()))
+        StructMatchNode::Leaf(StructMatch::Name(name.into()))
     }
     
+    /// Matches structs by attribute
+    /// 
+    /// The attribute parameter can be either:
+    /// - An exact attribute (e.g., "derive(Debug)")
+    /// - A regular expression pattern (e.g., "derive\\(.*Debug.*\\)")
+    ///
+    /// The implementation will determine if it's a regex based on the presence of special regex characters.
     pub fn has_attribute(&self, attr: impl Into<String>) -> StructMatchNode {
         StructMatchNode::Leaf(StructMatch::HasAttribute(attr.into()))
-    }
-
-    // Add regex-based matchers
-    pub fn name_regex(&self, pattern: impl Into<String>) -> StructMatchNode {
-        StructMatchNode::Leaf(StructMatch::NameRegex(pattern.into()))
-    }
-    
-    pub fn attribute_regex(&self, pattern: impl Into<String>) -> StructMatchNode {
-        StructMatchNode::Leaf(StructMatch::AttributeRegex(pattern.into()))
     }
 }
 
@@ -83,11 +88,8 @@ where
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum StructMatch {
-    NameEquals(String),
+    Name(String),
     HasAttribute(String),
-    // Add regex-based matchers
-    NameRegex(String),
-    AttributeRegex(String),
     // Logical operations
     AndMatches(Box<StructMatch>, Box<StructMatch>),
     OrMatches(Box<StructMatch>, Box<StructMatch>),

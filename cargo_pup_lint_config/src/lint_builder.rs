@@ -57,11 +57,9 @@ mod tests {
         // Use a more complex matcher to demonstrate the DSL capabilities with regex
         builder.module()
             .matching(|m| 
-                m.namespace_regex("^core::(models|entities)$")
-                    .and(m.path_regex("src/domain/.*\\.rs$"))
+                m.module("^core::(models|entities)$")
                     .or(
-                        m.namespace("api::controllers")
-                            .and(m.path_contains("tests").not())
+                        m.module("api::controllers")
                     )
             )
             .with_severity(Severity::Deny)
@@ -85,11 +83,11 @@ mod tests {
         // Use the same complex matcher as in test_write_to_file
         builder.module()
             .matching(|m| 
-                m.namespace_regex("^core::(models|entities)$")
-                    .and(m.path_regex("src/domain/.*\\.rs$"))
+                m.module("^core::(models|entities)$")
+                    .and(m.module("src/domain/.*\\.rs$"))
                     .or(
-                        m.namespace("api::controllers")
-                            .and(m.path_contains("tests").not())
+                        m.module("api::controllers")
+                            .and(m.module("tests").not())
                     )
             )
             .with_severity(Severity::Deny)
@@ -115,12 +113,12 @@ mod tests {
                 // We don't check the entire structure, just that the serialization/deserialization worked
                 assert!(matches!(**left, ModuleMatch::AndMatches(_, _)));
                 
-                // Check that the left side uses a regex namespace matcher
+                // Check that the left side uses a regex module matcher
                 if let ModuleMatch::AndMatches(ref left_and_left, _) = **left {
-                    if let ModuleMatch::NamespaceRegex(pattern) = &**left_and_left {
+                    if let ModuleMatch::Module(pattern) = &**left_and_left {
                         assert_eq!(pattern, "^core::(models|entities)$");
                     } else {
-                        panic!("Expected NamespaceRegex");
+                        panic!("Expected Module");
                     }
                 }
             } else {
@@ -156,8 +154,8 @@ mod tests {
         // Test regex capabilities for struct matching
         builder.struct_lint()
             .matching(|m| 
-                m.name_regex("^[A-Z][a-z]+Model$")
-                    .and(m.attribute_regex("derive\\(.*Debug.*\\)"))
+                m.name("^[A-Z][a-z]+Model$")
+                    .and(m.has_attribute("derive\\(.*Debug.*\\)"))
             )
             .with_severity(Severity::Deny)
             .must_be_named("EntityModel".into())
@@ -167,16 +165,16 @@ mod tests {
         if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
             // Check that the matcher is an AND with regex patterns
             if let StructMatch::AndMatches(left, right) = &struct_lint.matches {
-                if let StructMatch::NameRegex(pattern) = &**left {
+                if let StructMatch::Name(pattern) = &**left {
                     assert_eq!(pattern, "^[A-Z][a-z]+Model$");
                 } else {
-                    panic!("Expected NameRegex");
+                    panic!("Expected Name");
                 }
                 
-                if let StructMatch::AttributeRegex(pattern) = &**right {
+                if let StructMatch::HasAttribute(pattern) = &**right {
                     assert_eq!(pattern, "derive\\(.*Debug.*\\)");
                 } else {
-                    panic!("Expected AttributeRegex");
+                    panic!("Expected HasAttribute");
                 }
             } else {
                 panic!("Expected AndMatches");
@@ -196,12 +194,90 @@ mod tests {
     }
 
     #[test]
+    fn test_function_lint_max_length() {
+        let mut builder = LintBuilder::new();
+        
+        // Test function lint with name matching and max length
+        builder.function()
+            .matching(|m| m.name("process_data"))
+            .with_severity(Severity::Deny)
+            .max_length(50)
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
+            assert_eq!(function_lint.name, "function_lint");
+            
+            if let FunctionMatch::NameEquals(name) = &function_lint.matches {
+                assert_eq!(name, "process_data");
+            } else {
+                panic!("Expected NameEquals match");
+            }
+            
+            assert_eq!(function_lint.rules.len(), 1);
+            if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
+                assert_eq!(*length, 50);
+                assert_eq!(severity, &Severity::Deny);
+            } else {
+                panic!("Expected MaxLength rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_function_lint_regex_matching() {
+        let mut builder = LintBuilder::new();
+        
+        // Test function lint with regex matching
+        builder.function()
+            .matching(|m| 
+                m.name_regex("^(get|set)_[a-z_]+$")
+                    .and(m.in_module("^core::models::[a-zA-Z]+$"))
+            )
+            .max_length(30)
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
+            // Check that the matcher is an AND with regex patterns
+            if let FunctionMatch::AndMatches(left, right) = &function_lint.matches {
+                if let FunctionMatch::NameRegex(pattern) = &**left {
+                    assert_eq!(pattern, "^(get|set)_[a-z_]+$");
+                } else {
+                    panic!("Expected NameRegex");
+                }
+                
+                if let FunctionMatch::InModule(pattern) = &**right {
+                    assert_eq!(pattern, "^core::models::[a-zA-Z]+$");
+                } else {
+                    panic!("Expected InModule");
+                }
+            } else {
+                panic!("Expected AndMatches");
+            }
+            
+            // Check rule
+            assert_eq!(function_lint.rules.len(), 1);
+            if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
+                assert_eq!(*length, 30);
+                assert_eq!(severity, &Severity::Warn); // Default severity
+            } else {
+                panic!("Expected MaxLength rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+
+    #[test]
     fn test_must_not_be_empty_rule() {
         let mut builder = LintBuilder::new();
         
         // Test the builder extension method with new matcher DSL
         builder.module()
-            .matching(|m| m.namespace("core::utils"))
+            .matching(|m| m.module("core::utils"))
             .must_not_be_empty()
             .build();
             
@@ -224,7 +300,7 @@ mod tests {
         
         // Test the builder extension method with new matcher DSL
         builder.module()
-            .matching(|m| m.path_contains("src/ui"))
+            .matching(|m| m.module("src/ui"))
             .no_wildcard_imports()
             .build();
             
@@ -249,7 +325,7 @@ mod tests {
         
         // Test the builder extension method with new matcher DSL
         builder.module()
-            .matching(|m| m.namespace("app::core"))
+            .matching(|m| m.module("app::core"))
             .restrict_imports(Some(allowed.clone()), Some(denied.clone()))
             .build();
             
@@ -274,7 +350,7 @@ mod tests {
         
         // Apply multiple rules to the same module match
         builder.module()
-            .matching(|m| m.namespace("app::core"))
+            .matching(|m| m.module("app::core"))
             .must_not_be_empty()
             .no_wildcard_imports()
             .must_be_named("core".into())
@@ -325,10 +401,10 @@ mod tests {
         if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
             assert_eq!(struct_lint.name, "struct_lint");
             
-            if let StructMatch::NameEquals(name) = &struct_lint.matches {
+            if let StructMatch::Name(name) = &struct_lint.matches {
                 assert_eq!(name, "User");
             } else {
-                panic!("Expected NameEquals match");
+                panic!("Expected Name match");
             }
             
             assert_eq!(struct_lint.rules.len(), 2);
@@ -352,7 +428,7 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_complex_module_matcher() {
         let mut builder = LintBuilder::new();
@@ -360,9 +436,9 @@ mod tests {
         // Test a complex matching expression
         builder.module()
             .matching(|m| 
-                m.namespace("app::core")
-                    .and(m.path_contains("src/"))
-                    .or(m.namespace("lib::utils").not())
+                m.module("app::core")
+                    .and(m.module("src/"))
+                    .or(m.module("lib::utils").not())
             )
             .must_not_be_empty()
             .build();
@@ -389,83 +465,5 @@ mod tests {
         assert_eq!(builder.lints.len(), 1);
         // We're not checking the complex match structure in depth,
         // just that it builds successfully
-    }
-
-    #[test]
-    fn test_function_lint_max_length() {
-        let mut builder = LintBuilder::new();
-        
-        // Test function lint with name matching and max length
-        builder.function()
-            .matching(|m| m.name("process_data"))
-            .with_severity(Severity::Deny)
-            .max_length(50)
-            .build();
-            
-        assert_eq!(builder.lints.len(), 1);
-        if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
-            assert_eq!(function_lint.name, "function_lint");
-            
-            if let FunctionMatch::NameEquals(name) = &function_lint.matches {
-                assert_eq!(name, "process_data");
-            } else {
-                panic!("Expected NameEquals match");
-            }
-            
-            assert_eq!(function_lint.rules.len(), 1);
-            if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
-                assert_eq!(*length, 50);
-                assert_eq!(severity, &Severity::Deny);
-            } else {
-                panic!("Expected MaxLength rule");
-            }
-        } else {
-            panic!("Unexpected lint type");
-        }
-    }
-    
-    #[test]
-    fn test_function_lint_regex_matching() {
-        let mut builder = LintBuilder::new();
-        
-        // Test function lint with regex matching
-        builder.function()
-            .matching(|m| 
-                m.name_regex("^(get|set)_[a-z_]+$")
-                    .and(m.in_module_regex("^core::models::[a-zA-Z]+$"))
-            )
-            .max_length(30)
-            .build();
-            
-        assert_eq!(builder.lints.len(), 1);
-        if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
-            // Check that the matcher is an AND with regex patterns
-            if let FunctionMatch::AndMatches(left, right) = &function_lint.matches {
-                if let FunctionMatch::NameRegex(pattern) = &**left {
-                    assert_eq!(pattern, "^(get|set)_[a-z_]+$");
-                } else {
-                    panic!("Expected NameRegex");
-                }
-                
-                if let FunctionMatch::InModuleRegex(pattern) = &**right {
-                    assert_eq!(pattern, "^core::models::[a-zA-Z]+$");
-                } else {
-                    panic!("Expected InModuleRegex");
-                }
-            } else {
-                panic!("Expected AndMatches");
-            }
-            
-            // Check rule
-            assert_eq!(function_lint.rules.len(), 1);
-            if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
-                assert_eq!(*length, 30);
-                assert_eq!(severity, &Severity::Warn); // Default severity
-            } else {
-                panic!("Expected MaxLength rule");
-            }
-        } else {
-            panic!("Unexpected lint type");
-        }
     }
 }

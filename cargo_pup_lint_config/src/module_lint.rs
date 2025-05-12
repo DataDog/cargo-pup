@@ -8,21 +8,9 @@ use regex::Regex;
 pub struct ModuleMatcher;
 
 impl ModuleMatcher {
-    pub fn namespace(&self, ns: impl Into<String>) -> ModuleMatchNode {
-        ModuleMatchNode::Leaf(ModuleMatch::NamespaceEquals(ns.into()))
-    }
-    
-    pub fn path_contains(&self, path: impl Into<String>) -> ModuleMatchNode {
-        ModuleMatchNode::Leaf(ModuleMatch::PathContains(path.into()))
-    }
-    
-    // Add regex-based matchers
-    pub fn namespace_regex(&self, pattern: impl Into<String>) -> ModuleMatchNode {
-        ModuleMatchNode::Leaf(ModuleMatch::NamespaceRegex(pattern.into()))
-    }
-    
-    pub fn path_regex(&self, pattern: impl Into<String>) -> ModuleMatchNode {
-        ModuleMatchNode::Leaf(ModuleMatch::PathRegex(pattern.into()))
+
+    pub fn module(&self, module: impl Into<String>) -> ModuleMatchNode {
+        ModuleMatchNode::Leaf(ModuleMatch::Module(module.into()))
     }
 }
 
@@ -83,11 +71,7 @@ where
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ModuleMatch {
-    NamespaceEquals(String),
-    PathContains(String),
-    // Add regex-based matchers
-    NamespaceRegex(String),
-    PathRegex(String),
+    Module(String),
     // Logical operations
     AndMatches(Box<ModuleMatch>, Box<ModuleMatch>),
     OrMatches(Box<ModuleMatch>, Box<ModuleMatch>),

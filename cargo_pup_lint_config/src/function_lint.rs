@@ -16,12 +16,15 @@ impl FunctionMatcher {
         FunctionMatchNode::Leaf(FunctionMatch::NameRegex(pattern.into()))
     }
     
+    /// Matches functions in a specific module
+    /// 
+    /// The module parameter can be either:
+    /// - An exact module path (e.g., "core::utils")
+    /// - A regular expression pattern (e.g., "^core::(utils|models)::[a-zA-Z]+$")
+    ///
+    /// The implementation will determine if it's a regex based on the presence of special regex characters.
     pub fn in_module(&self, module: impl Into<String>) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::InModule(module.into()))
-    }
-    
-    pub fn in_module_regex(&self, pattern: impl Into<String>) -> FunctionMatchNode {
-        FunctionMatchNode::Leaf(FunctionMatch::InModuleRegex(pattern.into()))
     }
 }
 
@@ -85,7 +88,6 @@ pub enum FunctionMatch {
     NameEquals(String),
     NameRegex(String),
     InModule(String),
-    InModuleRegex(String),
     // Logical operations
     AndMatches(Box<FunctionMatch>, Box<FunctionMatch>),
     OrMatches(Box<FunctionMatch>, Box<FunctionMatch>),
