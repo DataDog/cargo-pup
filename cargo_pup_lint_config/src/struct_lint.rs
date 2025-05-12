@@ -11,7 +11,7 @@ pub enum StructMatch {
 pub struct StructLint {
     pub name: String,
     pub matches: StructMatch,
-    pub rule: StructRule,
+    pub rules: Vec<StructRule>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,6 +42,7 @@ impl<'a> StructMatchBuilder<'a> {
         StructConstraintBuilder {
             parent: self.parent,
             match_: m,
+            rules: Vec::new(),
         }
     }
 }
@@ -49,16 +50,30 @@ impl<'a> StructMatchBuilder<'a> {
 pub struct StructConstraintBuilder<'a> {
     parent: &'a mut crate::lint_builder::LintBuilder,
     match_: StructMatch,
+    rules: Vec<StructRule>,
 }
 
 impl<'a> StructConstraintBuilder<'a> {
-    pub fn constraints(self, rule: StructRule) -> &'a mut crate::lint_builder::LintBuilder {
+    pub fn add_rule(mut self, rule: StructRule) -> Self {
+        self.rules.push(rule);
+        self
+    }
+    
+    pub fn build(self) -> &'a mut crate::lint_builder::LintBuilder {
         let lint = ConfiguredLint::Struct(StructLint {
             name: "struct_lint".into(),
             matches: self.match_,
-            rule,
+            rules: self.rules,
         });
         self.parent.push(lint);
         self.parent
+    }
+    
+    pub fn must_be_named(self, name: String) -> Self {
+        self.add_rule(StructRule::MustBeNamed(name))
+    }
+    
+    pub fn must_not_be_named(self, name: String) -> Self {
+        self.add_rule(StructRule::MustNotBeNamed(name))
     }
 }

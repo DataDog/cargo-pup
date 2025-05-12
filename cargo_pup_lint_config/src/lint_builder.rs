@@ -46,17 +46,17 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
     use crate::{ConfiguredLint, ModuleMatch, ModuleRule};
-    use crate::module_lint::ModuleLint;
+    use crate::module_lint::{ModuleLint, ModuleLintExt};
+    use crate::struct_lint::{StructMatch, StructRule, StructLintExt};
 
     #[test]
     fn test_write_to_file() {
         let mut builder = LintBuilder::new();
 
-        builder.push(ConfiguredLint::Module(ModuleLint {
-            name: "example_module".into(),
-            matches: ModuleMatch::NamespaceEquals("bob".into()),
-            rule: ModuleRule::MustBeNamed("bob".into()),
-        }));
+        builder.module()
+            .matches(ModuleMatch::NamespaceEquals("bob".into()))
+            .must_be_named("bob".into())
+            .build();
 
         let temp_file = NamedTempFile::new().unwrap();
         let temp_path = temp_file.path();
@@ -70,11 +70,10 @@ mod tests {
     fn test_read_from_file() {
         let mut builder = LintBuilder::new();
 
-        builder.push(ConfiguredLint::Module(ModuleLint {
-            name: "example_module".into(),
-            matches: ModuleMatch::NamespaceEquals("bob".into()),
-            rule: ModuleRule::MustBeNamed("bob".into()),
-        }));
+        builder.module()
+            .matches(ModuleMatch::NamespaceEquals("bob".into()))
+            .must_be_named("bob".into())
+            .build();
 
         let temp_file = NamedTempFile::new().unwrap();
         let temp_path = temp_file.path();
@@ -86,12 +85,167 @@ mod tests {
         // Verify that the loaded builder contains the correct data
         assert_eq!(loaded_builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &loaded_builder.lints[0] {
-            assert_eq!(module_lint.name, "example_module");
+            assert_eq!(module_lint.name, "module_lint");
             if let ModuleMatch::NamespaceEquals(namespace) = &module_lint.matches {
                 assert_eq!(namespace, "bob");
             }
-            if let ModuleRule::MustBeNamed(name) = &module_lint.rule {
+            assert_eq!(module_lint.rules.len(), 1);
+            if let ModuleRule::MustBeNamed(name) = &module_lint.rules[0] {
                 assert_eq!(name, "bob");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+
+    #[test]
+    fn test_must_not_be_empty_rule() {
+        let mut builder = LintBuilder::new();
+        
+        // Test the builder extension method
+        builder.module()
+            .matches(ModuleMatch::NamespaceEquals("core::utils".into()))
+            .must_not_be_empty()
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 1);
+            if let ModuleRule::MustNotBeEmpty = &module_lint.rules[0] {
+                // Test passes if we can match the pattern
+            } else {
+                panic!("Expected MustNotBeEmpty rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_no_wildcard_imports_rule() {
+        let mut builder = LintBuilder::new();
+        
+        // Test the builder extension method
+        builder.module()
+            .matches(ModuleMatch::PathContains("src/ui".into()))
+            .no_wildcard_imports()
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 1);
+            if let ModuleRule::NoWildcardImports = &module_lint.rules[0] {
+                // Test passes if we can match the pattern
+            } else {
+                panic!("Expected NoWildcardImports rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_restrict_imports_rule() {
+        let mut builder = LintBuilder::new();
+        let allowed = vec!["std::collections".into(), "crate::utils".into()];
+        let denied = vec!["std::sync".into()];
+        
+        // Test the builder extension method
+        builder.module()
+            .matches(ModuleMatch::NamespaceEquals("app::core".into()))
+            .restrict_imports(Some(allowed.clone()), Some(denied.clone()))
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 1);
+            if let ModuleRule::RestrictImports { allowed_only, denied: denied_mods } = &module_lint.rules[0] {
+                assert_eq!(allowed_only.as_ref().unwrap(), &allowed);
+                assert_eq!(denied_mods.as_ref().unwrap(), &denied);
+            } else {
+                panic!("Expected RestrictImports rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_multiple_rules() {
+        let mut builder = LintBuilder::new();
+        
+        // Apply multiple rules to the same module match
+        builder.module()
+            .matches(ModuleMatch::NamespaceEquals("app::core".into()))
+            .must_not_be_empty()
+            .no_wildcard_imports()
+            .must_be_named("core".into())
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 3);
+            
+            // Check first rule - MustNotBeEmpty
+            if let ModuleRule::MustNotBeEmpty = &module_lint.rules[0] {
+                // First rule is correct
+            } else {
+                panic!("Expected MustNotBeEmpty as first rule");
+            }
+            
+            // Check second rule - NoWildcardImports
+            if let ModuleRule::NoWildcardImports = &module_lint.rules[1] {
+                // Second rule is correct
+            } else {
+                panic!("Expected NoWildcardImports as second rule");
+            }
+            
+            // Check third rule - MustBeNamed
+            if let ModuleRule::MustBeNamed(name) = &module_lint.rules[2] {
+                assert_eq!(name, "core");
+            } else {
+                panic!("Expected MustBeNamed as third rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+
+    #[test]
+    fn test_struct_lint_builder() {
+        let mut builder = LintBuilder::new();
+        
+        // Use the builder interface for struct lints
+        builder.struct_lint()
+            .matches(StructMatch::NameEquals("User".into()))
+            .must_be_named("User".into())
+            .must_not_be_named("UserStruct".into())
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
+            assert_eq!(struct_lint.name, "struct_lint");
+            
+            if let StructMatch::NameEquals(name) = &struct_lint.matches {
+                assert_eq!(name, "User");
+            } else {
+                panic!("Expected NameEquals match");
+            }
+            
+            assert_eq!(struct_lint.rules.len(), 2);
+            
+            // Check first rule - MustBeNamed
+            if let StructRule::MustBeNamed(name) = &struct_lint.rules[0] {
+                assert_eq!(name, "User");
+            } else {
+                panic!("Expected MustBeNamed as first rule");
+            }
+            
+            // Check second rule - MustNotBeNamed
+            if let StructRule::MustNotBeNamed(name) = &struct_lint.rules[1] {
+                assert_eq!(name, "UserStruct");
+            } else {
+                panic!("Expected MustNotBeNamed as second rule");
             }
         } else {
             panic!("Unexpected lint type");
