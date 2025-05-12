@@ -1,14 +1,17 @@
 pub mod lint_builder;
 mod module_lint;
 mod struct_lint;
+mod function_lint;
 
 // Make sure our extenions are visible
 pub use module_lint::{ModuleMatch, ModuleLintExt, ModuleRule, ModuleMatcher, ModuleMatchNode, matcher as module_matcher};
 pub use struct_lint::{StructMatch, StructLintExt, StructRule, StructMatcher, StructMatchNode, matcher as struct_matcher};
+pub use function_lint::{FunctionMatch, FunctionLintExt, FunctionRule, FunctionMatcher, FunctionMatchNode, matcher as function_matcher};
 
 use serde::{Deserialize, Serialize};
 use crate::module_lint::ModuleLint;
 use crate::struct_lint::StructLint;
+use crate::function_lint::FunctionLint;
 
 /// Severity level for lint rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -29,4 +32,5 @@ impl Default for Severity {
 pub enum ConfiguredLint {
     Module(ModuleLint),
     Struct(StructLint),
+    Function(FunctionLint),
 }
