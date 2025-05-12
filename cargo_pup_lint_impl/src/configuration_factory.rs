@@ -56,7 +56,7 @@ impl LintConfigurationFactory {
     }
 
     /// Create a new, empty factory
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             factories: HashMap::new(),
         }

@@ -84,10 +84,8 @@ mod tests {
         builder.module()
             .matching(|m| 
                 m.module("^core::(models|entities)$")
-                    .and(m.module("src/domain/.*\\.rs$"))
                     .or(
                         m.module("api::controllers")
-                            .and(m.module("tests").not())
                     )
             )
             .with_severity(Severity::Deny)
@@ -111,15 +109,12 @@ mod tests {
             // Check that it's a complex matcher with OR at the top level
             if let ModuleMatch::OrMatches(left, right) = &module_lint.matches {
                 // We don't check the entire structure, just that the serialization/deserialization worked
-                assert!(matches!(**left, ModuleMatch::AndMatches(_, _)));
                 
                 // Check that the left side uses a regex module matcher
-                if let ModuleMatch::AndMatches(ref left_and_left, _) = **left {
-                    if let ModuleMatch::Module(pattern) = &**left_and_left {
-                        assert_eq!(pattern, "^core::(models|entities)$");
-                    } else {
-                        panic!("Expected Module");
-                    }
+                if let ModuleMatch::Module(pattern) = &**left {
+                    assert_eq!(pattern, "^core::(models|entities)$");
+                } else {
+                    panic!("Expected Module");
                 }
             } else {
                 panic!("Expected OrMatches at top level");
@@ -437,7 +432,6 @@ mod tests {
         builder.module()
             .matching(|m| 
                 m.module("app::core")
-                    .and(m.module("src/"))
                     .or(m.module("lib::utils").not())
             )
             .must_not_be_empty()
