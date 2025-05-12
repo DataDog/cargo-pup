@@ -45,7 +45,7 @@ impl LintBuilder {
 mod tests {
     use super::*;
     use tempfile::NamedTempFile;
-    use crate::{ConfiguredLint, ModuleMatch, ModuleRule};
+    use crate::{ConfiguredLint, ModuleMatch, ModuleRule, module_matcher, struct_matcher};
     use crate::module_lint::{ModuleLint, ModuleLintExt};
     use crate::struct_lint::{StructMatch, StructRule, StructLintExt};
 
@@ -53,9 +53,18 @@ mod tests {
     fn test_write_to_file() {
         let mut builder = LintBuilder::new();
 
+        // Use a more complex matcher to demonstrate the DSL capabilities
         builder.module()
-            .matches(ModuleMatch::NamespaceEquals("bob".into()))
-            .must_be_named("bob".into())
+            .matching(|m| 
+                m.namespace("core::models")
+                    .and(m.path_contains("src/domain"))
+                    .or(
+                        m.namespace("api::controllers")
+                            .and(m.path_contains("tests").not())
+                    )
+            )
+            .must_be_named("domain_entity".into())
+            .no_wildcard_imports()
             .build();
 
         let temp_file = NamedTempFile::new().unwrap();
@@ -70,9 +79,18 @@ mod tests {
     fn test_read_from_file() {
         let mut builder = LintBuilder::new();
 
+        // Use the same complex matcher as in test_write_to_file
         builder.module()
-            .matches(ModuleMatch::NamespaceEquals("bob".into()))
-            .must_be_named("bob".into())
+            .matching(|m|
+                m.namespace("core::models")
+                    .and(m.path_contains("src/domain"))
+                    .or(
+                        m.namespace("api::controllers")
+                            .and(m.path_contains("tests").not())
+                    )
+            )
+            .must_be_named("domain_entity".into())
+            .no_wildcard_imports()
             .build();
 
         let temp_file = NamedTempFile::new().unwrap();
@@ -86,13 +104,20 @@ mod tests {
         assert_eq!(loaded_builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &loaded_builder.lints[0] {
             assert_eq!(module_lint.name, "module_lint");
-            if let ModuleMatch::NamespaceEquals(namespace) = &module_lint.matches {
-                assert_eq!(namespace, "bob");
+            
+            // Check that it's a complex matcher with OR at the top level
+            if let ModuleMatch::OrMatches(left, right) = &module_lint.matches {
+                // We don't check the entire structure, just that the serialization/deserialization worked
+                assert!(matches!(**left, ModuleMatch::AndMatches(_, _)));
+                assert!(matches!(**right, ModuleMatch::AndMatches(_, _)));
+            } else {
+                panic!("Expected OrMatches at top level");
             }
-            assert_eq!(module_lint.rules.len(), 1);
-            if let ModuleRule::MustBeNamed(name) = &module_lint.rules[0] {
-                assert_eq!(name, "bob");
-            }
+            
+            // Check rules
+            assert_eq!(module_lint.rules.len(), 2);
+            assert!(matches!(module_lint.rules[0], ModuleRule::MustBeNamed(_)));
+            assert!(matches!(module_lint.rules[1], ModuleRule::NoWildcardImports));
         } else {
             panic!("Unexpected lint type");
         }
@@ -102,9 +127,9 @@ mod tests {
     fn test_must_not_be_empty_rule() {
         let mut builder = LintBuilder::new();
         
-        // Test the builder extension method
+        // Test the builder extension method with new matcher DSL
         builder.module()
-            .matches(ModuleMatch::NamespaceEquals("core::utils".into()))
+            .matching(|m| m.namespace("core::utils"))
             .must_not_be_empty()
             .build();
             
@@ -125,9 +150,9 @@ mod tests {
     fn test_no_wildcard_imports_rule() {
         let mut builder = LintBuilder::new();
         
-        // Test the builder extension method
+        // Test the builder extension method with new matcher DSL
         builder.module()
-            .matches(ModuleMatch::PathContains("src/ui".into()))
+            .matching(|m| m.path_contains("src/ui"))
             .no_wildcard_imports()
             .build();
             
@@ -150,9 +175,9 @@ mod tests {
         let allowed = vec!["std::collections".into(), "crate::utils".into()];
         let denied = vec!["std::sync".into()];
         
-        // Test the builder extension method
+        // Test the builder extension method with new matcher DSL
         builder.module()
-            .matches(ModuleMatch::NamespaceEquals("app::core".into()))
+            .matching(|m| m.namespace("app::core"))
             .restrict_imports(Some(allowed.clone()), Some(denied.clone()))
             .build();
             
@@ -176,7 +201,7 @@ mod tests {
         
         // Apply multiple rules to the same module match
         builder.module()
-            .matches(ModuleMatch::NamespaceEquals("app::core".into()))
+            .matching(|m| m.namespace("app::core"))
             .must_not_be_empty()
             .no_wildcard_imports()
             .must_be_named("core".into())
@@ -210,14 +235,14 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-
+    
     #[test]
     fn test_struct_lint_builder() {
         let mut builder = LintBuilder::new();
         
-        // Use the builder interface for struct lints
+        // Use the builder interface for struct lints with new matcher DSL
         builder.struct_lint()
-            .matches(StructMatch::NameEquals("User".into()))
+            .matching(|m| m.name("User"))
             .must_be_named("User".into())
             .must_not_be_named("UserStruct".into())
             .build();
@@ -250,5 +275,43 @@ mod tests {
         } else {
             panic!("Unexpected lint type");
         }
+    }
+    
+    #[test]
+    fn test_complex_module_matcher() {
+        let mut builder = LintBuilder::new();
+        
+        // Test a complex matching expression
+        builder.module()
+            .matching(|m| 
+                m.namespace("app::core")
+                    .and(m.path_contains("src/"))
+                    .or(m.namespace("lib::utils").not())
+            )
+            .must_not_be_empty()
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        // We're not checking the complex match structure in depth,
+        // just that it builds successfully
+    }
+    
+    #[test]
+    fn test_complex_struct_matcher() {
+        let mut builder = LintBuilder::new();
+        
+        // Test a complex matching expression for structs
+        builder.struct_lint()
+            .matching(|m| 
+                m.name("User")
+                    .or(m.name("Account"))
+                    .and(m.has_attribute("derive(Debug)").not())
+            )
+            .must_be_named("Entity".into())
+            .build();
+            
+        assert_eq!(builder.lints.len(), 1);
+        // We're not checking the complex match structure in depth,
+        // just that it builds successfully
     }
 }

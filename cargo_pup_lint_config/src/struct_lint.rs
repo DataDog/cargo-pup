@@ -1,10 +1,83 @@
 use serde::{Deserialize, Serialize};
 use crate::ConfiguredLint;
 
-#[derive(Debug, Serialize, Deserialize)]
+// === Struct Matcher DSL === //
+
+pub struct StructMatcher;
+
+impl StructMatcher {
+    pub fn name(&self, name: impl Into<String>) -> StructMatchNode {
+        StructMatchNode::Leaf(StructMatch::NameEquals(name.into()))
+    }
+    
+    pub fn has_attribute(&self, attr: impl Into<String>) -> StructMatchNode {
+        StructMatchNode::Leaf(StructMatch::HasAttribute(attr.into()))
+    }
+}
+
+#[derive(Clone)]
+pub enum StructMatchNode {
+    Leaf(StructMatch),
+    And(Box<StructMatchNode>, Box<StructMatchNode>),
+    Or(Box<StructMatchNode>, Box<StructMatchNode>),
+    Not(Box<StructMatchNode>),
+}
+
+impl StructMatchNode {
+    pub fn and(self, other: StructMatchNode) -> Self {
+        StructMatchNode::And(Box::new(self), Box::new(other))
+    }
+    
+    pub fn or(self, other: StructMatchNode) -> Self {
+        StructMatchNode::Or(Box::new(self), Box::new(other))
+    }
+    
+    pub fn not(self) -> Self {
+        StructMatchNode::Not(Box::new(self))
+    }
+    
+    // Converts the DSL tree to the actual StructMatch
+    pub fn build(self) -> StructMatch {
+        match self {
+            StructMatchNode::Leaf(matcher) => matcher,
+            StructMatchNode::And(a, b) => {
+                let a_match = a.build();
+                let b_match = b.build();
+                StructMatch::AndMatches(Box::new(a_match), Box::new(b_match))
+            },
+            StructMatchNode::Or(a, b) => {
+                let a_match = a.build();
+                let b_match = b.build();
+                StructMatch::OrMatches(Box::new(a_match), Box::new(b_match))
+            },
+            StructMatchNode::Not(m) => {
+                let inner = m.build();
+                StructMatch::NotMatch(Box::new(inner))
+            }
+        }
+    }
+}
+
+// Factory function to create a matcher DSL
+pub fn matcher<F>(f: F) -> StructMatch 
+where 
+    F: FnOnce(&StructMatcher) -> StructMatchNode 
+{
+    let matcher = StructMatcher;
+    let node = f(&matcher);
+    node.build()
+}
+
+// === Struct Lint Types === //
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum StructMatch {
     NameEquals(String),
     HasAttribute(String),
+    // Add logical operations
+    AndMatches(Box<StructMatch>, Box<StructMatch>),
+    OrMatches(Box<StructMatch>, Box<StructMatch>),
+    NotMatch(Box<StructMatch>),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -23,6 +96,8 @@ pub enum StructRule {
     Not(Box<StructRule>),
 }
 
+// === Fluent Builder for Struct Lints === //
+
 pub trait StructLintExt {
     fn struct_lint<'a>(&'a mut self) -> StructMatchBuilder<'a>;
 }
@@ -38,12 +113,22 @@ pub struct StructMatchBuilder<'a> {
 }
 
 impl<'a> StructMatchBuilder<'a> {
+    // Original matches method
     pub fn matches(self, m: StructMatch) -> StructConstraintBuilder<'a> {
         StructConstraintBuilder {
             parent: self.parent,
             match_: m,
             rules: Vec::new(),
         }
+    }
+    
+    // New matcher method using the DSL
+    pub fn matching<F>(self, f: F) -> StructConstraintBuilder<'a>
+    where
+        F: FnOnce(&StructMatcher) -> StructMatchNode
+    {
+        let matcher = matcher(f);
+        self.matches(matcher)
     }
 }
 
