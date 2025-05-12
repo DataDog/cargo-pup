@@ -19,6 +19,8 @@ serde_yaml = "0.9.34"
 anyhow = "1.0.95"
 regex = "1.11.1"
 tempfile = "3.14.0"
+ron = "0.8.1"
+
 [dependencies]
 ansi_term = "0.12.1"
 clap = {version = "4.5.23", features = ["derive"] }
