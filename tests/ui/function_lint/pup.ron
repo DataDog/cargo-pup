@@ -1,0 +1,99 @@
+(
+    lints: [
+        // Basic function length limit that applies to functions starting with "too_long" 
+        // but NOT containing "with_prefix"
+        Function(
+            (
+                name: "function_length_test",
+                matches: AndMatches(
+                    NameRegex("^too_long.*"),
+                    NotMatch(NameRegex("with_prefix"))
+                ),
+                rules: [
+                    MaxLength(
+                        5,   // Maximum allowed function length (5 lines)
+                        Error, // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Function length test with name-based targeting (for "another_long_" functions)
+        Function(
+            (
+                name: "named_function_length_test",
+                matches: NameRegex("^another_long.*"), 
+                rules: [
+                    MaxLength(
+                        3,   // Stricter limit for functions with this pattern (3 lines)
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Module-based function length test (for functions in inner_module)
+        Function(
+            (
+                name: "module_based_function_length_test",
+                matches: InModule("::inner_module.*"),
+                rules: [
+                    MaxLength(
+                        2,   // Very strict limit for functions in this module (2 lines)
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // AND rule test - functions with prefix AND in specific module
+        Function(
+            (
+                name: "and_rule_test",
+                matches: AndMatches(
+                    NameRegex("with_prefix$"),
+                    NameRegex("^too_long.*")
+                ),
+                rules: [
+                    MaxLength(
+                        5,
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // OR rule test
+        Function(
+            (
+                name: "or_rule_test",
+                matches: OrMatches(
+                    NameRegex("alternative.*"),
+                    NameRegex(".*with_suffix$")
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Very strict limit for this test
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // NOT rule test - all functions except those with "exempt" in the name
+        Function(
+            (
+                name: "not_rule_test",
+                matches: NotMatch(
+                    NameRegex("exempt")
+                ),
+                rules: [
+                    MaxLength(
+                        100, // Effectively no limitation
+                        Error,
+                    )
+                ]
+            )
+        )
+    ]
+) 

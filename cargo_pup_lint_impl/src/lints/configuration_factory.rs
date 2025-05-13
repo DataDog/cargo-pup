@@ -7,8 +7,9 @@ use anyhow::{Result, anyhow};
 use cargo_pup_common::project_context::ProjectContext;
 use cargo_pup_lint_config::ConfiguredLint;
 use cargo_pup_lint_config::lint_builder::LintBuilder;
-use crate::lints::module_lint::module_lint::ModuleLint;
+use crate::lints::module_lint::ModuleLint;
 use crate::lints::struct_lint::StructLint;
+use crate::lints::function_lint::FunctionLint;
 use ron;
 use serde_yaml;
 
@@ -48,7 +49,8 @@ impl LintConfigurationFactory {
                 match l {
                     ConfiguredLint::Module(_) => ModuleLint::new(l),
                     ConfiguredLint::Struct(_) => StructLint::new(l),
-                    ConfiguredLint::Function(_) => {panic!("Not implemented"); }
+                    ConfiguredLint::Function(_) => FunctionLint::new(l),
+                    _ => panic!("Unsupported lint type")
                 }
             }).collect())
         } else {
@@ -76,6 +78,7 @@ impl LintConfigurationFactory {
                     match l {
                         ConfiguredLint::Module(_) => ModuleLint::new(l),
                         ConfiguredLint::Struct(_) => StructLint::new(l),
+                        ConfiguredLint::Function(_) => FunctionLint::new(l),
                         // For now, only handle the lints we've already implemented in the new system
                         _ => panic!("Lint type not yet implemented in new system")
                     }
@@ -89,7 +92,8 @@ impl LintConfigurationFactory {
                             match l {
                                 ConfiguredLint::Module(_) => ModuleLint::new(l),
                                 ConfiguredLint::Struct(_) => StructLint::new(l),
-                                ConfiguredLint::Function(_) => {panic!("Not implemented"); }
+                                ConfiguredLint::Function(_) => FunctionLint::new(l),
+                                _ => panic!("Unsupported lint type")
                             }
                         }).collect())
                     },

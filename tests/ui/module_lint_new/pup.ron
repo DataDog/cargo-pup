@@ -80,15 +80,15 @@
             )
         ),
         
-        // Test RestrictFunctions rule (adding it for completeness)
-        Module(
+        // Replace RestrictFunctions with Function lint
+        Function(
             (
-                name: "restrict_functions_test",
-                matches: Module("^test_restrict_functions$"),
+                name: "function_length_limit_test",
+                matches: InModule("^test_restrict_functions$"),
                 rules: [
-                    RestrictFunctions(
-                        max_lines: 3,
-                        severity: Error,
+                    MaxLength(
+                        3,   // Maximum allowed function length (3 lines)
+                        Error, // Severity
                     )
                 ]
             )

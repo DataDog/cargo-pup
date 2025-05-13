@@ -85,7 +85,7 @@ pub struct ModuleLint {
     pub rules: Vec<ModuleRule>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ModuleRule {
     MustBeNamed(String, Severity),
     MustNotBeNamed(String, Severity),
@@ -96,10 +96,6 @@ pub enum ModuleRule {
         severity: Severity,
     },
     NoWildcardImports(Severity),
-    RestrictFunctions {
-        max_lines: usize,
-        severity: Severity,
-    },
     And(Box<ModuleRule>, Box<ModuleRule>),
     Or(Box<ModuleRule>, Box<ModuleRule>),
     Not(Box<ModuleRule>),
@@ -185,15 +181,6 @@ impl<'a> ModuleConstraintBuilder<'a> {
     // Helper method for feature #5: Wildcard Imports Detection
     pub fn no_wildcard_imports(mut self) -> Self {
         self.add_rule_internal(ModuleRule::NoWildcardImports(self.current_severity));
-        self
-    }
-    
-    // Helper method for function length restrictions
-    pub fn restrict_functions(mut self, max_lines: usize) -> Self {
-        self.add_rule_internal(ModuleRule::RestrictFunctions { 
-            max_lines,
-            severity: self.current_severity 
-        });
         self
     }
     

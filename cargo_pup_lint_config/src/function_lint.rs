@@ -94,19 +94,31 @@ pub enum FunctionMatch {
     NotMatch(Box<FunctionMatch>),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FunctionLint {
     pub name: String,
     pub matches: FunctionMatch,
     pub rules: Vec<FunctionRule>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum FunctionRule {
     MaxLength(usize, Severity),
-    And(Box<FunctionRule>, Box<FunctionRule>),
-    Or(Box<FunctionRule>, Box<FunctionRule>),
-    Not(Box<FunctionRule>),
+}
+
+// Helper methods for FunctionRule
+impl FunctionRule {
+    // pub fn and(self, other: FunctionRule) -> Self {
+    //     FunctionRule::And(Box::new(self), Box::new(other))
+    // }
+    
+    // pub fn or(self, other: FunctionRule) -> Self {
+    //     FunctionRule::Or(Box::new(self), Box::new(other))
+    // }
+    
+    // pub fn not(self) -> Self {
+    //     FunctionRule::Not(Box::new(self))
+    // }
 }
 
 // Fluent Builder for Function Lints
@@ -184,5 +196,10 @@ impl<'a> FunctionConstraintBuilder<'a> {
     pub fn max_length(mut self, length: usize) -> Self {
         self.add_rule_internal(FunctionRule::MaxLength(length, self.current_severity));
         self
+    }
+    
+    // Create a MaxLength rule that can be used in combinations
+    pub fn create_max_length_rule(&self, length: usize) -> FunctionRule {
+        FunctionRule::MaxLength(length, self.current_severity)
     }
 } 

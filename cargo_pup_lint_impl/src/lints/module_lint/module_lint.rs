@@ -35,9 +35,6 @@ enum ModuleRuleType {
         denied: Option<Vec<String>>,
     },
     NoWildcardImports,
-    RestrictFunctions {
-        max_lines: usize,
-    },
 }
 
 impl ModuleLint {
@@ -78,13 +75,6 @@ impl ModuleLint {
                         ModuleRule::NoWildcardImports(severity) => 
                             Some(ModuleRuleInfo {
                                 rule_type: ModuleRuleType::NoWildcardImports,
-                                severity: *severity
-                            }),
-                        ModuleRule::RestrictFunctions { max_lines, severity } =>
-                            Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::RestrictFunctions {
-                                    max_lines: *max_lines,
-                                },
                                 severity: *severity
                             }),
                         // Not handling logical combinations for now
@@ -384,36 +374,6 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         self.check_for_wildcard_imports(ctx, module, rule_info.severity);
                     }
                 },
-                ModuleRuleType::RestrictFunctions { max_lines } => {
-                    // Check functions in the current item
-                    if let ItemKind::Fn {
-                        sig: _,
-                        generics: _,
-                        body,
-                        has_body: _,
-                    } = &item.kind {
-                        let body = ctx.tcx.hir_body(*body);
-                        let source_map = ctx.tcx.sess.source_map();
-                        
-                        if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
-                            if file_lines.lines.len() > *max_lines {
-                                span_lint_and_help(
-                                    ctx,
-                                    get_lint(rule_info.severity),
-                                    self.name().as_str(),
-                                    item.span,
-                                    format!(
-                                        "Function exceeds maximum length of {} lines with {} lines",
-                                        max_lines,
-                                        file_lines.lines.len()
-                                    ),
-                                    None,
-                                    "Consider breaking this function into smaller parts",
-                                );
-                            }
-                        }
-                    }
-                },
             }
         }
     }
@@ -429,32 +389,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
             return;
         }
         
-        // Apply each rule
-        for rule_info in &self.module_rules {
-            if let ModuleRuleType::RestrictFunctions { max_lines } = &rule_info.rule_type {
-                if let rustc_hir::ImplItemKind::Fn(_fn_sig, body_id) = &impl_item.kind {
-                    let body = ctx.tcx.hir_body(*body_id);
-                    let source_map = ctx.tcx.sess.source_map();
-                    
-                    if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
-                        if file_lines.lines.len() > *max_lines {
-                            span_lint_and_help(
-                                ctx,
-                                get_lint(rule_info.severity),
-                                self.name().as_str(),
-                                impl_item.span,
-                                format!(
-                                    "Function exceeds maximum length of {} lines with {} lines",
-                                    max_lines,
-                                    file_lines.lines.len()
-                                ),
-                                None,
-                                "Consider breaking this method into smaller parts",
-                            );
-                        }
-                    }
-                }
-            }
-        }
+        // Since we're removing RestrictFunctions, we can simplify check_impl_item
+        // It won't need to do anything now
     }
 }

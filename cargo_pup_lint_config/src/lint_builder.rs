@@ -267,6 +267,112 @@ mod tests {
     }
 
     #[test]
+    fn test_function_lint_combined_rules() {
+        let mut builder = LintBuilder::new();
+        
+        // Test AND match
+        builder.function()
+            .matching(|m| m.name("test_and").and(m.name_regex(".*")))
+            .with_severity(Severity::Error)
+            .max_length(10)
+            .build();
+            
+        // Test OR match
+        builder.function()
+            .matching(|m| m.name("test_or_1").or(m.name("test_or_2")))
+            .with_severity(Severity::Error)
+            .max_length(20)
+            .build();
+            
+        // Test NOT match
+        builder.function()
+            .matching(|m| m.name_regex("test_.*").not())
+            .with_severity(Severity::Error)
+            .max_length(100)
+            .build();
+            
+        assert_eq!(builder.lints.len(), 3);
+        
+        // Verify AND match
+        if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
+            if let FunctionMatch::AndMatches(left, right) = &function_lint.matches {
+                if let FunctionMatch::NameEquals(name) = &**left {
+                    assert_eq!(name, "test_and");
+                } else {
+                    panic!("Expected NameEquals on left side");
+                }
+                
+                if let FunctionMatch::NameRegex(pattern) = &**right {
+                    assert_eq!(pattern, ".*");
+                } else {
+                    panic!("Expected NameRegex on right side");
+                }
+            } else {
+                panic!("Expected AndMatches");
+            }
+            
+            // Verify rule is a simple MaxLength
+            assert_eq!(function_lint.rules.len(), 1);
+            if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
+                assert_eq!(*length, 10);
+                assert_eq!(severity, &Severity::Error);
+            } else {
+                panic!("Expected MaxLength rule");
+            }
+        }
+        
+        // Verify OR match
+        if let ConfiguredLint::Function(function_lint) = &builder.lints[1] {
+            if let FunctionMatch::OrMatches(left, right) = &function_lint.matches {
+                if let FunctionMatch::NameEquals(name) = &**left {
+                    assert_eq!(name, "test_or_1");
+                } else {
+                    panic!("Expected NameEquals on left side");
+                }
+                
+                if let FunctionMatch::NameEquals(name) = &**right {
+                    assert_eq!(name, "test_or_2");
+                } else {
+                    panic!("Expected NameEquals on right side");
+                }
+            } else {
+                panic!("Expected OrMatches");
+            }
+            
+            // Verify rule is a simple MaxLength
+            assert_eq!(function_lint.rules.len(), 1);
+            if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
+                assert_eq!(*length, 20);
+                assert_eq!(severity, &Severity::Error);
+            } else {
+                panic!("Expected MaxLength rule");
+            }
+        }
+        
+        // Verify NOT match
+        if let ConfiguredLint::Function(function_lint) = &builder.lints[2] {
+            if let FunctionMatch::NotMatch(inner) = &function_lint.matches {
+                if let FunctionMatch::NameRegex(pattern) = &**inner {
+                    assert_eq!(pattern, "test_.*");
+                } else {
+                    panic!("Expected NameRegex inside NOT");
+                }
+            } else {
+                panic!("Expected NotMatch");
+            }
+            
+            // Verify rule is a simple MaxLength
+            assert_eq!(function_lint.rules.len(), 1);
+            if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
+                assert_eq!(*length, 100);
+                assert_eq!(severity, &Severity::Error);
+            } else {
+                panic!("Expected MaxLength rule");
+            }
+        }
+    }
+
+    #[test]
     fn test_must_not_be_empty_rule() {
         let mut builder = LintBuilder::new();
         

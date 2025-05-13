@@ -1,0 +1,57 @@
+error: Function exceeds maximum length of 5 lines with 6 lines
+  --> tests/ui/function_lint/function_length.rs:9:1
+   |
+LL | fn too_long_function() {
+   | ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'function_length_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function exceeds maximum length of 3 lines with 5 lines
+  --> tests/ui/function_lint/function_length.rs:26:1
+   |
+LL | fn another_long_function() {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'named_function_length_test'.
+
+error: Function exceeds maximum length of 5 lines with 6 lines
+  --> tests/ui/function_lint/function_length.rs:43:5
+   |
+LL |     fn too_long_method(&self) {
+   |     ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'function_length_test'.
+
+error: Function exceeds maximum length of 3 lines with 5 lines
+  --> tests/ui/function_lint/function_length.rs:51:5
+   |
+LL |     fn another_long_method(&self) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'named_function_length_test'.
+
+error: Function exceeds maximum length of 2 lines with 3 lines
+  --> tests/ui/function_lint/function_length.rs:67:5
+   |
+LL |     pub fn tiny_but_too_long() {
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'module_based_function_length_test'.
+
+error: Function exceeds maximum length of 2 lines with 3 lines
+  --> tests/ui/function_lint/function_length.rs:77:9
+   |
+LL |         pub fn nested_too_long() {
+   |         ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'module_based_function_length_test'.
+
+error: aborting due to 6 previous errors
+
