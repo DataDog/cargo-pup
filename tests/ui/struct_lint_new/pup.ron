@@ -1,0 +1,53 @@
+(
+    lints: [
+        // Test MustBeNamed rule - only apply to test_must_be_named crate
+        Struct(
+            (
+                name: "must_be_named_test",
+                matches: Name("test_must_be_named"), // Match based on crate name
+                rules: [
+                    MustBeNamed(
+                        "Good*",  // Pattern that struct names must match
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test MustNotBeNamed rule - only apply to test_must_not_be_named crate
+        Struct(
+            (
+                name: "must_not_be_named_test",
+                matches: Name("test_must_not_be_named"), // Match based on crate name
+                rules: [
+                    MustNotBeNamed(
+                        "Bad*",  // Pattern that struct names must not match
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test combination of both rules - only apply to test_combined_rules crate
+        // We need to match both on crate name and struct name pattern here
+        Struct(
+            (
+                name: "combined_naming_test",
+                matches: AndMatches(
+                    Name("test_combined_rules"), // Match based on crate name 
+                    Name("TestStruct.*"), // Only apply to structs starting with TestStruct
+                ),
+                rules: [
+                    MustBeNamed(
+                        "TestStruct[A-Z].*",  // Must start with TestStruct followed by capital letter
+                        Error,
+                    ),
+                    MustNotBeNamed(
+                        ".*Forbidden.*",  // Must not contain the word "Forbidden"
+                        Error,
+                    )
+                ]
+            )
+        )
+    ]
+) 

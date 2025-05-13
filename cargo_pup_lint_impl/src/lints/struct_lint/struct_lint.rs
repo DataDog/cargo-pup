@@ -1,6 +1,7 @@
 use rustc_lint::{LateContext, LateLintPass, Lint, LintStore};
 use rustc_hir::{Item, ItemKind};
 use rustc_session::impl_lint_pass;
+use rustc_span::BytePos;
 use regex::Regex;
 use cargo_pup_lint_config::{ConfiguredLint, Severity, StructMatch, StructRule};
 use crate::ArchitectureLintRule;
@@ -23,6 +24,43 @@ impl StructLint {
             })
         } else {
             panic!("Expected a Struct lint configuration")
+        }
+    }
+    
+    // Helper method to check if a struct in a given crate should be linted
+    fn matches_struct(&self, crate_name: &str, struct_name: &str) -> bool {
+        self.evaluate_struct_match(&self.matches, crate_name, struct_name)
+    }
+    
+    // Evaluates the complex matcher structure to determine if a struct matches
+    fn evaluate_struct_match(&self, matcher: &StructMatch, crate_name: &str, struct_name: &str) -> bool {
+        match matcher {
+            StructMatch::Name(pattern) => {
+                // Try to match both the crate name and the struct name
+                // If it's a crate name starting with "test_", prefer that match
+                if pattern.starts_with("test_") {
+                    // This is likely a crate name pattern
+                    self.string_matches_pattern(crate_name, pattern)
+                } else {
+                    // This is likely a struct name pattern
+                    self.string_matches_pattern(struct_name, pattern)
+                }
+            },
+            StructMatch::HasAttribute(pattern) => {
+                // Attribute matching not yet implemented
+                false
+            },
+            StructMatch::AndMatches(left, right) => {
+                self.evaluate_struct_match(left, crate_name, struct_name) && 
+                self.evaluate_struct_match(right, crate_name, struct_name)
+            },
+            StructMatch::OrMatches(left, right) => {
+                self.evaluate_struct_match(left, crate_name, struct_name) || 
+                self.evaluate_struct_match(right, crate_name, struct_name)
+            },
+            StructMatch::NotMatch(inner) => {
+                !self.evaluate_struct_match(inner, crate_name, struct_name)
+            }
         }
     }
     
@@ -83,16 +121,28 @@ impl ArchitectureLintRule for StructLint {
 
 impl<'tcx> LateLintPass<'tcx> for StructLint {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
-        // We only care about struct_lint items
+        // We only care about struct items
         if let ItemKind::Struct(..) = item.kind {
             let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id()).to_string();
+            let crate_name = ctx.tcx.crate_name(rustc_hir::def_id::LOCAL_CRATE).to_string();
             
-            // Simple pattern matching for now
-            if let StructMatch::Name(pattern) = &self.matches {
-                if !self.string_matches_pattern(&item_name, pattern) {
-                    return;
-                }
+            // Check if this struct matches our patterns
+            if !self.matches_struct(&crate_name, &item_name) {
+                return;
             }
+            
+            // Create a span that only covers the struct definition line
+            // This includes "pub struct Name {" but not the struct fields or closing brace
+            let definition_span = {
+                let span = item.span;
+                // Check if the struct is public by checking if ident_span is different from vis_span
+                let is_pub = !item.vis_span.is_empty();
+                let prefix_len = if is_pub { 11 } else { 7 }; // "pub struct " or "struct "
+                
+                // Create a span from start to just after the struct name and opening brace
+                let end_pos = span.lo() + BytePos((prefix_len + item_name.len() + 2) as u32); // +2 for " {"
+                span.with_hi(end_pos)
+            };
             
             // Apply rules
             for rule in &self.struct_rules {
@@ -104,16 +154,16 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                                                pattern_type, pattern, item_name);
                             
                             let help = if pattern_type == "pattern" {
-                                format!("Rename this struct_lint to match the pattern '{}'", pattern)
+                                format!("Rename this struct to match the pattern '{}'", pattern)
                             } else {
-                                format!("Rename this struct_lint to '{}'", pattern)
+                                format!("Rename this struct to '{}'", pattern)
                             };
                             
                             span_lint_and_help(
                                 ctx,
                                 get_lint(*severity),
                                 self.name().as_str(),
-                                item.span,
+                                definition_span,
                                 message,
                                 None,
                                 help,
@@ -129,14 +179,14 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                             let help = if pattern_type == "pattern" {
                                 "Choose a name that doesn't match this pattern"
                             } else {
-                                "Choose a different name for this struct_lint"
+                                "Choose a different name for this struct"
                             };
                             
                             span_lint_and_help(
                                 ctx,
                                 get_lint(*severity),
                                 self.name().as_str(),
-                                item.span,
+                                definition_span,
                                 message,
                                 None,
                                 help,
