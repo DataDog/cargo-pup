@@ -94,7 +94,7 @@ impl<'tcx> LateLintPass<'tcx> for TraitImplLintProcessor {
                                                         struct_name, name_pattern
                                                     ),
                                                     None,
-                                                    "Consider renaming the struct_lint.",
+                                                    "Consider renaming the struct.",
                                                 );
                                             }
                                         }

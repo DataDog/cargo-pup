@@ -1,0 +1,33 @@
+error: Function exceeds maximum length of 5 lines with 9 lines
+  --> tests/ui/function_length_lint/namespace_patterns.rs:7:5
+   |
+LL | /     pub fn too_long_function() {
+LL | |         let a = 1;
+LL | |         let b = 2;
+LL | |         let c = 3;
+...  |
+LL | |         let g = 7;
+LL | |     }
+   | |_____^
+   |
+   = help: 
+   = note: Applied by cargo-pup rule 'namespace_patterns_test'.
+   = note: `#[deny(pup_function_length)]` on by default
+
+error: Function exceeds maximum length of 5 lines with 9 lines
+  --> tests/ui/function_length_lint/namespace_patterns.rs:29:9
+   |
+LL | /         pub fn too_long_method(&self) {
+LL | |             let a = 1;
+LL | |             let b = 2;
+LL | |             let c = 3;
+...  |
+LL | |             let g = 7;
+LL | |         }
+   | |_________^
+   |
+   = help: 
+   = note: Applied by cargo-pup rule 'namespace_patterns_test'.
+
+error: aborting due to 2 previous errors
+

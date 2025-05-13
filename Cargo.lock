@@ -254,6 +254,7 @@ dependencies = [
  "cargo_pup_common",
  "cargo_pup_lint_config",
  "regex",
+ "ron",
  "serde",
  "serde_json",
  "serde_yaml",

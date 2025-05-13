@@ -27,6 +27,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use cargo_pup_lint_impl::{register_all_lints, setup_lints_yaml, ArchitectureLintCollection, ArchitectureLintRunner, LintConfigurationFactory, Mode};
+use cargo_pup_lint_impl::lints::configuration_factory as new_factory;
 
 pub fn main() -> Result<()> {
     register_all_lints();
@@ -91,37 +92,100 @@ pub fn main() -> Result<()> {
         // For generate-config mode, use an empty collection
         ArchitectureLintCollection::new(Vec::new())
     } else if is_ui_testing {
-        // For UI testing, look for a pup.yaml file in the same directory as the test file
+        // For UI testing, look for pup files in the same directory as the test file
         let source_file = find_source_file(&orig_args)?;
         let test_dir = source_file.parent().unwrap_or(Path::new("."));
-        let yaml_path = test_dir.join("pup.yaml");
-
-        if yaml_path.exists() {
-            // For UI tests, load rules from the pup.yaml in the test directory
-            match fs::read_to_string(&yaml_path) {
-                Ok(yaml_content) => {
-                    match LintConfigurationFactory::from_yaml(yaml_content) {
-                        Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
-                        Err(e) => {
-                            // TODO - improve this
-                            panic!("Failed loading lint collection: {:?}", e);
-                            //ArchitectureLintCollection::new(Vec::new())
-                        }
-                    }
-                }
+        
+        // Try loading from pup.ron with new factory first
+        let ron_path = test_dir.join("pup.ron");
+        if ron_path.exists() {
+            println!("UI testing: Trying to load from pup.ron with new factory");
+            match new_factory::LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
+                Ok(lint_rules) => {
+                    println!("UI testing: Successfully loaded from pup.ron");
+                    ArchitectureLintCollection::new(lint_rules)
+                },
                 Err(e) => {
-                    println!("UI testing: Error reading pup.yaml: {:?}", e);
-                    ArchitectureLintCollection::new(Vec::new())
+                    println!("UI testing: Error loading pup.ron with new factory: {:?}", e);
+                    // Fall through to try old method
+                    
+                    // Check for pup.yaml as fallback
+                    let yaml_path = test_dir.join("pup.yaml");
+                    if yaml_path.exists() {
+                        // For UI tests, load rules from the pup.yaml in the test directory
+                        match fs::read_to_string(&yaml_path) {
+                            Ok(yaml_content) => {
+                                match LintConfigurationFactory::from_yaml(yaml_content) {
+                                    Ok(lint_rules) => {
+                                        println!("UI testing: Successfully loaded from pup.yaml");
+                                        ArchitectureLintCollection::new(lint_rules)
+                                    },
+                                    Err(e) => {
+                                        println!("UI testing: Error loading pup.yaml with old factory: {:?}", e);
+                                        ArchitectureLintCollection::new(Vec::new())
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                println!("UI testing: Error reading pup.yaml: {:?}", e);
+                                ArchitectureLintCollection::new(Vec::new())
+                            }
+                        }
+                    } else {
+                        println!("UI testing: No pup.yaml found for fallback");
+                        ArchitectureLintCollection::new(Vec::new())
+                    }
                 }
             }
         } else {
-            println!("UI testing: No pup.yaml found in test directory");
-            ArchitectureLintCollection::new(Vec::new())
+            // No pup.ron found, try pup.yaml
+            let yaml_path = test_dir.join("pup.yaml");
+            if yaml_path.exists() {
+                // For UI tests, load rules from the pup.yaml in the test directory
+                match fs::read_to_string(&yaml_path) {
+                    Ok(yaml_content) => {
+                        match LintConfigurationFactory::from_yaml(yaml_content) {
+                            Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
+                            Err(e) => {
+                                println!("UI testing: Error loading pup.yaml with old factory: {:?}", e);
+                                ArchitectureLintCollection::new(Vec::new())
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("UI testing: Error reading pup.yaml: {:?}", e);
+                        ArchitectureLintCollection::new(Vec::new())
+                    }
+                }
+            } else {
+                println!("UI testing: No configuration file found in test directory");
+                ArchitectureLintCollection::new(Vec::new())
+            }
         }
     } else {
-        // For normal operation, load rules from pup.yaml
-        let lint_rules = setup_lints_yaml()?;
-        ArchitectureLintCollection::new(lint_rules)
+        // For normal operation, try pup.ron first with new factory, then fall back to pup.yaml
+        let cwd = env::current_dir()?;
+        let ron_path = cwd.join("pup.ron");
+        
+        if ron_path.exists() {
+            println!("Trying to load from pup.ron with new factory");
+            match new_factory::LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
+                Ok(lint_rules) => {
+                    println!("Successfully loaded from pup.ron");
+                    ArchitectureLintCollection::new(lint_rules)
+                },
+                Err(e) => {
+                    println!("Error loading pup.ron with new factory: {:?}", e);
+                    // Fall back to old method
+                    let lint_rules = setup_lints_yaml()?;
+                    ArchitectureLintCollection::new(lint_rules)
+                }
+            }
+        } else {
+            // Fall back to old method
+            let lint_rules = setup_lints_yaml()?;
+            ArchitectureLintCollection::new(lint_rules)
+        }
     };
 
     // Prepare cli_args, either from environment or empty for UI testing

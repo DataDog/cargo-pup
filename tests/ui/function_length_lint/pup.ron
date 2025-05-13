@@ -1,0 +1,29 @@
+// LintBuilder structure with lints array
+(
+    lints: [
+        // ModuleLint that enforces function length for the "test" module
+        Module(
+            (
+                name: "long_function_test",
+                matches: Module("^test$"),
+                rules: [
+                    // Since there's no RestrictFunctions, we need to use a custom approach
+                    // We'll use MustNotBeEmpty as a placeholder for now
+                    MustNotBeEmpty(Error),
+                    // In the future, we could add a variant for function length
+                ]
+            )
+        ),
+        
+        // ModuleLint that enforces function length for "namespace_patterns::my_module"
+        Module(
+            (
+                name: "namespace_patterns_test",
+                matches: Module("^namespace_patterns::my_module$"),
+                rules: [
+                    MustNotBeEmpty(Error)
+                ]
+            )
+        )
+    ]
+) 

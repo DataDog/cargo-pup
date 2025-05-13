@@ -125,7 +125,7 @@ impl<'tcx> LateLintPass<'tcx> for ItemTypeLintProcessor {
                 self.name().as_str(),
                 item.span,
                 format!(
-                    "{} '{}' is not allowed in this module_lint",
+                    "{} '{}' is not allowed in this module",
                     item_type, item_name
                 ),
                 None,

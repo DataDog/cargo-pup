@@ -25,7 +25,7 @@ mod module_usage;
 mod result_error;
 mod trait_impl;
 mod configuration_factory;
-mod lints;
+pub mod lints;
 
 // Re-export our public API
 pub use architecture_lint_rule::ArchitectureLintRule;
