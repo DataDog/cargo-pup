@@ -1,5 +1,5 @@
 use rustc_lint::{LateContext, LateLintPass, Lint, LintStore};
-use rustc_hir::{Item, ItemKind, OwnerId, UseKind};
+use rustc_hir::{Item, ItemKind, OwnerId, UseKind, ImplItem, ImplItemKind};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 use regex::Regex;
@@ -35,6 +35,9 @@ enum ModuleRuleType {
         denied: Option<Vec<String>>,
     },
     NoWildcardImports,
+    RestrictFunctions {
+        max_lines: usize,
+    },
 }
 
 impl ModuleLint {
@@ -75,6 +78,13 @@ impl ModuleLint {
                         ModuleRule::NoWildcardImports(severity) => 
                             Some(ModuleRuleInfo {
                                 rule_type: ModuleRuleType::NoWildcardImports,
+                                severity: *severity
+                            }),
+                        ModuleRule::RestrictFunctions { max_lines, severity } =>
+                            Some(ModuleRuleInfo {
+                                rule_type: ModuleRuleType::RestrictFunctions {
+                                    max_lines: *max_lines,
+                                },
                                 severity: *severity
                             }),
                         // Not handling logical combinations for now
@@ -142,6 +152,32 @@ impl ModuleLint {
             "name"
         }
     }
+    
+    // Helper method to check for wildcard imports in a module
+    fn check_for_wildcard_imports(&self, 
+                                  ctx: &LateContext<'_>, 
+                                  module: &rustc_hir::Mod,
+                                  severity: Severity) {
+        for &item_id in module.item_ids.iter() {
+            let def_id = item_id.owner_id.to_def_id();
+            if let Some(local_def_id) = def_id.as_local() {
+                let item = ctx.tcx.hir().expect_item(local_def_id);
+                
+                // If this is a wildcard import, report it
+                if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
+                    span_lint_and_help(
+                        ctx,
+                        get_lint(severity),
+                        self.name().as_str(),
+                        item.span,
+                        "Wildcard imports are not allowed",
+                        None,
+                        "Import specific items instead of using a wildcard",
+                    );
+                }
+            }
+        }
+    }
 }
 
 // Declare the module_lint lint with variable severity
@@ -186,7 +222,6 @@ impl ArchitectureLintRule for ModuleLint {
 
 impl<'tcx> LateLintPass<'tcx> for ModuleLint {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
-        // Get the full module_lint path
         let parent_item = ctx.tcx.hir_get_parent_item(item.hir_id());
         let module_path = get_full_module_name(&ctx.tcx, &parent_item);
         
@@ -210,9 +245,9 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                                 pattern_type, pattern, item_name_str);
                             
                             let help = if pattern_type == "pattern" {
-                                format!("Rename this module_lint to match the pattern '{}'", pattern)
+                                format!("Rename this module to match the pattern '{}'", pattern)
                             } else {
-                                format!("Rename this module_lint to '{}'", pattern)
+                                format!("Rename this module to '{}'", pattern)
                             };
                             
                             span_lint_and_help(
@@ -241,7 +276,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             let help = if pattern_type == "pattern" {
                                 "Choose a name that doesn't match this pattern"
                             } else {
-                                "Choose a different name for this module_lint"
+                                "Choose a different name for this module"
                             };
                             
                             span_lint_and_help(
@@ -266,7 +301,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 item.span,
                                 "Module must not be empty",
                                 None,
-                                "Add content to this module_lint or remove it",
+                                "Add content to this module or remove it",
                             );
                         }
                     }
@@ -300,7 +335,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                     item.span,
                                     message,
                                     None,
-                                    "Use only allowed module_lint imports",
+                                    "Use only allowed module imports",
                                 );
                             }
                         }
@@ -315,7 +350,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             });
                             
                             if is_denied {
-                                let message = format!("Use of module_lint '{}' is denied", import_module);
+                                let message = format!("Use of module '{}' is denied", import_module);
                                 
                                 span_lint_and_help(
                                     ctx,
@@ -331,6 +366,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 },
                 ModuleRuleType::NoWildcardImports => {
+                    // Check if the current item is a wildcard import
                     if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
                         span_lint_and_help(
                             ctx,
@@ -342,7 +378,82 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             "Import specific items instead of using a wildcard",
                         );
                     }
+                    
+                    // Also check nested modules for wildcard imports
+                    if let ItemKind::Mod(module) = &item.kind {
+                        self.check_for_wildcard_imports(ctx, module, rule_info.severity);
+                    }
                 },
+                ModuleRuleType::RestrictFunctions { max_lines } => {
+                    // Check functions in the current item
+                    if let ItemKind::Fn {
+                        sig: _,
+                        generics: _,
+                        body,
+                        has_body: _,
+                    } = &item.kind {
+                        let body = ctx.tcx.hir_body(*body);
+                        let source_map = ctx.tcx.sess.source_map();
+                        
+                        if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
+                            if file_lines.lines.len() > *max_lines {
+                                span_lint_and_help(
+                                    ctx,
+                                    get_lint(rule_info.severity),
+                                    self.name().as_str(),
+                                    item.span,
+                                    format!(
+                                        "Function exceeds maximum length of {} lines with {} lines",
+                                        max_lines,
+                                        file_lines.lines.len()
+                                    ),
+                                    None,
+                                    "Consider breaking this function into smaller parts",
+                                );
+                            }
+                        }
+                    }
+                },
+            }
+        }
+    }
+    
+    fn check_impl_item(&mut self, ctx: &LateContext<'tcx>, impl_item: &'tcx rustc_hir::ImplItem<'tcx>) {
+        // Get the full module path
+        let impl_block = ctx.tcx.hir_get_parent_item(impl_item.owner_id.into());
+        let module = ctx.tcx.hir_get_parent_item(impl_block.into());
+        let module_path = get_full_module_name(&ctx.tcx, &module);
+        
+        // Check if this module matches our patterns
+        if !self.matches_module(&module_path) {
+            return;
+        }
+        
+        // Apply each rule
+        for rule_info in &self.module_rules {
+            if let ModuleRuleType::RestrictFunctions { max_lines } = &rule_info.rule_type {
+                if let rustc_hir::ImplItemKind::Fn(_fn_sig, body_id) = &impl_item.kind {
+                    let body = ctx.tcx.hir_body(*body_id);
+                    let source_map = ctx.tcx.sess.source_map();
+                    
+                    if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
+                        if file_lines.lines.len() > *max_lines {
+                            span_lint_and_help(
+                                ctx,
+                                get_lint(rule_info.severity),
+                                self.name().as_str(),
+                                impl_item.span,
+                                format!(
+                                    "Function exceeds maximum length of {} lines with {} lines",
+                                    max_lines,
+                                    file_lines.lines.len()
+                                ),
+                                None,
+                                "Consider breaking this method into smaller parts",
+                            );
+                        }
+                    }
+                }
             }
         }
     }

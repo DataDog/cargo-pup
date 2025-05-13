@@ -1,0 +1,21 @@
+error: Use of module 'crate::dummy_denied::anything' is not allowed; only ["std::*", "core::*"] are permitted
+  --> tests/ui/module_lint_new/restrict_imports.rs:15:1
+   |
+LL | use crate::dummy_denied::anything;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Use only allowed module imports
+   = note: Applied by cargo-pup rule 'restrict_imports_allowed_test'.
+   = note: `#[deny(module_lint)]` on by default
+
+error: Use of module 'crate::dummy_denied::anything' is denied
+  --> tests/ui/module_lint_new/restrict_imports.rs:15:1
+   |
+LL | use crate::dummy_denied::anything;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this import
+   = note: Applied by cargo-pup rule 'restrict_imports_denied_test'.
+
+error: aborting due to 2 previous errors
+

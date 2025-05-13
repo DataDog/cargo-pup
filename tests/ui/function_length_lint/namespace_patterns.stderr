@@ -10,9 +10,9 @@ LL | |         let g = 7;
 LL | |     }
    | |_____^
    |
-   = help: 
+   = help: Consider breaking this function into smaller parts
    = note: Applied by cargo-pup rule 'namespace_patterns_test'.
-   = note: `#[deny(pup_function_length)]` on by default
+   = note: `#[deny(module_lint)]` on by default
 
 error: Function exceeds maximum length of 5 lines with 9 lines
   --> tests/ui/function_length_lint/namespace_patterns.rs:29:9
@@ -26,7 +26,7 @@ LL | |             let g = 7;
 LL | |         }
    | |_________^
    |
-   = help: 
+   = help: Consider breaking this method into smaller parts
    = note: Applied by cargo-pup rule 'namespace_patterns_test'.
 
 error: aborting due to 2 previous errors

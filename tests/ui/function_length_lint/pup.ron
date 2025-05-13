@@ -7,10 +7,11 @@
                 name: "long_function_test",
                 matches: Module("^test$"),
                 rules: [
-                    // Since there's no RestrictFunctions, we need to use a custom approach
-                    // We'll use MustNotBeEmpty as a placeholder for now
-                    MustNotBeEmpty(Error),
-                    // In the future, we could add a variant for function length
+                    // Use RestrictFunctions rule to limit function length
+                    RestrictFunctions(
+                        max_lines: 5,
+                        severity: Error,
+                    )
                 ]
             )
         ),
@@ -21,7 +22,11 @@
                 name: "namespace_patterns_test",
                 matches: Module("^namespace_patterns::my_module$"),
                 rules: [
-                    MustNotBeEmpty(Error)
+                    // Use RestrictFunctions rule with Error severity 
+                    RestrictFunctions(
+                        max_lines: 5,
+                        severity: Error,
+                    )
                 ]
             )
         )
