@@ -121,7 +121,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                                 self.name().as_str(),
                                 item.span,
                                 format!(
-                                    "Use of module_lint '{}' is not allowed; only {:?} are permitted.",
+                                    "Use of module '{}' is not allowed; only {:?} are permitted.",
                                     import_module, allowed_modules
                                 ),
                                 None,
@@ -150,7 +150,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleUsageLintProcessor {
                                 self.name().as_str(),
                                 item.span,
                                 format!(
-                                    "Use of module_lint '{}' is denied; {:?} are not permitted.",
+                                    "Use of module '{}' is denied; {:?} are not permitted.",
                                     import_module, denied_modules
                                 ),
                                 None,

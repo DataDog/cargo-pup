@@ -78,7 +78,7 @@ impl ItemTypeLintProcessor {
                 Some("enum")
             }
             ItemKind::Struct(..) if self.rule.denied_items.contains(&DeniedItemType::Struct) => {
-                Some("struct_lint")
+                Some("struct")
             }
             ItemKind::Trait(..) if self.rule.denied_items.contains(&DeniedItemType::Trait) => {
                 Some("trait")
@@ -93,7 +93,7 @@ impl ItemTypeLintProcessor {
                 has_body: _,
             } if self.rule.denied_items.contains(&DeniedItemType::Function) => Some("function"),
             ItemKind::Mod(..) if self.rule.denied_items.contains(&DeniedItemType::Module) => {
-                Some("module_lint")
+                Some("module")
             }
             ItemKind::Static(..) if self.rule.denied_items.contains(&DeniedItemType::Static) => {
                 Some("static")
@@ -129,7 +129,7 @@ impl<'tcx> LateLintPass<'tcx> for ItemTypeLintProcessor {
                     item_type, item_name
                 ),
                 None,
-                "Consider moving this item to a different module_lint",
+                "Consider moving this item to a different module",
             );
         }
     }

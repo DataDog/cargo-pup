@@ -99,16 +99,11 @@ pub fn main() -> Result<()> {
         // Try loading from pup.ron with new factory first
         let ron_path = test_dir.join("pup.ron");
         if ron_path.exists() {
-            println!("UI testing: Trying to load from pup.ron with new factory");
             match new_factory::LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
                 Ok(lint_rules) => {
-                    println!("UI testing: Successfully loaded from pup.ron");
                     ArchitectureLintCollection::new(lint_rules)
                 },
                 Err(e) => {
-                    println!("UI testing: Error loading pup.ron with new factory: {:?}", e);
-                    // Fall through to try old method
-                    
                     // Check for pup.yaml as fallback
                     let yaml_path = test_dir.join("pup.yaml");
                     if yaml_path.exists() {
@@ -117,22 +112,18 @@ pub fn main() -> Result<()> {
                             Ok(yaml_content) => {
                                 match LintConfigurationFactory::from_yaml(yaml_content) {
                                     Ok(lint_rules) => {
-                                        println!("UI testing: Successfully loaded from pup.yaml");
                                         ArchitectureLintCollection::new(lint_rules)
                                     },
                                     Err(e) => {
-                                        println!("UI testing: Error loading pup.yaml with old factory: {:?}", e);
                                         ArchitectureLintCollection::new(Vec::new())
                                     }
                                 }
                             }
                             Err(e) => {
-                                println!("UI testing: Error reading pup.yaml: {:?}", e);
                                 ArchitectureLintCollection::new(Vec::new())
                             }
                         }
                     } else {
-                        println!("UI testing: No pup.yaml found for fallback");
                         ArchitectureLintCollection::new(Vec::new())
                     }
                 }

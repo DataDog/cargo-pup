@@ -290,7 +290,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             });
                             
                             if !is_allowed {
-                                let message = format!("Use of module_lint '{}' is not allowed; only {:?} are permitted",
+                                let message = format!("Use of module '{}' is not allowed; only {:?} are permitted",
                                         import_module, allowed);
                                 
                                 span_lint_and_help(
