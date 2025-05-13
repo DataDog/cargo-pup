@@ -4,5 +4,5 @@ use crate::ArchitectureLintRule;
 use rustc_lint::{LateContext, LateLintPass, Lint, LintStore};
 
 pub mod configuration_factory;
-mod module_lint;
-mod struct_lint;
+pub mod struct_lint;
+pub mod module_lint;

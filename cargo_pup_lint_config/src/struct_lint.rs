@@ -103,7 +103,7 @@ pub struct StructLint {
     pub rules: Vec<StructRule>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum StructRule {
     MustBeNamed(String, Severity),
     MustNotBeNamed(String, Severity),

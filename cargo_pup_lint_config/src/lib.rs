@@ -18,8 +18,8 @@ use crate::function_lint::FunctionLint;
 pub enum Severity {
     /// Warning - prints a warning but doesn't cause failure
     Warn,
-    /// Deny - causes the lint check to fail
-    Deny,
+    /// Error - causes the lint check to fail
+    Error,
 }
 
 impl Default for Severity {

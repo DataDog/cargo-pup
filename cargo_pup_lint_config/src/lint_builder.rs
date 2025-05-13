@@ -62,7 +62,7 @@ mod tests {
                         m.module("api::controllers")
                     )
             )
-            .with_severity(Severity::Deny)
+            .with_severity(Severity::Error)
             .must_be_named("domain_entity".into())
             .with_severity(Severity::Warn)
             .no_wildcard_imports()
@@ -88,7 +88,7 @@ mod tests {
                         m.module("api::controllers")
                     )
             )
-            .with_severity(Severity::Deny)
+            .with_severity(Severity::Error)
             .must_be_named("domain_entity".into())
             .with_severity(Severity::Warn)
             .no_wildcard_imports()
@@ -126,7 +126,7 @@ mod tests {
             // First rule should be MustBeNamed with Deny severity
             if let ModuleRule::MustBeNamed(name, severity) = &module_lint.rules[0] {
                 assert_eq!(name, "domain_entity");
-                assert_eq!(severity, &Severity::Deny);
+                assert_eq!(severity, &Severity::Error);
             } else {
                 panic!("Expected MustBeNamed with Deny severity");
             }
@@ -152,7 +152,7 @@ mod tests {
                 m.name("^[A-Z][a-z]+Model$")
                     .and(m.has_attribute("derive\\(.*Debug.*\\)"))
             )
-            .with_severity(Severity::Deny)
+            .with_severity(Severity::Error)
             .must_be_named("EntityModel".into())
             .build();
             
@@ -179,7 +179,7 @@ mod tests {
             assert_eq!(struct_lint.rules.len(), 1);
             if let StructRule::MustBeNamed(name, severity) = &struct_lint.rules[0] {
                 assert_eq!(name, "EntityModel");
-                assert_eq!(severity, &Severity::Deny);
+                assert_eq!(severity, &Severity::Error);
             } else {
                 panic!("Expected MustBeNamed with Deny severity");
             }
@@ -195,7 +195,7 @@ mod tests {
         // Test function lint with name matching and max length
         builder.function()
             .matching(|m| m.name("process_data"))
-            .with_severity(Severity::Deny)
+            .with_severity(Severity::Error)
             .max_length(50)
             .build();
             
@@ -212,7 +212,7 @@ mod tests {
             assert_eq!(function_lint.rules.len(), 1);
             if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
                 assert_eq!(*length, 50);
-                assert_eq!(severity, &Severity::Deny);
+                assert_eq!(severity, &Severity::Error);
             } else {
                 panic!("Expected MaxLength rule");
             }
