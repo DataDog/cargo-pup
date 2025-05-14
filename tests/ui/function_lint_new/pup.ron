@@ -1,0 +1,71 @@
+(
+    lints: [
+        // Test for returns_result.rs - targeting test_returns_result crate
+        Function(
+            (
+                name: "function_returns_result_test",
+                matches: InModule("^test_returns_result::"),
+                rules: [
+                    MaxLength(
+                        10,  // Maximum allowed function length (10 lines)
+                        Warning, // Severity - just warning for test
+                    )
+                ]
+            )
+        ),
+        
+        // Test for returns_result.rs - test function name matcher
+        Function(
+            (
+                name: "function_name_test",
+                matches: AndMatches(
+                    InModule("^test_returns_result::"),
+                    NameRegex("^function_with_.*$")
+                ),
+                rules: [
+                    MaxLength(
+                        10,  // Maximum allowed function length (10 lines)
+                        Warning, // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Test for returns_result.rs - test logical combinations of matchers
+        Function(
+            (
+                name: "complex_match_test",
+                matches: AndMatches(
+                    InModule("^test_returns_result::"),
+                    AndMatches(
+                        ReturnsType(Result), 
+                        NameRegex("^function_with_custom.*$")
+                    )
+                ),
+                rules: [
+                    MaxLength(
+                        10,  // Maximum allowed function length (10 lines)
+                        Warning, // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Configuration for returns_result_error.rs - stricter line limits
+        Function(
+            (
+                name: "function_returns_result_limit",
+                matches: AndMatches(
+                    InModule("^test_returns_result_error::"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    MaxLength(
+                        2,  // Maximum allowed function length (2 lines)
+                        Warning, // Using Warning to match our stderr
+                    )
+                ]
+            )
+        )
+    ]
+) 

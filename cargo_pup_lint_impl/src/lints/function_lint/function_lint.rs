@@ -1,9 +1,10 @@
 use rustc_lint::{LateContext, LateLintPass, Lint, LintStore};
 use rustc_hir::{Item, ItemKind, ImplItem, ImplItemKind, def_id::LOCAL_CRATE};
+use rustc_middle::ty::TyKind;
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
 use regex::Regex;
-use cargo_pup_lint_config::{ConfiguredLint, Severity, FunctionMatch, FunctionRule};
+use cargo_pup_lint_config::{ConfiguredLint, Severity, FunctionMatch, FunctionRule, ReturnTypePattern};
 use crate::ArchitectureLintRule;
 use crate::helpers::clippy_utils::span_lint_and_help;
 use crate::helpers::queries::get_full_module_name;
@@ -29,12 +30,12 @@ impl FunctionLint {
     }
     
     // Helper method to check if a function in a given module with a given name should be linted
-    fn matches_function(&self, module_path: &str, function_name: &str) -> bool {
-        self.evaluate_function_match(&self.matches, module_path, function_name)
+    fn matches_function(&self, ctx: &LateContext<'_>, module_path: &str, function_name: &str, fn_def_id: rustc_hir::def_id::DefId) -> bool {
+        self.evaluate_function_match(&self.matches, ctx, module_path, function_name, fn_def_id)
     }
     
     // Evaluates the complex matcher structure to determine if a function matches
-    fn evaluate_function_match(&self, matcher: &FunctionMatch, module_path: &str, function_name: &str) -> bool {
+    fn evaluate_function_match(&self, matcher: &FunctionMatch, ctx: &LateContext<'_>, module_path: &str, function_name: &str, fn_def_id: rustc_hir::def_id::DefId) -> bool {
         match matcher {
             FunctionMatch::NameEquals(name) => {
                 function_name == name
@@ -51,16 +52,62 @@ impl FunctionLint {
                     Err(_) => module_path == pattern,
                 }
             },
+            FunctionMatch::ReturnsType(pattern) => {
+                let fn_sig = ctx.tcx.fn_sig(fn_def_id).skip_binder();
+                let return_ty = fn_sig.output().skip_binder();
+                
+                match pattern {
+                    ReturnTypePattern::Result => {
+                        if let TyKind::Adt(adt_def, _) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            path == "std::result::Result" || path == "core::result::Result"
+                        } else {
+                            false
+                        }
+                    },
+                    ReturnTypePattern::Option => {
+                        if let TyKind::Adt(adt_def, _) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            path == "std::option::Option" || path == "core::option::Option"
+                        } else {
+                            false
+                        }
+                    },
+                    ReturnTypePattern::Named(name) => {
+                        match return_ty.kind() {
+                            TyKind::Adt(adt_def, _) => {
+                                let path = ctx.tcx.def_path_str(adt_def.did());
+                                path == *name
+                            },
+                            _ => false,
+                        }
+                    },
+                    ReturnTypePattern::Regex(pattern) => {
+                        match Regex::new(pattern) {
+                            Ok(regex) => {
+                                match return_ty.kind() {
+                                    TyKind::Adt(adt_def, _) => {
+                                        let path = ctx.tcx.def_path_str(adt_def.did());
+                                        regex.is_match(&path)
+                                    },
+                                    _ => false,
+                                }
+                            },
+                            Err(_) => false,
+                        }
+                    },
+                }
+            },
             FunctionMatch::AndMatches(left, right) => {
-                self.evaluate_function_match(left, module_path, function_name) && 
-                self.evaluate_function_match(right, module_path, function_name)
+                self.evaluate_function_match(left, ctx, module_path, function_name, fn_def_id) && 
+                self.evaluate_function_match(right, ctx, module_path, function_name, fn_def_id)
             },
             FunctionMatch::OrMatches(left, right) => {
-                self.evaluate_function_match(left, module_path, function_name) || 
-                self.evaluate_function_match(right, module_path, function_name)
+                self.evaluate_function_match(left, ctx, module_path, function_name, fn_def_id) || 
+                self.evaluate_function_match(right, ctx, module_path, function_name, fn_def_id)
             },
             FunctionMatch::NotMatch(inner) => {
-                !self.evaluate_function_match(inner, module_path, function_name)
+                !self.evaluate_function_match(inner, ctx, module_path, function_name, fn_def_id)
             }
         }
     }
@@ -132,9 +179,10 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
             let _crate_name = ctx.tcx.crate_name(LOCAL_CRATE).to_string();
             let parent_item = ctx.tcx.hir_get_parent_item(item.hir_id());
             let module_path = get_full_module_name(&ctx.tcx, &parent_item);
+            let fn_def_id = item.owner_id.to_def_id();
             
             // Check if this function matches our patterns
-            if !self.matches_function(&module_path, &item_name) {
+            if !self.matches_function(ctx, &module_path, &item_name, fn_def_id) {
                 return;
             }
             
@@ -182,9 +230,10 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
             let impl_block = ctx.tcx.hir_get_parent_item(impl_item.owner_id.into());
             let module = ctx.tcx.hir_get_parent_item(impl_block.into());
             let module_path = get_full_module_name(&ctx.tcx, &module);
+            let fn_def_id = impl_item.owner_id.to_def_id();
             
             // Check if this method matches our patterns
-            if !self.matches_function(&module_path, &item_name) {
+            if !self.matches_function(ctx, &module_path, &item_name, fn_def_id) {
                 return;
             }
             

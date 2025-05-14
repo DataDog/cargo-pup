@@ -26,6 +26,26 @@ impl FunctionMatcher {
     pub fn in_module(&self, module: impl Into<String>) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::InModule(module.into()))
     }
+    
+    /// Matches functions that return a Result<T, E>
+    pub fn returns_result(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::Result))
+    }
+    
+    /// Matches functions that return an Option<T>
+    pub fn returns_option(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::Option))
+    }
+    
+    /// Matches functions that return a specific named type
+    pub fn returns_type(&self, name: impl Into<String>) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::Named(name.into())))
+    }
+    
+    /// Matches functions that return a type matching a regex pattern
+    pub fn returns_type_regex(&self, pattern: impl Into<String>) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::Regex(pattern.into())))
+    }
 }
 
 #[derive(Clone)]
@@ -84,10 +104,20 @@ where
 // === Function Lint Types === //
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ReturnTypePattern {
+    Result,           // Match any Result<T, E>
+    Option,           // Match any Option<T>
+    Named(String),    // Match a specific named type
+    Regex(String),    // Match types by regex pattern
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum FunctionMatch {
     NameEquals(String),
     NameRegex(String),
     InModule(String),
+    // New variant to match by return type
+    ReturnsType(ReturnTypePattern),
     // Logical operations
     AndMatches(Box<FunctionMatch>, Box<FunctionMatch>),
     OrMatches(Box<FunctionMatch>, Box<FunctionMatch>),
