@@ -7,7 +7,7 @@ use cargo_pup_lint_config::{ConfiguredLint, Severity, ModuleMatch, ModuleRule};
 use crate::ArchitectureLintRule;
 use crate::helpers::queries::get_full_module_name;
 use crate::helpers::clippy_utils::span_lint_and_help;
-use crate::declare_variable_severity_lint;
+use crate::{declare_variable_severity_lint, declare_variable_severity_lint_new};
 
 pub struct ModuleLint {
     name: String,
@@ -157,7 +157,7 @@ impl ModuleLint {
                 if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
                     span_lint_and_help(
                         ctx,
-                        get_lint(severity),
+                        MODULE_WILDCARD_IMPORT_LINT::get_by_severity(severity),
                         self.name().as_str(),
                         item.span,
                         "Wildcard imports are not allowed",
@@ -170,8 +170,8 @@ impl ModuleLint {
     }
 }
 
-// Declare the module_lint lint with variable severity
-declare_variable_severity_lint!(
+// Declare the module_lint lint with variable severity using the new macro
+declare_variable_severity_lint_new!(
     pub,
     MODULE_LINT,
     MODULE_LINT_DENY, 
@@ -179,7 +179,55 @@ declare_variable_severity_lint!(
     "Module structure and organization rules"
 );
 
-impl_lint_pass!(ModuleLint => [MODULE_LINT_DENY, MODULE_LINT_WARN]);
+// Define specific lints for different rule types
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_MUST_BE_NAMED_LINT,
+    MODULE_MUST_BE_NAMED_LINT_DENY,
+    MODULE_MUST_BE_NAMED_LINT_WARN,
+    "Module must match a specific naming pattern"
+);
+
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_MUST_NOT_BE_NAMED_LINT,
+    MODULE_MUST_NOT_BE_NAMED_LINT_DENY,
+    MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
+    "Module must not match a specific naming pattern"
+);
+
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_MUST_NOT_BE_EMPTY_LINT,
+    MODULE_MUST_NOT_BE_EMPTY_LINT_DENY,
+    MODULE_MUST_NOT_BE_EMPTY_LINT_WARN,
+    "Module must not be empty"
+);
+
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_RESTRICT_IMPORTS_LINT,
+    MODULE_RESTRICT_IMPORTS_LINT_DENY,
+    MODULE_RESTRICT_IMPORTS_LINT_WARN,
+    "Module has import restrictions"
+);
+
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_WILDCARD_IMPORT_LINT,
+    MODULE_WILDCARD_IMPORT_LINT_DENY,
+    MODULE_WILDCARD_IMPORT_LINT_WARN,
+    "Wildcard imports are not allowed"
+);
+
+impl_lint_pass!(ModuleLint => [
+    MODULE_LINT_DENY, MODULE_LINT_WARN,
+    MODULE_MUST_BE_NAMED_LINT_DENY, MODULE_MUST_BE_NAMED_LINT_WARN,
+    MODULE_MUST_NOT_BE_NAMED_LINT_DENY, MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
+    MODULE_MUST_NOT_BE_EMPTY_LINT_DENY, MODULE_MUST_NOT_BE_EMPTY_LINT_WARN,
+    MODULE_RESTRICT_IMPORTS_LINT_DENY, MODULE_RESTRICT_IMPORTS_LINT_WARN,
+    MODULE_WILDCARD_IMPORT_LINT_DENY, MODULE_WILDCARD_IMPORT_LINT_WARN
+]);
 
 impl ArchitectureLintRule for ModuleLint {
     fn name(&self) -> String {
@@ -242,7 +290,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             
                             span_lint_and_help(
                                 ctx,
-                                get_lint(rule_info.severity),
+                                MODULE_MUST_BE_NAMED_LINT::get_by_severity(rule_info.severity),
                                 self.name().as_str(),
                                 item.span,
                                 message,
@@ -271,7 +319,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             
                             span_lint_and_help(
                                 ctx,
-                                get_lint(rule_info.severity),
+                                MODULE_MUST_NOT_BE_NAMED_LINT::get_by_severity(rule_info.severity),
                                 self.name().as_str(),
                                 item.span,
                                 message,
@@ -286,7 +334,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         if module_data.item_ids.is_empty() {
                             span_lint_and_help(
                                 ctx,
-                                get_lint(rule_info.severity),
+                                MODULE_MUST_NOT_BE_EMPTY_LINT::get_by_severity(rule_info.severity),
                                 self.name().as_str(),
                                 item.span,
                                 "Module must not be empty",
@@ -320,7 +368,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 
                                 span_lint_and_help(
                                     ctx,
-                                    get_lint(rule_info.severity),
+                                    MODULE_RESTRICT_IMPORTS_LINT::get_by_severity(rule_info.severity),
                                     self.name().as_str(),
                                     item.span,
                                     message,
@@ -344,7 +392,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 
                                 span_lint_and_help(
                                     ctx,
-                                    get_lint(rule_info.severity),
+                                    MODULE_RESTRICT_IMPORTS_LINT::get_by_severity(rule_info.severity),
                                     self.name().as_str(),
                                     item.span,
                                     message,
@@ -360,7 +408,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
                         span_lint_and_help(
                             ctx,
-                            get_lint(rule_info.severity),
+                            MODULE_WILDCARD_IMPORT_LINT::get_by_severity(rule_info.severity),
                             self.name().as_str(),
                             item.span,
                             "Wildcard imports are not allowed",
