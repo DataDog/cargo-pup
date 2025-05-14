@@ -88,7 +88,9 @@ impl StructLint {
     
     // Check if this struct has any trait implementations that match our patterns
     fn has_matching_trait_impl<'tcx>(&self, ctx: &LateContext<'tcx>, def_id: DefId) -> bool {
-        // This is a simplified implementation that will be expanded later
+        use crate::helpers::queries;
+        
+        // Extract trait pattern if one exists in the matcher
         fn needs_trait_check(matcher: &StructMatch) -> Option<String> {
             match matcher {
                 StructMatch::ImplementsTrait(pattern) => Some(pattern.clone()),
@@ -105,18 +107,39 @@ impl StructLint {
         
         // Check if we have any trait matchers
         if let Some(trait_pattern) = needs_trait_check(&self.matches) {
-            // This is a simplified placeholder implementation
-            // A real implementation would need to traverse all trait implementations
-            // for the type and check them against the pattern
-            //
-            // For now, we'll just return true to allow the basic matcher structure to work
-            //
-            // TODO: Replace this with actual trait implementation checking
-            // using TCX and hir() traversal when that part of the API is better understood.
-            return true;
+            // Create a regex from the trait pattern
+            let trait_regex = match Regex::new(&trait_pattern) {
+                Ok(regex) => regex,
+                Err(_) => return false, // If regex is invalid, consider no match
+            };
+            
+            // Get the type for the struct
+            let ty = ctx.tcx.type_of(def_id).skip_binder();
+            
+            // Get parameter environment for the struct
+            let param_env = ctx.param_env;
+            
+            // For each trait in the crate, check if:
+            // 1. The trait name matches our pattern
+            // 2. The struct implements the trait
+            for trait_def_id in ctx.tcx.all_traits() {
+                // Get the full canonical trait name
+                let full_trait_name = queries::get_full_canonical_trait_name_from_def_id(&ctx.tcx, trait_def_id);
+                
+                // Check if the trait name matches our pattern
+                if trait_regex.is_match(&full_trait_name) {
+                    // If the trait name matches, check if our type implements this trait
+                    if queries::implements_trait(ctx.tcx, param_env, ty, trait_def_id) {
+                        return true;
+                    }
+                }
+            }
+            
+            // If we get here, no matching trait implementations were found
+            return false;
         }
         
-        // If no trait patterns found, return true
+        // If no trait patterns found, no trait constraints to enforce
         true
     }
 }

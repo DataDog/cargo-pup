@@ -48,6 +48,23 @@
                     )
                 ]
             )
+        ),
+        
+        // Test ImplementsTrait matcher - only apply to test_implements_trait crate
+        Struct(
+            (
+                name: "implements_trait_test",
+                matches: AndMatches(
+                    Name("test_implements_trait"), // Match based on crate name
+                    ImplementsTrait("test_implements_trait::TestTrait"), // Match structs implementing TestTrait
+                ),
+                rules: [
+                    MustBeNamed(
+                        "Compliant*",  // Pattern that struct names must match
+                        Error,
+                    )
+                ]
+            )
         )
     ]
 ) 

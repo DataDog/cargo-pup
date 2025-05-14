@@ -1,0 +1,21 @@
+error: Struct must match pattern 'Compliant*', found 'ImplementsTestTrait'
+  --> tests/ui/struct_lint_new/implements_trait.rs:18:1
+   |
+LL | pub struct ImplementsTestTrait {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'Compliant*'
+   = note: Applied by cargo-pup rule 'implements_trait_test'.
+   = note: `#[deny(struct_lint_must_be_named)]` on by default
+
+error: Struct must match pattern 'Compliant*', found 'ImplementsMultipleTraits'
+  --> tests/ui/struct_lint_new/implements_trait.rs:29:1
+   |
+LL | pub struct ImplementsMultipleTraits {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'Compliant*'
+   = note: Applied by cargo-pup rule 'implements_trait_test'.
+
+error: aborting due to 2 previous errors
+
