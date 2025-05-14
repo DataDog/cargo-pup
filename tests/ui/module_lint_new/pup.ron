@@ -80,6 +80,20 @@
             )
         ),
         
+        // Test item type restrictions with DeniedItems rule
+        Module(
+            (
+                name: "module_denied_items",
+                matches: Module("^test_module_denied_items$"),
+                rules: [
+                    DeniedItems(
+                        items: ["struct", "enum", "trait", "module"],
+                        severity: Error,
+                    )
+                ]
+            )
+        ),
+        
         // Replace RestrictFunctions with Function lint
         Function(
             (
