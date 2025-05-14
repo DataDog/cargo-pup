@@ -1,12 +1,13 @@
 use rustc_lint::{LateContext, LateLintPass, Lint, LintStore};
-use rustc_hir::{Item, ItemKind};
+use rustc_hir::{Item, ItemKind, def_id::DefId};
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
 use regex::Regex;
 use cargo_pup_lint_config::{ConfiguredLint, Severity, StructMatch, StructRule};
 use crate::ArchitectureLintRule;
 use crate::helpers::clippy_utils::span_lint_and_help;
-use crate::declare_variable_severity_lint;
+use crate::declare_variable_severity_lint_new;
+
 
 pub struct StructLint {
     name: String,
@@ -50,6 +51,11 @@ impl StructLint {
                 // Attribute matching not yet implemented
                 false
             },
+            StructMatch::ImplementsTrait(_) => {
+                // Implementation will be handled in check_item
+                // Always return true here and do the filtering there
+                true
+            },
             StructMatch::AndMatches(left, right) => {
                 self.evaluate_struct_match(left, crate_name, struct_name) && 
                 self.evaluate_struct_match(right, crate_name, struct_name)
@@ -64,6 +70,7 @@ impl StructLint {
         }
     }
     
+    // Helper to determine if a string matches a pattern (exact match or regex)
     fn string_matches_pattern(&self, string: &str, pattern: &str) -> bool {
         match Regex::new(pattern) {
             Ok(regex) => regex.is_match(string),
@@ -78,18 +85,59 @@ impl StructLint {
             "name"
         }
     }
+    
+    // Check if this struct has any trait implementations that match our patterns
+    fn has_matching_trait_impl<'tcx>(&self, ctx: &LateContext<'tcx>, def_id: DefId) -> bool {
+        // This is a simplified implementation that will be expanded later
+        fn needs_trait_check(matcher: &StructMatch) -> Option<String> {
+            match matcher {
+                StructMatch::ImplementsTrait(pattern) => Some(pattern.clone()),
+                StructMatch::AndMatches(left, right) => {
+                    needs_trait_check(left).or_else(|| needs_trait_check(right))
+                },
+                StructMatch::OrMatches(left, right) => {
+                    needs_trait_check(left).or_else(|| needs_trait_check(right))
+                },
+                StructMatch::NotMatch(inner) => needs_trait_check(inner),
+                _ => None,
+            }
+        }
+        
+        // Check if we have any trait matchers
+        if let Some(trait_pattern) = needs_trait_check(&self.matches) {
+            // This is a simplified placeholder implementation
+            // A real implementation would need to traverse all trait implementations
+            // for the type and check them against the pattern
+            //
+            // For now, we'll just return true to allow the basic matcher structure to work
+            //
+            // TODO: Replace this with actual trait implementation checking
+            // using TCX and hir() traversal when that part of the API is better understood.
+            return true;
+        }
+        
+        // If no trait patterns found, return true
+        true
+    }
 }
 
-// Declare the struct_lint lint with variable severity
-declare_variable_severity_lint!(
+declare_variable_severity_lint_new!(
     pub,
-    STRUCT_LINT,
-    STRUCT_LINT_DENY, 
-    STRUCT_LINT_WARN,
+    STRUCT_LINT_MUST_BE_NAMED,
+    STRUCT_LINT_MUST_BE_NAMED_DENY, 
+    STRUCT_LINT_MUST_BE_NAMED_WARN,
     "Struct naming and attribute rules"
 );
 
-impl_lint_pass!(StructLint => [STRUCT_LINT_DENY, STRUCT_LINT_WARN]);
+declare_variable_severity_lint_new!(
+    pub,
+    STRUCT_LINT_MUST_NOT_BE_NAMED,
+    STRUCT_LINT_MUST_NOT_BE_NAMED_DENY, 
+    STRUCT_LINT_MUST_NOT_BE_NAMED_WARN,
+    "Struct naming and attribute rules"
+);
+
+impl_lint_pass!(StructLint => [STRUCT_LINT_MUST_BE_NAMED_DENY, STRUCT_LINT_MUST_BE_NAMED_WARN, STRUCT_LINT_MUST_NOT_BE_NAMED_DENY, STRUCT_LINT_MUST_NOT_BE_NAMED_WARN]);
 
 impl ArchitectureLintRule for StructLint {
     fn name(&self) -> String {
@@ -131,6 +179,12 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                 return;
             }
             
+            // Check trait implementations if needed
+            let def_id = item.owner_id.def_id.to_def_id();
+            if !self.has_matching_trait_impl(ctx, def_id) {
+                return;
+            }
+            
             // Create a span that only covers the struct definition line
             // This includes "pub struct Name {" but not the struct fields or closing brace
             let definition_span = {
@@ -161,7 +215,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                             
                             span_lint_and_help(
                                 ctx,
-                                get_lint(*severity),
+                                STRUCT_LINT_MUST_BE_NAMED::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
                                 message,
@@ -184,7 +238,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                             
                             span_lint_and_help(
                                 ctx,
-                                get_lint(*severity),
+                                STRUCT_LINT_MUST_NOT_BE_NAMED::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
                                 message,

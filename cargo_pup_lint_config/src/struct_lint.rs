@@ -29,6 +29,18 @@ impl StructMatcher {
     pub fn has_attribute(&self, attr: impl Into<String>) -> StructMatchNode {
         StructMatchNode::Leaf(StructMatch::HasAttribute(attr.into()))
     }
+    
+    /// Matches structs that implement a specific trait
+    ///
+    /// The trait_name parameter can be either:
+    /// - An exact trait name (e.g., "Debug")
+    /// - A trait with path (e.g., "std::fmt::Debug")
+    /// - A regular expression pattern (e.g., "^(Read|Write)$")
+    ///
+    /// The implementation will determine if it's a regex based on the presence of special regex characters.
+    pub fn implements_trait(&self, trait_name: impl Into<String>) -> StructMatchNode {
+        StructMatchNode::Leaf(StructMatch::ImplementsTrait(trait_name.into()))
+    }
 }
 
 #[derive(Clone)]
@@ -90,6 +102,7 @@ where
 pub enum StructMatch {
     Name(String),
     HasAttribute(String),
+    ImplementsTrait(String),
     // Logical operations
     AndMatches(Box<StructMatch>, Box<StructMatch>),
     OrMatches(Box<StructMatch>, Box<StructMatch>),

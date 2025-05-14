@@ -50,7 +50,6 @@ impl LintConfigurationFactory {
                     ConfiguredLint::Module(_) => ModuleLint::new(l),
                     ConfiguredLint::Struct(_) => StructLint::new(l),
                     ConfiguredLint::Function(_) => FunctionLint::new(l),
-                    _ => panic!("Unsupported lint type")
                 }
             }).collect())
         } else {
@@ -80,7 +79,6 @@ impl LintConfigurationFactory {
                         ConfiguredLint::Struct(_) => StructLint::new(l),
                         ConfiguredLint::Function(_) => FunctionLint::new(l),
                         // For now, only handle the lints we've already implemented in the new system
-                        _ => panic!("Lint type not yet implemented in new system")
                     }
                 }).collect())
             },
@@ -93,7 +91,6 @@ impl LintConfigurationFactory {
                                 ConfiguredLint::Module(_) => ModuleLint::new(l),
                                 ConfiguredLint::Struct(_) => StructLint::new(l),
                                 ConfiguredLint::Function(_) => FunctionLint::new(l),
-                                _ => panic!("Unsupported lint type")
                             }
                         }).collect())
                     },

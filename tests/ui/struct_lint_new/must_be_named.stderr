@@ -6,7 +6,7 @@ LL | pub struct IncorrectName {
    |
    = help: Rename this struct to match the pattern 'Good*'
    = note: Applied by cargo-pup rule 'must_be_named_test'.
-   = note: `#[deny(struct_lint)]` on by default
+   = note: `#[deny(struct_lint_must_be_named)]` on by default
 
 error: Struct must match pattern 'Good*', found 'AnotherBadName'
   --> tests/ui/struct_lint_new/must_be_named.rs:12:1
