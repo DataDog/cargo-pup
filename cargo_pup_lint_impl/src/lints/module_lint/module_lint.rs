@@ -35,6 +35,7 @@ enum ModuleRuleType {
         denied: Option<Vec<String>>,
     },
     NoWildcardImports,
+    DeniedItems(Vec<String>),
 }
 
 impl ModuleLint {
@@ -75,6 +76,12 @@ impl ModuleLint {
                         ModuleRule::NoWildcardImports(severity) => 
                             Some(ModuleRuleInfo {
                                 rule_type: ModuleRuleType::NoWildcardImports,
+                                severity: *severity
+                            }),
+                        // Handle the DeniedItems variant
+                        ModuleRule::DeniedItems { items, severity } =>
+                            Some(ModuleRuleInfo {
+                                rule_type: ModuleRuleType::DeniedItems(items.clone()),
                                 severity: *severity
                             }),
                         // Not handling logical combinations for now
@@ -220,13 +227,23 @@ declare_variable_severity_lint_new!(
     "Wildcard imports are not allowed"
 );
 
+// Define specific lints for denied item types
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_DENIED_ITEMS_LINT,
+    MODULE_DENIED_ITEMS_LINT_DENY,
+    MODULE_DENIED_ITEMS_LINT_WARN,
+    "Module contains denied item types"
+);
+
 impl_lint_pass!(ModuleLint => [
     MODULE_LINT_DENY, MODULE_LINT_WARN,
     MODULE_MUST_BE_NAMED_LINT_DENY, MODULE_MUST_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY, MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_EMPTY_LINT_DENY, MODULE_MUST_NOT_BE_EMPTY_LINT_WARN,
     MODULE_RESTRICT_IMPORTS_LINT_DENY, MODULE_RESTRICT_IMPORTS_LINT_WARN,
-    MODULE_WILDCARD_IMPORT_LINT_DENY, MODULE_WILDCARD_IMPORT_LINT_WARN
+    MODULE_WILDCARD_IMPORT_LINT_DENY, MODULE_WILDCARD_IMPORT_LINT_WARN,
+    MODULE_DENIED_ITEMS_LINT_DENY, MODULE_DENIED_ITEMS_LINT_WARN
 ]);
 
 impl ArchitectureLintRule for ModuleLint {
@@ -420,6 +437,38 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     // Also check nested modules for wildcard imports
                     if let ItemKind::Mod(module) = &item.kind {
                         self.check_for_wildcard_imports(ctx, module, rule_info.severity);
+                    }
+                },
+                ModuleRuleType::DeniedItems(denied_items) => {
+                    // Get the item type as a string
+                    let item_type = match &item.kind {
+                        ItemKind::Enum(..) => "enum",
+                        ItemKind::Struct(..) => "struct",
+                        ItemKind::Trait(..) => "trait",
+                        ItemKind::Impl(..) => "impl",
+                        ItemKind::Fn { .. } => "function",
+                        ItemKind::Mod(..) => "module",
+                        ItemKind::Static(..) => "static",
+                        ItemKind::Const(..) => "const",
+                        ItemKind::Union(..) => "union",
+                        _ => "",
+                    };
+                    
+                    // Check if the current item type is in the denied list
+                    if !item_type.is_empty() && denied_items.contains(&item_type.to_string()) {
+                        let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
+                        span_lint_and_help(
+                            ctx,
+                            MODULE_DENIED_ITEMS_LINT::get_by_severity(rule_info.severity),
+                            self.name().as_str(),
+                            item.span,
+                            format!(
+                                "{} '{}' is not allowed in this module",
+                                item_type, item_name
+                            ),
+                            None,
+                            "Consider moving this item to a different module",
+                        );
                     }
                 },
             }

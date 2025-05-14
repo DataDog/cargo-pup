@@ -96,6 +96,10 @@ pub enum ModuleRule {
         severity: Severity,
     },
     NoWildcardImports(Severity),
+    DeniedItems {
+        items: Vec<String>,
+        severity: Severity,
+    },
     And(Box<ModuleRule>, Box<ModuleRule>),
     Or(Box<ModuleRule>, Box<ModuleRule>),
     Not(Box<ModuleRule>),
@@ -205,6 +209,15 @@ impl<'a> ModuleConstraintBuilder<'a> {
     
     pub fn must_not_be_named(mut self, name: String) -> Self {
         self.add_rule_internal(ModuleRule::MustNotBeNamed(name, self.current_severity));
+        self
+    }
+    
+    // Helper method for DeniedItems rule
+    pub fn denied_items(mut self, items: Vec<String>) -> Self {
+        self.add_rule_internal(ModuleRule::DeniedItems { 
+            items, 
+            severity: self.current_severity 
+        });
         self
     }
 }
