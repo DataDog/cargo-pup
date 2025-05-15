@@ -92,7 +92,27 @@ warning: Use of module 'std::collections::HashMap' is denied
   = note: Applied by cargo-pup rule 'module_lint'.
   = note: `#[warn(module_restrict_imports_lint)]` on by default
 
-DEBUG: Checking MustBeEmpty on 'test_app::must_be_empty'. Matches? true
+warning: Item 'this_should_not_be_here' not allowed in empty module
+ --> src/must_be_empty.rs:4:1
+  |
+4 | / pub fn this_should_not_be_here() {
+5 | |     println!("This function violates the MustBeEmpty lint rule");
+6 | | }
+  | |_^
+  |
+  = help: Remove this item from the module, which must be empty
+  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: `#[warn(module_must_be_empty_lint)]` on by default
+
+warning: Item 'ALSO_NOT_ALLOWED' not allowed in empty module
+ --> src/must_be_empty.rs:8:1
+  |
+8 | pub const ALSO_NOT_ALLOWED: &str = "This const also violates the MustBeEmpty rule"; 
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: Remove this item from the module, which must be empty
+  = note: Applied by cargo-pup rule 'module_lint'.
+
 warning: Module must be empty
  --> src/main.rs:8:1
   |
@@ -101,7 +121,6 @@ warning: Module must be empty
   |
   = help: Remove all content from this module
   = note: Applied by cargo-pup rule 'module_lint'.
-  = note: `#[warn(module_must_be_empty_lint)]` on by default
 
 warning: Error type 'i32' in Result does not implement Error trait
   --> src/result_error/mod.rs:14:1
@@ -150,4 +169,4 @@ warning: Struct 'MyBadlyNamedThing' is public, but must be private
    = note: Applied by cargo-pup rule 'struct_lint'.
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
-warning: `test_app` (bin "test_app") generated 15 warnings
+warning: `test_app` (bin "test_app") generated 17 warnings
