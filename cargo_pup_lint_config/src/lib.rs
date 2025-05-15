@@ -3,6 +3,8 @@ mod module_lint;
 mod struct_lint;
 mod function_lint;
 
+pub use lint_builder::LintBuilder;
+
 // Make sure our extenions are visible
 pub use module_lint::{ModuleMatch, ModuleLintExt, ModuleRule, ModuleMatcher, ModuleMatchNode, matcher as module_matcher};
 pub use struct_lint::{StructMatch, StructLintExt, StructRule, StructMatcher, StructMatchNode, matcher as struct_matcher};

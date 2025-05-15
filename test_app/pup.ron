@@ -1,0 +1,45 @@
+[
+    Module((
+        name: "module_lint",
+        matches: Module("^test_app::function_length$"),
+        rules: [
+            MustNotBeEmpty(Warn),
+        ],
+    )),
+    Module((
+        name: "module_lint",
+        matches: Module("^test_app::module_usage$"),
+        rules: [
+            RestrictImports(
+                allowed_only: None,
+                denied: Some([
+                    "^std::collections",
+                ]),
+                severity: Warn,
+            ),
+            NoWildcardImports(Warn),
+        ],
+    )),
+    Module((
+        name: "module_lint",
+        matches: Module("^test_app::empty_mod$"),
+        rules: [
+            MustNotBeEmpty(Warn),
+        ],
+    )),
+    Module((
+        name: "module_lint",
+        matches: Module("^test_app::item_type$"),
+        rules: [
+            DeniedItems(
+                items: [
+                    "struct",
+                    "enum",
+                    "trait",
+                    "module",
+                ],
+                severity: Warn,
+            ),
+        ],
+    )),
+]
