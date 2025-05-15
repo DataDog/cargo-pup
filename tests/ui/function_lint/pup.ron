@@ -181,6 +181,61 @@
                     )
                 ]
             )
+        ),
+        
+        // ===== NAMED TYPE TEST RULES =====
+        
+        // Rule targeting functions that return CustomType (exact name match)
+        Function(
+            (
+                name: "named_type_custom_type_test",
+                matches: AndMatches(
+                    InModule("^test_returns_type::"),
+                    ReturnsType(Named("test_returns_type::CustomType"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Very strict to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule targeting functions that return MyError (exact name match)
+        Function(
+            (
+                name: "named_type_my_error_test",
+                matches: AndMatches(
+                    InModule("^test_returns_type::"),
+                    ReturnsType(Named("test_returns_type::MyError"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Very strict to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // ===== REGEX TYPE TEST RULES =====
+        
+        // Rule targeting functions that return Vec<anything> using regex
+        Function(
+            (
+                name: "regex_type_vec_test",
+                matches: AndMatches(
+                    InModule("^test_returns_type::"),
+                    ReturnsType(Regex("std::vec::Vec<.*>"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Very strict to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
         )
     ]
 ) 

@@ -72,6 +72,36 @@ mod inner_module {
     }
 }
 
+// ====== Named Type Matching Tests ======
+
+// Function that returns a CustomType - will be matched with a named type matcher
+fn returns_custom_type() -> CustomType { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
+    let value = 42;
+    CustomType { value }
+}
+
+// Function that returns MyError - will also be matched with a named type matcher
+fn returns_my_error() -> MyError { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
+    let msg = "error message".to_string();
+    MyError { message: msg }
+}
+
+// ====== Regex Type Matching Tests ======
+
+// This function returns Vec<i32> - will be matched with regex for Vec<.*>
+fn returns_vec_of_ints() -> Vec<i32> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
+    let mut v = Vec::new();
+    v.push(42);
+    v
+}
+
+// This function returns Vec<String> - will also be matched with regex for Vec<.*>
+fn returns_vec_of_strings() -> Vec<String> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
+    let mut v = Vec::new();
+    v.push("hello".to_string());
+    v
+}
+
 // Custom error type
 #[derive(Debug)]
 struct MyError {
