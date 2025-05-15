@@ -1,0 +1,17 @@
+error: Module must be empty
+  --> tests/ui/module_lint_new/must_be_empty.rs:15:1
+   |
+LL | / pub mod non_empty_module {
+LL | |     pub fn invalid_function() {
+LL | |         println!("This module should be empty");
+...  |
+LL | |     pub const INVALID_CONST: &str = "Content not allowed";
+LL | | } 
+   | |_^
+   |
+   = help: Remove all content from this module
+   = note: Applied by cargo-pup rule 'must_be_empty_test'.
+   = note: `#[deny(module_must_be_empty_lint)]` on by default
+
+error: aborting due to 1 previous error
+

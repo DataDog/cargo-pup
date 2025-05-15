@@ -7,6 +7,13 @@
                 MustNotBeEmpty(Warn),
             ],
         )),
+        Function((
+            name: "function_lint",
+            matches: InModule("^test_app::function_length$"),
+            rules: [
+                MaxLength(5, Warn),
+            ],
+        )),
         Module((
             name: "module_lint",
             matches: Module("^test_app::module_usage$"),
@@ -30,6 +37,13 @@
         )),
         Module((
             name: "module_lint",
+            matches: Module("^test_app::must_be_empty$"),
+            rules: [
+                MustBeEmpty(Warn),
+            ],
+        )),
+        Module((
+            name: "module_lint",
             matches: Module("^test_app::item_type$"),
             rules: [
                 DeniedItems(
@@ -49,6 +63,13 @@
             rules: [
                 MustBeNamed(".*MyTraitImpl$", Warn),
                 MustBePrivate(Warn),
+            ],
+        )),
+        Function((
+            name: "function_lint",
+            matches: InModule("^test_app::result_error$"),
+            rules: [
+                ResultErrorMustImplementError(Warn),
             ],
         )),
     ],

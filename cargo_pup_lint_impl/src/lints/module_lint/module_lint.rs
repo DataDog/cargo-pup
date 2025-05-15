@@ -30,6 +30,7 @@ enum ModuleRuleType {
     MustBeNamed(String),
     MustNotBeNamed(String),
     MustNotBeEmpty,
+    MustBeEmpty,
     RestrictImports {
         allowed_only: Option<Vec<String>>,
         denied: Option<Vec<String>>,
@@ -58,6 +59,11 @@ impl ModuleLint {
                         ModuleRule::MustNotBeEmpty(severity) => 
                             Some(ModuleRuleInfo {
                                 rule_type: ModuleRuleType::MustNotBeEmpty,
+                                severity: *severity
+                            }),
+                        ModuleRule::MustBeEmpty(severity) => 
+                            Some(ModuleRuleInfo {
+                                rule_type: ModuleRuleType::MustBeEmpty,
                                 severity: *severity
                             }),
                         ModuleRule::RestrictImports { allowed_only, denied, severity } => {
@@ -236,11 +242,20 @@ declare_variable_severity_lint_new!(
     "Module contains denied item types"
 );
 
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_MUST_BE_EMPTY_LINT,
+    MODULE_MUST_BE_EMPTY_LINT_DENY, 
+    MODULE_MUST_BE_EMPTY_LINT_WARN,
+    "Module must be empty"
+);
+
 impl_lint_pass!(ModuleLint => [
     MODULE_LINT_DENY, MODULE_LINT_WARN,
     MODULE_MUST_BE_NAMED_LINT_DENY, MODULE_MUST_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY, MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_EMPTY_LINT_DENY, MODULE_MUST_NOT_BE_EMPTY_LINT_WARN,
+    MODULE_MUST_BE_EMPTY_LINT_DENY, MODULE_MUST_BE_EMPTY_LINT_WARN,
     MODULE_RESTRICT_IMPORTS_LINT_DENY, MODULE_RESTRICT_IMPORTS_LINT_WARN,
     MODULE_WILDCARD_IMPORT_LINT_DENY, MODULE_WILDCARD_IMPORT_LINT_WARN,
     MODULE_DENIED_ITEMS_LINT_DENY, MODULE_DENIED_ITEMS_LINT_WARN
@@ -278,11 +293,20 @@ impl ArchitectureLintRule for ModuleLint {
 impl<'tcx> LateLintPass<'tcx> for ModuleLint {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
         let parent_item = ctx.tcx.hir_get_parent_item(item.hir_id());
-        let module_path = get_full_module_name(&ctx.tcx, &parent_item);
+        let parent_module_path = get_full_module_name(&ctx.tcx, &parent_item);
         
-        // Check if this module_lint matches our patterns
-        if !self.matches_module(&module_path) {
-            return;
+        // Check if the parent module matches our patterns (original behavior)
+        if !self.matches_module(&parent_module_path) {
+            // Get the full path of the current item for module-specific rules
+            if let ItemKind::Mod(_) = item.kind {
+                let full_item_path = get_full_module_name(&ctx.tcx, &item.owner_id);
+                // If neither the parent nor the full item path match, return
+                if !self.matches_module(&full_item_path) {
+                    return;
+                }
+            } else {
+                return;
+            }
         }
         
         // Apply each rule
@@ -357,6 +381,22 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 "Module must not be empty",
                                 None,
                                 "Add content to this module or remove it",
+                            );
+                        }
+                    }
+                },
+                ModuleRuleType::MustBeEmpty => {
+                    if let ItemKind::Mod(module_data) = item.kind {
+                        if !module_data.item_ids.is_empty() {
+                            // If the module is not empty, that's a violation
+                            span_lint_and_help(
+                                ctx,
+                                MODULE_MUST_BE_EMPTY_LINT::get_by_severity(rule_info.severity),
+                                self.name().as_str(),
+                                item.span,
+                                "Module must be empty",
+                                None,
+                                "Remove all content from this module",
                             );
                         }
                     }

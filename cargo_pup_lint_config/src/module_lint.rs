@@ -90,6 +90,7 @@ pub enum ModuleRule {
     MustBeNamed(String, Severity),
     MustNotBeNamed(String, Severity),
     MustNotBeEmpty(Severity),
+    MustBeEmpty(Severity),
     RestrictImports {
         allowed_only: Option<Vec<String>>,
         denied: Option<Vec<String>>,
@@ -179,6 +180,12 @@ impl<'a> ModuleConstraintBuilder<'a> {
     // Helper method for feature #10: Empty Module Detection
     pub fn must_not_be_empty(mut self) -> Self {
         self.add_rule_internal(ModuleRule::MustNotBeEmpty(self.current_severity));
+        self
+    }
+    
+    // Helper method for requiring a module to be empty
+    pub fn must_be_empty(mut self) -> Self {
+        self.add_rule_internal(ModuleRule::MustBeEmpty(self.current_severity));
         self
     }
     

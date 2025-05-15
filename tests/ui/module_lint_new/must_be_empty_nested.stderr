@@ -1,0 +1,17 @@
+error: Module must be empty
+  --> tests/ui/module_lint_new/must_be_empty_nested.rs:12:5
+   |
+LL | /     pub mod nested_target {
+LL | |         pub fn invalid_function() {
+LL | |             println!("This shouldn't be here");
+...  |
+LL | |         pub struct InvalidStruct;
+LL | |     }
+   | |_____^
+   |
+   = help: Remove all content from this module
+   = note: Applied by cargo-pup rule 'must_be_empty_nested_test'.
+   = note: `#[deny(module_must_be_empty_lint)]` on by default
+
+error: aborting due to 1 previous error
+

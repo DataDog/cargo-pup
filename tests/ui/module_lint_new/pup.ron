@@ -39,6 +39,28 @@
             )
         ),
         
+        // Test MustBeEmpty rule - modules must be empty
+        Module(
+            (
+                name: "must_be_empty_test",
+                matches: Module("^test_must_be_empty$"),
+                rules: [
+                    MustBeEmpty(Error)
+                ]
+            )
+        ),
+        
+        // Test MustBeEmpty rule with nested modules - only target specific nested module
+        Module(
+            (
+                name: "must_be_empty_nested_test",
+                matches: Module("test_must_be_empty_nested::parent_module::nested_target"),
+                rules: [
+                    MustBeEmpty(Error)
+                ]
+            )
+        ),
+        
         // Test RestrictImports rule - control which modules can be imported
         Module(
             (
