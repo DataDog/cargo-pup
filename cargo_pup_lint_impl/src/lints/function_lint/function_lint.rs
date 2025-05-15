@@ -59,94 +59,56 @@ impl FunctionLint {
                 
                 match pattern {
                     ReturnTypePattern::Result => {
-                        // Try different approaches to identify Result
+                        // Check for Adt with Result path
+                        if let TyKind::Adt(adt_def, _) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            return path.contains("result::Result");
+                        }
                         
-                        // 1. Check for ADT with Result path
-                        let adt_result = match return_ty.kind() {
-                            TyKind::Adt(adt_def, _) => {
-                                let path = ctx.tcx.def_path_str(adt_def.did());
-                                path.contains("result::Result")
-                            },
-                            _ => false,
-                        };
-                        
-                        // 2. Use string representation as fallback
-                        let string_result = if !adt_result {
-                            let type_string = return_ty.to_string();
-                            type_string.contains("Result<")
-                        } else {
-                            false
-                        };
-                        
-                        adt_result || string_result
+                        // Fallback: use the string representation 
+                        let type_string = return_ty.to_string();
+                        type_string.contains("Result<")
                     },
                     ReturnTypePattern::Option => {
-                        // Try different approaches to identify Option
+                        // Check for Adt with Option path
+                        if let TyKind::Adt(adt_def, _) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            return path.contains("option::Option");
+                        }
                         
-                        // 1. Check for ADT with Option path
-                        let adt_result = match return_ty.kind() {
-                            TyKind::Adt(adt_def, _) => {
-                                let path = ctx.tcx.def_path_str(adt_def.did());
-                                path.contains("option::Option")
-                            },
-                            _ => false,
-                        };
-                        
-                        // 2. Use string representation as fallback
-                        let string_result = if !adt_result {
-                            let type_string = return_ty.to_string();
-                            type_string.contains("Option<")
-                        } else {
-                            false
-                        };
-                        
-                        adt_result || string_result
+                        // Fallback: use the string representation
+                        let type_string = return_ty.to_string();
+                        type_string.contains("Option<")
                     },
                     ReturnTypePattern::Named(name) => {
-                        // Try different approaches to identify named type
+                        // Check for Adt with the exact name
+                        if let TyKind::Adt(adt_def, _) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            
+                            // Try to match the simple name at the end of the path
+                            if path.ends_with(&format!("::{}", name)) || path == *name {
+                                return true;
+                            }
+                            
+                            // Extract the type name without module path
+                            if let Some(last_segment) = path.split("::").last() {
+                                if last_segment == *name {
+                                    return true;
+                                }
+                            }
+                        }
                         
-                        // 1. Check for ADT with specific path
-                        let adt_result = match return_ty.kind() {
-                            TyKind::Adt(adt_def, _) => {
-                                let path = ctx.tcx.def_path_str(adt_def.did());
-                                path == *name
-                            },
-                            _ => false,
-                        };
-                        
-                        // 2. Use string representation as fallback
-                        let string_result = if !adt_result {
-                            let type_string = return_ty.to_string();
-                            type_string == *name
-                        } else {
-                            false
-                        };
-                        
-                        adt_result || string_result
+                        // Fallback: use the string representation
+                        let type_string = return_ty.to_string();
+                        type_string == *name || type_string.ends_with(&format!("::{}", name))
                     },
-                    ReturnTypePattern::Regex(pattern) => {
-                        match Regex::new(pattern) {
+                    ReturnTypePattern::Regex(regex_pattern) => {
+                        // Try to compile and use the regex pattern
+                        match Regex::new(regex_pattern) {
                             Ok(regex) => {
-                                // Try different approaches for regex matching
-                                
-                                // 1. Check for ADT with matching path
-                                let adt_result = match return_ty.kind() {
-                                    TyKind::Adt(adt_def, _) => {
-                                        let path = ctx.tcx.def_path_str(adt_def.did());
-                                        regex.is_match(&path)
-                                    },
-                                    _ => false,
-                                };
-                                
-                                // 2. Use string representation as fallback
-                                let string_result = if !adt_result {
-                                    let type_string = return_ty.to_string();
-                                    regex.is_match(&type_string)
-                                } else {
-                                    false
-                                };
-                                
-                                adt_result || string_result
+                                // Check the string representation of the type against the regex
+                                let type_string = return_ty.to_string();
+                                regex.is_match(&type_string)
                             },
                             Err(_) => false,
                         }

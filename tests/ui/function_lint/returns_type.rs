@@ -3,112 +3,88 @@
 
 // This test verifies that the FunctionLint's ReturnsType matcher works correctly
 
-// ====== Basic Return Type Tests ======
+// ====== Result Type Tests ======
 
-// Function returns Result<(), i32> and should trigger the lint
-fn function_with_result() -> Result<(), i32> {
+// Function returns Result<(), i32> and should trigger the Result matcher
+fn test_result_simple() -> Result<(), i32> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
     Ok(())
 }
 
 // Function returns Result with a custom error type
-fn function_with_custom_result() -> Result<String, MyError> {
+fn test_result_custom_error() -> Result<String, MyError> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
     Ok("Success".to_string())
 }
 
-// Function returns Option<i32>, not Result
-fn function_with_option() -> Option<i32> {
+// ====== Option Type Tests ======
+
+// Function returns Option<i32>
+fn test_option_simple() -> Option<i32> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
     Some(42)
 }
 
-// Function returns a String, not Result or Option
-fn function_with_string() -> String {
-    "Not a result".to_string()
+// Function returns Option<String>
+fn test_option_string() -> Option<String> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
+    Some("test".to_string())
 }
 
-// Function returns a custom type, not Result or Option
-fn function_with_custom_type() -> CustomType {
-    CustomType { value: 10 }
-}
+// ====== Named Type Tests ======
 
-// Function returns Result and exceeds the line limit (should trigger both matchers)
-fn long_function_with_result() -> Result<(), i32> { //~ ERROR: Function exceeds maximum length of 3 lines with 5 lines
-    let x = 1;
-    let y = x + 1;
-    Ok(())
-}
-
-// ====== Methods in Structs ======
-
-pub struct TestStruct;
-
-impl TestStruct {
-    // Method returns Result
-    fn method_with_result(&self) -> Result<(), i32> {
-        Ok(())
-    }
-    
-    // Method returns Option
-    fn method_with_option(&self) -> Option<i32> {
-        Some(42)
-    }
-    
-    // Method returns String (not Result or Option)
-    fn method_returns_string(&self) -> String {
-        "Not a result".to_string()
+// Function returns CustomType (tests Named pattern)
+fn test_custom_type_function() -> CustomType { //~ ERROR: Function exceeds maximum length of 1 lines with 5 lines
+    CustomType {
+        value: 42
     }
 }
 
-// ====== Module-based Return Type Tests ======
+// Function returns MyError (tests Named pattern)
+fn test_my_error_function() -> MyError { //~ ERROR: Function exceeds maximum length of 1 lines with 5 lines
+    MyError {
+        message: "Error".to_string()
+    }
+}
+
+// ====== Regex Type Tests ======
+
+// Function returns Vec<i32> (tests Regex pattern)
+fn test_vec_integers() -> Vec<i32> { //~ ERROR: Function exceeds maximum length of 1 lines with 6 lines
+    let mut v = Vec::new();
+    v.push(1);
+    v.push(2);
+    return v;
+}
+
+// Function returns Vec<String> (tests Regex pattern)
+fn test_vec_strings() -> Vec<String> { //~ ERROR: Function exceeds maximum length of 1 lines with 6 lines
+    let mut v = Vec::new();
+    v.push("Hello".to_string());
+    v.push("World".to_string());
+    return v;
+}
+
+// ====== Module-based Tests ======
 
 mod inner_module {
-    // Function in module returning Result
-    pub fn module_function_result() -> Result<(), i32> { //~ ERROR: Function exceeds maximum length of 2 lines with 3 lines
+    // Function in module returns Result
+    pub fn module_result_function() -> Result<(), i32> { 
+        //~^ ERROR: Function exceeds maximum length of 2 lines with 5 lines
+        //~| ERROR: Function exceeds maximum length of 1 lines with 5 lines
         Ok(())
     }
     
-    // Function in module returning Option
-    pub fn module_function_option() -> Option<i32> { //~ ERROR: Function exceeds maximum length of 2 lines with 3 lines
+    // Function in module returns Option
+    pub fn module_option_function() -> Option<i32> { 
+        //~^ ERROR: Function exceeds maximum length of 2 lines with 5 lines
+        //~| ERROR: Function exceeds maximum length of 1 lines with 5 lines
         Some(42)
     }
 }
 
-// ====== Named Type Matching Tests ======
+// ====== Type Definitions ======
 
-// Function that returns a CustomType - will be matched with a named type matcher
-fn returns_custom_type() -> CustomType { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
-    let value = 42;
-    CustomType { value }
+pub struct CustomType {
+    pub value: i32,
 }
 
-// Function that returns MyError - will also be matched with a named type matcher
-fn returns_my_error() -> MyError { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
-    let msg = "error message".to_string();
-    MyError { message: msg }
-}
-
-// ====== Regex Type Matching Tests ======
-
-// This function returns Vec<i32> - will be matched with regex for Vec<.*>
-fn returns_vec_of_ints() -> Vec<i32> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
-    let mut v = Vec::new();
-    v.push(42);
-    v
-}
-
-// This function returns Vec<String> - will also be matched with regex for Vec<.*>
-fn returns_vec_of_strings() -> Vec<String> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
-    let mut v = Vec::new();
-    v.push("hello".to_string());
-    v
-}
-
-// Custom error type
-#[derive(Debug)]
-struct MyError {
-    message: String,
-}
-
-// Custom return type
-struct CustomType {
-    value: i32,
+pub struct MyError {
+    pub message: String,
 } 

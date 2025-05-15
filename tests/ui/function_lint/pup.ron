@@ -1,5 +1,9 @@
 (
     lints: [
+        // ======================================================================
+        // SECTION: Function Length Tests (for function_length.rs)
+        // ======================================================================
+        
         // Basic function length limit that applies to functions starting with "too_long" 
         // but NOT containing "with_prefix"
         Function(
@@ -36,7 +40,7 @@
         Function(
             (
                 name: "module_based_function_length_test",
-                matches: InModule("::inner_module.*"),
+                matches: InModule("::inner_module"),
                 rules: [
                     MaxLength(
                         2,   // Very strict limit for functions in this module (2 lines)
@@ -46,7 +50,11 @@
             )
         ),
         
-        // AND rule test - functions with prefix AND in specific module
+        // ======================================================================
+        // SECTION: Combined Rules Tests (for combined_rules.rs)
+        // ======================================================================
+        
+        // AND rule test - functions with prefix AND in specific name pattern
         Function(
             (
                 name: "and_rule_test",
@@ -96,142 +104,123 @@
             )
         ),
         
-        // ===== RETURN TYPE TEST RULES =====
+        // ======================================================================
+        // SECTION: Return Type Tests (for returns_type.rs)
+        // ======================================================================
         
-        // Basic rule for functions returning Result types
+        // Rule for functions returning Result types
         Function(
             (
-                name: "function_returns_result_test",
+                name: "result_return_type_test",
                 matches: AndMatches(
-                    InModule("^test_returns_type::"),
+                    NameRegex("^test_result_"),
                     ReturnsType(Result)
                 ),
                 rules: [
                     MaxLength(
-                        10,  // High limit to just test the matcher, not the line count
+                        1,  // Strict limit to ensure it triggers
                         Warn,
                     )
                 ]
             )
         ),
         
-        // Basic rule for functions returning Option types
+        // Rule for functions returning Option types
         Function(
             (
-                name: "function_returns_option_test",
+                name: "option_return_type_test",
                 matches: AndMatches(
-                    InModule("^test_returns_type::"),
+                    NameRegex("^test_option_"),
                     ReturnsType(Option)
                 ),
                 rules: [
                     MaxLength(
-                        10,  // High limit to just test the matcher, not the line count
+                        1,  // Strict limit to ensure it triggers
                         Warn,
                     )
                 ]
             )
         ),
         
-        // Rule for functions returning Result types with stricter line limits
+        // Rule for functions returning CustomType (named type)
         Function(
             (
-                name: "result_function_length_test",
+                name: "custom_type_return_test",
                 matches: AndMatches(
-                    ReturnsType(Result),
-                    NameRegex("^long_function_with.*")
+                    NameRegex("^test_custom_type_"),
+                    ReturnsType(Named("CustomType"))
                 ),
                 rules: [
                     MaxLength(
-                        3,   // Strict limit for functions with "long" in name
+                        1,  // Strict limit to ensure it triggers
                         Warn,
                     )
                 ]
             )
         ),
         
-        // Module-based rule for functions returning Result in specific module
+        // Rule for functions returning MyError (another named type)
+        Function(
+            (
+                name: "my_error_return_test",
+                matches: AndMatches(
+                    NameRegex("^test_my_error_"),
+                    ReturnsType(Named("MyError"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Strict limit to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for functions returning Vec<T> (regex type)
+        Function(
+            (
+                name: "vec_return_type_test",
+                matches: AndMatches(
+                    NameRegex("^test_vec_"),
+                    ReturnsType(Regex("Vec<.*>"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Strict limit to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for module functions returning Result
         Function(
             (
                 name: "module_result_test",
                 matches: AndMatches(
-                    InModule("^test_returns_type::inner_module"),
+                    NameEquals("module_result_function"),
                     ReturnsType(Result)
                 ),
                 rules: [
                     MaxLength(
-                        10,  // Just testing the matcher 
+                        1,  // Strict limit to ensure it triggers
                         Warn,
                     )
                 ]
             )
         ),
         
-        // Module-based rule for functions returning Option in specific module
+        // Rule for module functions returning Option
         Function(
             (
                 name: "module_option_test",
                 matches: AndMatches(
-                    InModule("^test_returns_type::inner_module"),
+                    NameEquals("module_option_function"),
                     ReturnsType(Option)
                 ),
                 rules: [
                     MaxLength(
-                        10,  // Just testing the matcher
-                        Warn,
-                    )
-                ]
-            )
-        ),
-        
-        // ===== NAMED TYPE TEST RULES =====
-        
-        // Rule targeting functions that return CustomType (exact name match)
-        Function(
-            (
-                name: "named_type_custom_type_test",
-                matches: AndMatches(
-                    InModule("^test_returns_type::"),
-                    ReturnsType(Named("test_returns_type::CustomType"))
-                ),
-                rules: [
-                    MaxLength(
-                        1,  // Very strict to ensure it triggers
-                        Warn,
-                    )
-                ]
-            )
-        ),
-        
-        // Rule targeting functions that return MyError (exact name match)
-        Function(
-            (
-                name: "named_type_my_error_test",
-                matches: AndMatches(
-                    InModule("^test_returns_type::"),
-                    ReturnsType(Named("test_returns_type::MyError"))
-                ),
-                rules: [
-                    MaxLength(
-                        1,  // Very strict to ensure it triggers
-                        Warn,
-                    )
-                ]
-            )
-        ),
-        
-        // ===== REGEX TYPE TEST RULES =====
-        
-        // Rule targeting functions that return Vec<anything> using regex
-        Function(
-            (
-                name: "regex_type_vec_test",
-                matches: AndMatches(
-                    InModule("^test_returns_type::"),
-                    ReturnsType(Regex("std::vec::Vec<.*>"))
-                ),
-                rules: [
-                    MaxLength(
-                        1,  // Very strict to ensure it triggers
+                        1,  // Strict limit to ensure it triggers
                         Warn,
                     )
                 ]
