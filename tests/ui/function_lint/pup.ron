@@ -94,6 +94,93 @@
                     )
                 ]
             )
+        ),
+        
+        // ===== RETURN TYPE TEST RULES =====
+        
+        // Basic rule for functions returning Result types
+        Function(
+            (
+                name: "function_returns_result_test",
+                matches: AndMatches(
+                    InModule("^test_returns_type::"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    MaxLength(
+                        10,  // High limit to just test the matcher, not the line count
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Basic rule for functions returning Option types
+        Function(
+            (
+                name: "function_returns_option_test",
+                matches: AndMatches(
+                    InModule("^test_returns_type::"),
+                    ReturnsType(Option)
+                ),
+                rules: [
+                    MaxLength(
+                        10,  // High limit to just test the matcher, not the line count
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for functions returning Result types with stricter line limits
+        Function(
+            (
+                name: "result_function_length_test",
+                matches: AndMatches(
+                    ReturnsType(Result),
+                    NameRegex("^long_function_with.*")
+                ),
+                rules: [
+                    MaxLength(
+                        3,   // Strict limit for functions with "long" in name
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Module-based rule for functions returning Result in specific module
+        Function(
+            (
+                name: "module_result_test",
+                matches: AndMatches(
+                    InModule("^test_returns_type::inner_module"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    MaxLength(
+                        10,  // Just testing the matcher 
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Module-based rule for functions returning Option in specific module
+        Function(
+            (
+                name: "module_option_test",
+                matches: AndMatches(
+                    InModule("^test_returns_type::inner_module"),
+                    ReturnsType(Option)
+                ),
+                rules: [
+                    MaxLength(
+                        10,  // Just testing the matcher
+                        Warn,
+                    )
+                ]
+            )
         )
     ]
 ) 
