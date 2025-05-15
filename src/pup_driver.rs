@@ -104,6 +104,10 @@ pub fn main() -> Result<()> {
                     ArchitectureLintCollection::new(lint_rules)
                 },
                 Err(e) => {
+                    // In UI tests, print detailed error messages about configuration issues
+                    eprintln!("UI TEST ERROR: Failed to parse pup.ron: {}", e);
+                    eprintln!("UI TEST ERROR: This may indicate a syntax error in the configuration file.");
+                    
                     // Check for pup.yaml as fallback
                     let yaml_path = test_dir.join("pup.yaml");
                     if yaml_path.exists() {
@@ -115,11 +119,13 @@ pub fn main() -> Result<()> {
                                         ArchitectureLintCollection::new(lint_rules)
                                     },
                                     Err(e) => {
+                                        eprintln!("UI TEST ERROR: Failed to parse pup.yaml fallback: {}", e);                                    
                                         ArchitectureLintCollection::new(Vec::new())
                                     }
                                 }
                             }
                             Err(e) => {
+                                eprintln!("UI TEST ERROR: Failed to read pup.yaml fallback: {}", e);
                                 ArchitectureLintCollection::new(Vec::new())
                             }
                         }
@@ -138,18 +144,28 @@ pub fn main() -> Result<()> {
                         match LintConfigurationFactory::from_yaml(yaml_content) {
                             Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
                             Err(e) => {
-                                println!("UI testing: Error loading pup.yaml with old factory: {:?}", e);
+                                eprintln!("UI TEST ERROR: Failed to parse pup.yaml: {}", e);
+                                
+                                // Create an error marker file
+                                let error_file = test_dir.join("CONFIG_ERROR.txt");
+                                if let Ok(mut file) = fs::File::create(&error_file) {
+                                    let _ = writeln!(file, "Failed to parse pup.yaml configuration file:");
+                                    let _ = writeln!(file, "{}", e);
+                                    let _ = writeln!(file, "\nThis file was created automatically by cargo-pup to indicate a configuration error.");
+                                    let _ = writeln!(file, "Please fix the configuration file and run the test again.");
+                                }
+                                
                                 ArchitectureLintCollection::new(Vec::new())
                             }
                         }
                     }
                     Err(e) => {
-                        println!("UI testing: Error reading pup.yaml: {:?}", e);
+                        eprintln!("UI TEST ERROR: Failed to read pup.yaml: {}", e);
                         ArchitectureLintCollection::new(Vec::new())
                     }
                 }
             } else {
-                println!("UI testing: No configuration file found in test directory");
+                eprintln!("UI TEST ERROR: No configuration file found in test directory");
                 ArchitectureLintCollection::new(Vec::new())
             }
         }

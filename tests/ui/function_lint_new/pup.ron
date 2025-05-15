@@ -8,7 +8,7 @@
                 rules: [
                     MaxLength(
                         10,  // Maximum allowed function length (10 lines)
-                        Warning, // Severity - just warning for test
+                        Warn, // Severity - just warning for test
                     )
                 ]
             )
@@ -25,7 +25,7 @@
                 rules: [
                     MaxLength(
                         10,  // Maximum allowed function length (10 lines)
-                        Warning, // Severity
+                        Warn, // Severity
                     )
                 ]
             )
@@ -45,7 +45,7 @@
                 rules: [
                     MaxLength(
                         10,  // Maximum allowed function length (10 lines)
-                        Warning, // Severity
+                        Warn, // Severity
                     )
                 ]
             )
@@ -62,7 +62,7 @@
                 rules: [
                     MaxLength(
                         2,  // Maximum allowed function length (2 lines)
-                        Warning, // Using Warning to match our stderr
+                        Warn, // Using Warn to match our stderr
                     )
                 ]
             )

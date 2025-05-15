@@ -83,6 +83,12 @@ impl LintConfigurationFactory {
                 }).collect())
             },
             Err(e) => {
+                // Extract an error line preview if possible
+                let error_preview = match content.lines().enumerate().take(10).map(|(i, line)| format!("{}: {}", i+1, line)).collect::<Vec<_>>() {
+                    lines if !lines.is_empty() => format!("\nFirst few lines of the file:\n{}", lines.join("\n")),
+                    _ => String::new()
+                };
+                
                 // If RON parsing fails, try as YAML
                 match serde_yaml::from_str::<LintBuilder>(content) {
                     Ok(lint_builder) => {
@@ -95,8 +101,11 @@ impl LintConfigurationFactory {
                         }).collect())
                     },
                     Err(yaml_err) => {
-                        // Neither format worked
-                        Err(anyhow!("Failed to parse as RON: {}; Failed to parse as YAML: {}", e, yaml_err))
+                        // Neither format worked - provide detailed error message
+                        Err(anyhow!("Failed to parse configuration file as RON: {}\n\
+                                    Also failed as YAML: {}\n\
+                                    Please check your configuration syntax.{}", 
+                                    e, yaml_err, error_preview))
                     }
                 }
             }
