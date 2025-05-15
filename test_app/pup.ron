@@ -43,5 +43,13 @@
                 ),
             ],
         )),
+        Struct((
+            name: "struct_lint",
+            matches: ImplementsTrait("^test_app::trait_impl::MyTrait$"),
+            rules: [
+                MustBeNamed(".*MyTraitImpl$", Warn),
+                MustBePrivate(Warn),
+            ],
+        )),
     ],
 )

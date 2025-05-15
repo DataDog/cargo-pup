@@ -160,7 +160,32 @@ declare_variable_severity_lint_new!(
     "Struct naming and attribute rules"
 );
 
-impl_lint_pass!(StructLint => [STRUCT_LINT_MUST_BE_NAMED_DENY, STRUCT_LINT_MUST_BE_NAMED_WARN, STRUCT_LINT_MUST_NOT_BE_NAMED_DENY, STRUCT_LINT_MUST_NOT_BE_NAMED_WARN]);
+declare_variable_severity_lint_new!(
+    pub,
+    STRUCT_LINT_MUST_BE_PRIVATE,
+    STRUCT_LINT_MUST_BE_PRIVATE_DENY, 
+    STRUCT_LINT_MUST_BE_PRIVATE_WARN,
+    "Struct must have private visibility"
+);
+
+declare_variable_severity_lint_new!(
+    pub,
+    STRUCT_LINT_MUST_BE_PUBLIC,
+    STRUCT_LINT_MUST_BE_PUBLIC_DENY, 
+    STRUCT_LINT_MUST_BE_PUBLIC_WARN,
+    "Struct must have public visibility"
+);
+
+impl_lint_pass!(StructLint => [
+    STRUCT_LINT_MUST_BE_NAMED_DENY, 
+    STRUCT_LINT_MUST_BE_NAMED_WARN, 
+    STRUCT_LINT_MUST_NOT_BE_NAMED_DENY, 
+    STRUCT_LINT_MUST_NOT_BE_NAMED_WARN,
+    STRUCT_LINT_MUST_BE_PRIVATE_DENY,
+    STRUCT_LINT_MUST_BE_PRIVATE_WARN,
+    STRUCT_LINT_MUST_BE_PUBLIC_DENY,
+    STRUCT_LINT_MUST_BE_PUBLIC_WARN
+]);
 
 impl ArchitectureLintRule for StructLint {
     fn name(&self) -> String {
@@ -221,6 +246,10 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                 span.with_hi(end_pos)
             };
             
+            // Get visibility of the struct
+            let struct_visibility = ctx.tcx.visibility(def_id);
+            let is_public = struct_visibility == rustc_middle::ty::Visibility::Public;
+            
             // Apply rules
             for rule in &self.struct_rules {
                 match rule {
@@ -267,6 +296,32 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                                 message,
                                 None,
                                 help,
+                            );
+                        }
+                    },
+                    StructRule::MustBePrivate(severity) => {
+                        if is_public {
+                            span_lint_and_help(
+                                ctx,
+                                STRUCT_LINT_MUST_BE_PRIVATE::get_by_severity(*severity),
+                                self.name().as_str(),
+                                definition_span,
+                                format!("Struct '{}' is public, but must be private", item_name),
+                                None,
+                                "Remove the 'pub' visibility modifier",
+                            );
+                        }
+                    },
+                    StructRule::MustBePublic(severity) => {
+                        if !is_public {
+                            span_lint_and_help(
+                                ctx,
+                                STRUCT_LINT_MUST_BE_PUBLIC::get_by_severity(*severity),
+                                self.name().as_str(),
+                                definition_span,
+                                format!("Struct '{}' is private, but must be public", item_name),
+                                None,
+                                "Add the 'pub' visibility modifier",
                             );
                         }
                     },

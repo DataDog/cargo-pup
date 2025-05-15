@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::ConfiguredLint;
 use super::Severity;
-use regex::Regex;
 
 // === Struct Matcher DSL === //
 
@@ -120,6 +119,8 @@ pub struct StructLint {
 pub enum StructRule {
     MustBeNamed(String, Severity),
     MustNotBeNamed(String, Severity),
+    MustBePrivate(Severity),
+    MustBePublic(Severity),
     And(Box<StructRule>, Box<StructRule>),
     Or(Box<StructRule>, Box<StructRule>),
     Not(Box<StructRule>),
@@ -127,6 +128,8 @@ pub enum StructRule {
 
 // === Fluent Builder for Struct Lints === //
 
+// This is the trait for struct lint operations, ideally these would be implemented
+// for LintBuilder, but for now we'll use the builder pattern approach
 pub trait StructLintExt {
     fn struct_lint<'a>(&'a mut self) -> StructMatchBuilder<'a>;
 }
@@ -205,5 +208,69 @@ impl<'a> StructConstraintBuilder<'a> {
     pub fn must_not_be_named(mut self, name: String) -> Self {
         self.add_rule_internal(StructRule::MustNotBeNamed(name, self.current_severity));
         self
+    }
+    
+    // Add new visibility rule methods
+    pub fn must_be_private(mut self) -> Self {
+        self.add_rule_internal(StructRule::MustBePrivate(self.current_severity));
+        self
+    }
+    
+    pub fn must_be_public(mut self) -> Self {
+        self.add_rule_internal(StructRule::MustBePublic(self.current_severity));
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lint_builder::LintBuilder;
+    use crate::Severity;
+    
+    // ... existing tests ...
+    
+    #[test]
+    fn test_struct_visibility_rules() {
+        let mut builder = LintBuilder::new();
+        
+        // Test both visibility rules
+        builder.struct_lint()
+            .matching(|m| m.name("UserModel"))
+            .with_severity(Severity::Error)
+            .must_be_private() // First rule
+            .build();
+            
+        builder.struct_lint()
+            .matching(|m| m.name("PublicAPI"))
+            .with_severity(Severity::Warn)
+            .must_be_public() // Second rule
+            .build();
+        
+        assert_eq!(builder.lints.len(), 2);
+        
+        // Check private rule
+        if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
+            assert_eq!(struct_lint.rules.len(), 1);
+            if let StructRule::MustBePrivate(severity) = &struct_lint.rules[0] {
+                assert_eq!(severity, &Severity::Error);
+            } else {
+                panic!("Expected MustBePrivate rule");
+            }
+        } else {
+            panic!("Expected Struct lint type");
+        }
+        
+        // Check public rule
+        if let ConfiguredLint::Struct(struct_lint) = &builder.lints[1] {
+            assert_eq!(struct_lint.rules.len(), 1);
+            if let StructRule::MustBePublic(severity) = &struct_lint.rules[0] {
+                assert_eq!(severity, &Severity::Warn);
+            } else {
+                panic!("Expected MustBePublic rule");
+            }
+        } else {
+            panic!("Expected Struct lint type");
+        }
     }
 }
