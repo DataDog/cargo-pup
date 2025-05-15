@@ -106,23 +106,15 @@ impl Error for CommandExitStatus {}
 /// Validates the current directory to determine the project type
 fn validate_project() -> ProjectType {
     let pup_yaml_path = Path::new("./pup.yaml");
+    let pup_ron_path = Path::new("./pup.ron");
     let cargo_toml_path = Path::new("./Cargo.toml");
 
     let has_pup_yaml = pup_yaml_path.exists();
+    let has_pup_ron = pup_ron_path.exists();
     let has_cargo_toml = cargo_toml_path.exists();
 
-    #[cfg(test)]
-    {
-        // For tests, check again to be extra sure
-        let pup_exists = std::fs::metadata("./pup.yaml").is_ok();
-        let cargo_exists = std::fs::metadata("./Cargo.toml").is_ok();
-        println!(
-            "validate_project debug - pup.yaml exists: {}/{}, Cargo.toml exists: {}/{}",
-            has_pup_yaml, pup_exists, has_cargo_toml, cargo_exists
-        );
-    }
 
-    if has_pup_yaml && has_cargo_toml {
+    if (has_pup_yaml || has_pup_ron) && has_cargo_toml {
         ProjectType::ConfiguredPupProject
     } else if has_cargo_toml {
         ProjectType::RustProject
@@ -222,7 +214,7 @@ pub fn main() {
             ProjectType::RustProject => {
                 // In a Rust project but missing pup.yaml
                 show_ascii_puppy();
-                println!("{}", Red.bold().paint("Missing pup.yaml - nothing to do!"));
+                println!("{}", Red.bold().paint("Missing pup.ron - nothing to do!"));
                 println!("Consider generating an initial configuration:");
                 println!("  {}", Green.paint("cargo pup generate-config"));
                 exit(-1)

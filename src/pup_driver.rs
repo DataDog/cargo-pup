@@ -175,14 +175,11 @@ pub fn main() -> Result<()> {
         let ron_path = cwd.join("pup.ron");
         
         if ron_path.exists() {
-            println!("Trying to load from pup.ron with new factory");
             match new_factory::LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
                 Ok(lint_rules) => {
-                    println!("Successfully loaded from pup.ron");
                     ArchitectureLintCollection::new(lint_rules)
                 },
                 Err(e) => {
-                    println!("Error loading pup.ron with new factory: {:?}", e);
                     // Fall back to old method
                     let lint_rules = setup_lints_yaml()?;
                     ArchitectureLintCollection::new(lint_rules)
