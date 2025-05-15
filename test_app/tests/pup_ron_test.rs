@@ -13,7 +13,6 @@ use std::path::Path;
 
 #[test]
 fn test_lint_config_matches_yaml() {
-
     // Create a new LintBuilder
     let mut builder = LintBuilder::new();
 
@@ -57,6 +56,14 @@ fn test_lint_config_matches_yaml() {
         ])
         .build();
 
-    // Write the configuration to pup.ron
-    builder.write_to_file("./pup.ron").expect("Failed to write pup.ron file");
+    // Write the configuration to pup.ron using the fixed write_to_file method
+    builder.write_to_file("pup.ron").expect("Failed to write pup.ron file");
+    
+    // Verify we can read back the same configuration
+    let loaded_builder = LintBuilder::read_from_file("pup.ron").expect("Failed to read pup.ron file");
+    
+    // Check that we have the correct number of lints
+    assert_eq!(loaded_builder.lints.len(), 4, "Should have 4 lint rules configured");
+    
+    println!("Successfully created and verified pup.ron configuration");
 } 

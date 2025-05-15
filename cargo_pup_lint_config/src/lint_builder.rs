@@ -24,7 +24,7 @@ impl LintBuilder {
     pub fn write_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> io::Result<()> {
         let file = File::create(path)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        to_writer_pretty(file, &self.lints, PrettyConfig::default())
+        to_writer_pretty(file, &self, PrettyConfig::default())
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         Ok(())
     }
@@ -34,10 +34,10 @@ impl LintBuilder {
         let file = File::open(path)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map any io::Error
 
-        let lints: Vec<ConfiguredLint> = from_reader(file)
+        let lint_builder: LintBuilder = from_reader(file)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map ron::de::SpannedError to io::Error
 
-        Ok(LintBuilder { lints })
+        Ok(lint_builder)
     }
 }
 
@@ -565,5 +565,94 @@ mod tests {
         assert_eq!(builder.lints.len(), 1);
         // We're not checking the complex match structure in depth,
         // just that it builds successfully
+    }
+
+    /// Test that ensures the full LintBuilder structure is correctly serialized and deserialized,
+    /// preserving the exact structure and format expected by cargo-pup.
+    #[test]
+    fn test_lint_builder_serialization_roundtrip() {
+        // Create a builder with multiple different types of lint configurations
+        let mut original_builder = LintBuilder::new();
+        
+        // Add a module lint
+        original_builder.module()
+            .matching(|m| m.module("^test::module$"))
+            .with_severity(Severity::Warn)
+            .must_not_be_empty()
+            .build();
+            
+        // Add a struct lint
+        original_builder.struct_lint()
+            .matching(|m| m.name("TestStruct"))
+            .with_severity(Severity::Error)
+            .must_be_named("TestStruct".into())
+            .build();
+            
+        // Add a function lint
+        original_builder.function()
+            .matching(|m| m.name_regex("^test_.*$"))
+            .with_severity(Severity::Warn)
+            .max_length(50)
+            .build();
+        
+        // Serialize to RON
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_path = temp_file.path();
+        
+        // Write to file
+        original_builder.write_to_file(temp_path).unwrap();
+        
+        // Read it back
+        let deserialized_builder = LintBuilder::read_from_file(temp_path).unwrap();
+        
+        // Verify the count of lints is the same
+        assert_eq!(
+            original_builder.lints.len(), 
+            deserialized_builder.lints.len(),
+            "Deserialized builder should have the same number of lints"
+        );
+        
+        // Also directly test serialization and deserialization in memory (without file I/O)
+        let serialized = ron::to_string(&original_builder).expect("Failed to serialize to RON string");
+        let from_ron: LintBuilder = ron::from_str(&serialized).expect("Failed to deserialize from RON string");
+        
+        assert_eq!(
+            original_builder.lints.len(), 
+            from_ron.lints.len(),
+            "In-memory deserialized builder should have the same number of lints"
+        );
+        
+        // Print the serialized RON for debugging
+        println!("Serialized RON format:\n{}", serialized);
+        
+        // Verify the types match for each lint after deserialization
+        for (i, original_lint) in original_builder.lints.iter().enumerate() {
+            let deserialized_lint = &deserialized_builder.lints[i];
+            
+            match (original_lint, deserialized_lint) {
+                (ConfiguredLint::Module(_), ConfiguredLint::Module(_)) => {
+                    // Both are module lints - correct
+                },
+                (ConfiguredLint::Struct(_), ConfiguredLint::Struct(_)) => {
+                    // Both are struct lints - correct
+                },
+                (ConfiguredLint::Function(_), ConfiguredLint::Function(_)) => {
+                    // Both are function lints - correct
+                },
+                _ => {
+                    panic!("Lint type mismatch after deserialization at index {}", i);
+                }
+            }
+        }
+        
+        // For additional verification, re-serialize the deserialized builder and compare the strings
+        let reserialize1 = ron::to_string(&original_builder).expect("Failed to reserialize original");
+        let reserialize2 = ron::to_string(&deserialized_builder).expect("Failed to serialize deserialized");
+        
+        assert_eq!(
+            reserialize1, 
+            reserialize2,
+            "Reserialized RON strings should be identical"
+        );
     }
 }
