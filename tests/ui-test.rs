@@ -46,7 +46,6 @@ fn main() {
             "-Aunused",
             "-Zui-testing",
             "-Zdeduplicate-diagnostics=no",
-            "-Dwarnings",
             &format!("-Ldependency={}", deps_path.display()),
         ]
         .iter()

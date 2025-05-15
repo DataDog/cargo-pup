@@ -10,7 +10,7 @@ use std::fmt;
 
 // Function that returns a Result with a type that doesn't implement Error
 fn test_result_error_no_impl() -> Result<(), NoErrorImpl> { 
-    //~^ ERROR: Error type 'NoErrorImpl' in Result does not implement Error trait
+    //~^ WARN: Error type 'NoErrorImpl' in Result does not implement Error trait
     //~| ERROR: Error type 'NoErrorImpl' in Result does not implement Error trait
     Ok(())
 }
@@ -22,7 +22,7 @@ fn test_result_error_with_impl() -> Result<(), WithErrorImpl> {
 
 // Function with multi-line body and a Result with a type that doesn't implement Error
 fn test_result_error_multi_line() -> Result<String, NoErrorImpl> { 
-    //~^ ERROR: Error type 'NoErrorImpl' in Result does not implement Error trait
+    //~^ WARN: Error type 'NoErrorImpl' in Result does not implement Error trait
     //~| ERROR: Error type 'NoErrorImpl' in Result does not implement Error trait
     let s = "test".to_string();
     Ok(s)
@@ -30,7 +30,7 @@ fn test_result_error_multi_line() -> Result<String, NoErrorImpl> {
 
 // Function with a more complex Result type that doesn't implement Error
 fn test_result_error_complex() -> Result<Vec<String>, ComplexNoErrorImpl> { 
-    //~^ ERROR: Error type 'ComplexNoErrorImpl' in Result does not implement Error trait
+    //~^ WARN: Error type 'ComplexNoErrorImpl' in Result does not implement Error trait
     //~| ERROR: Error type 'ComplexNoErrorImpl' in Result does not implement Error trait
     Ok(vec!["test".to_string()])
 }

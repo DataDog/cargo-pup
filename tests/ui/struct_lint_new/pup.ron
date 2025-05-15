@@ -65,6 +65,48 @@
                     )
                 ]
             )
+        ),
+        
+        // Test MustBePrivate rule - only apply to test_visibility_rules crate
+        Struct(
+            (
+                name: "must_be_private_test",
+                matches: AndMatches(
+                    Name("test_visibility_rules"), // Match based on crate name
+                    Name("InternalData"), // Exact match on struct name
+                ),
+                rules: [
+                    MustBePrivate(Error), // Struct must be private
+                ]
+            )
+        ),
+        
+        // Test MustBePublic rule - only apply to test_visibility_rules crate
+        Struct(
+            (
+                name: "must_be_public_test",
+                matches: AndMatches(
+                    Name("test_visibility_rules"), // Match based on crate name
+                    Name("HiddenApi"), // Exact match on struct name
+                ),
+                rules: [
+                    MustBePublic(Warn), // Struct must be public
+                ]
+            )
+        ),
+        
+        // Test name pattern + visibility rule combination
+        Struct(
+            (
+                name: "name_and_visibility_test",
+                matches: AndMatches(
+                    Name("test_visibility_rules"), // Match based on crate name
+                    Name(".*InternalModel"), // Match any struct ending with InternalModel
+                ),
+                rules: [
+                    MustBePrivate(Error), // All InternalModel structs must be private
+                ]
+            )
         )
     ]
 ) 
