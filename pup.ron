@@ -1,0 +1,73 @@
+(
+    lints: [
+        Struct((
+            name: "struct_lint",
+            matches: ImplementsTrait("^pup_driver::lints::architecture_lint_rule::ArchitectureLintRule"),
+            rules: [
+                MustBeNamed(".*LintProcessor$", Error),
+                MustBePrivate(Error),
+            ],
+        )),
+        Struct((
+            name: "struct_lint",
+            matches: ImplementsTrait("^pup_driver::lints::configuration_factory.rs::LintFactory"),
+            rules: [
+                MustBeNamed(".*LintFactory$", Error),
+                MustBePrivate(Error),
+            ],
+        )),
+        Module((
+            name: "module_lint",
+            matches: Module(".*"),
+            rules: [
+                MustBeEmpty(Warn),
+            ],
+        )),
+        Module((
+            name: "module_lint",
+            matches: Module("^pup_driver::lints::helpers$"),
+            rules: [
+                DeniedItems(
+                    items: [
+                        "struct",
+                        "trait",
+                    ],
+                    severity: Error,
+                ),
+            ],
+        )),
+        Module((
+            name: "module_lint",
+            matches: Module("^pup_driver::utils$"),
+            rules: [
+                DeniedItems(
+                    items: [
+                        "struct",
+                        "trait",
+                    ],
+                    severity: Error,
+                ),
+            ],
+        )),
+        Function((
+            name: "function_lint",
+            matches: InModule(".*"),
+            rules: [
+                ResultErrorMustImplementError(Error),
+            ],
+        )),
+        Module((
+            name: "module_lint",
+            matches: Module("^cargo_pup::"),
+            rules: [
+                RestrictImports(
+                    allowed_only: None,
+                    denied: Some([
+                        "::lints",
+                    ]),
+                    severity: Error,
+                ),
+            ],
+        )),
+    ],
+)

@@ -173,6 +173,7 @@ dependencies = [
  "anyhow",
  "cargo_metadata 0.19.1",
  "cargo_pup_common",
+ "cargo_pup_lint_config",
  "cargo_pup_lint_impl",
  "clap",
  "ctor",
