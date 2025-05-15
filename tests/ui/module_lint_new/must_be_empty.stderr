@@ -1,3 +1,24 @@
+error: Item 'invalid_function' not allowed in empty module
+  --> tests/ui/module_lint_new/must_be_empty.rs:16:5
+   |
+LL | /     pub fn invalid_function() {
+LL | |         println!("This module should be empty");
+LL | |     }
+   | |_____^
+   |
+   = help: Remove this item from the module, which must be empty
+   = note: Applied by cargo-pup rule 'must_be_empty_test'.
+   = note: `#[deny(module_must_be_empty_lint)]` on by default
+
+error: Item 'INVALID_CONST' not allowed in empty module
+  --> tests/ui/module_lint_new/must_be_empty.rs:20:5
+   |
+LL |     pub const INVALID_CONST: &str = "Content not allowed";
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this item from the module, which must be empty
+   = note: Applied by cargo-pup rule 'must_be_empty_test'.
+
 error: Module must be empty
   --> tests/ui/module_lint_new/must_be_empty.rs:15:1
    |
@@ -11,7 +32,6 @@ LL | | }
    |
    = help: Remove all content from this module
    = note: Applied by cargo-pup rule 'must_be_empty_test'.
-   = note: `#[deny(module_must_be_empty_lint)]` on by default
 
-error: aborting due to 1 previous error
+error: aborting due to 3 previous errors
 

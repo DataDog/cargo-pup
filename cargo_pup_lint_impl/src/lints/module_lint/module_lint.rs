@@ -387,8 +387,53 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                 },
                 ModuleRuleType::MustBeEmpty => {
                     if let ItemKind::Mod(module_data) = item.kind {
+                        let full_path = get_full_module_name(&ctx.tcx, &item.owner_id);
+                        let mod_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
+                        
+                        // If module has items, emit a lint for each one
+                        for &item_id in module_data.item_ids.iter() {
+                            let def_id = item_id.owner_id.to_def_id();
+                            if let Some(local_def_id) = def_id.as_local() {
+                                let nested_item = ctx.tcx.hir().expect_item(local_def_id);
+                                let item_name = ctx.tcx.item_name(nested_item.owner_id.def_id.to_def_id());
+                                let nested_path = get_full_module_name(&ctx.tcx, &nested_item.owner_id);
+                                
+                                // Get a descriptive name of the item kind
+                                let item_type = {
+                                    // Get item name for better messages
+                                    let item_name = ctx.tcx.item_name(nested_item.owner_id.def_id.to_def_id()).to_string();
+                                    
+                                    // Use a simple match based on a simplified representation
+                                    match format!("{:?}", nested_item.kind).split_whitespace().next().unwrap_or("item") {
+                                        "Struct" => "struct".to_string(),
+                                        "Enum" => "enum".to_string(),
+                                        "Union" => "union".to_string(),
+                                        "Trait" => "trait".to_string(),
+                                        "Fn" => "function".to_string(),
+                                        "Mod" => "module".to_string(),
+                                        "Static" => "static".to_string(),
+                                        "Const" => "const".to_string(),
+                                        "Use" => "import".to_string(),
+                                        "Impl" => "implementation".to_string(),
+                                        other => other.to_lowercase()
+                                    }
+                                };
+                                
+                                span_lint_and_help(
+                                    ctx,
+                                    MODULE_MUST_BE_EMPTY_LINT::get_by_severity(rule_info.severity),
+                                    self.name().as_str(),
+                                    nested_item.span,
+                                    format!("Item '{}' not allowed in empty module", 
+                                         ctx.tcx.item_name(nested_item.owner_id.def_id.to_def_id())),
+                                    None,
+                                    "Remove this item from the module, which must be empty",
+                                );
+                            }
+                        }
+                        
+                        // Only add a module-level lint if there are items
                         if !module_data.item_ids.is_empty() {
-                            // If the module is not empty, that's a violation
                             span_lint_and_help(
                                 ctx,
                                 MODULE_MUST_BE_EMPTY_LINT::get_by_severity(rule_info.severity),

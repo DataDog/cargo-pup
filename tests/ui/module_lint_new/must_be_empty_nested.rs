@@ -10,11 +10,11 @@ pub mod parent_module {
     
     // Nested module that IS targeted by the lint (should trigger an error)
     pub mod nested_target { //~ ERROR: Module must be empty
-        pub fn invalid_function() {
+        pub fn invalid_function() { //~ ERROR: Item 'invalid_function' not allowed in empty module
             println!("This shouldn't be here");
         }
         
-        pub struct InvalidStruct;
+        pub struct InvalidStruct; //~ ERROR: Item 'InvalidStruct' not allowed in empty module
     }
     
     // Another nested module (not targeted, allowed to have content)

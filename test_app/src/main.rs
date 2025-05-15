@@ -3,10 +3,11 @@
 
 mod empty_mod;
 mod function_length;
-mod trait_impl;
-mod module_usage;
 mod item_type;
+mod module_usage;
+mod must_be_empty;
 mod result_error;
+mod trait_impl;
 
 fn main() {
     println!("Hello, world!");

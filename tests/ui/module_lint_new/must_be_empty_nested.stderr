@@ -1,3 +1,24 @@
+error: Item 'invalid_function' not allowed in empty module
+  --> tests/ui/module_lint_new/must_be_empty_nested.rs:13:9
+   |
+LL | /         pub fn invalid_function() {
+LL | |             println!("This shouldn't be here");
+LL | |         }
+   | |_________^
+   |
+   = help: Remove this item from the module, which must be empty
+   = note: Applied by cargo-pup rule 'must_be_empty_nested_test'.
+   = note: `#[deny(module_must_be_empty_lint)]` on by default
+
+error: Item 'InvalidStruct' not allowed in empty module
+  --> tests/ui/module_lint_new/must_be_empty_nested.rs:17:9
+   |
+LL |         pub struct InvalidStruct;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this item from the module, which must be empty
+   = note: Applied by cargo-pup rule 'must_be_empty_nested_test'.
+
 error: Module must be empty
   --> tests/ui/module_lint_new/must_be_empty_nested.rs:12:5
    |
@@ -11,7 +32,6 @@ LL | |     }
    |
    = help: Remove all content from this module
    = note: Applied by cargo-pup rule 'must_be_empty_nested_test'.
-   = note: `#[deny(module_must_be_empty_lint)]` on by default
 
-error: aborting due to 1 previous error
+error: aborting due to 3 previous errors
 
