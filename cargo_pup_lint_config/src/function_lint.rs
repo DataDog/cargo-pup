@@ -32,6 +32,11 @@ impl FunctionMatcher {
         FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::Result))
     }
     
+    /// Matches functions that return a Result type where the error type implements the Error trait
+    pub fn returns_result_with_error_impl(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::ResultWithErrorImpl))
+    }
+    
     /// Matches functions that return an Option<T>
     pub fn returns_option(&self) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::Option))
@@ -109,6 +114,7 @@ pub enum ReturnTypePattern {
     Option,           // Match any Option<T>
     Named(String),    // Match a specific named type
     Regex(String),    // Match types by regex pattern
+    ResultWithErrorImpl, // Match Result<T, E> where E implements Error trait
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -134,6 +140,7 @@ pub struct FunctionLint {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum FunctionRule {
     MaxLength(usize, Severity),
+    ResultErrorMustImplementError(Severity),
 }
 
 // Helper methods for FunctionRule
@@ -225,6 +232,12 @@ impl<'a> FunctionConstraintBuilder<'a> {
     // Helper method for function length limit
     pub fn max_length(mut self, length: usize) -> Self {
         self.add_rule_internal(FunctionRule::MaxLength(length, self.current_severity));
+        self
+    }
+    
+    // Helper method for Result error type check
+    pub fn enforce_error_trait_implementation(mut self) -> Self {
+        self.add_rule_internal(FunctionRule::ResultErrorMustImplementError(self.current_severity));
         self
     }
     

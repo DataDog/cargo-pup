@@ -7,7 +7,7 @@ use regex::Regex;
 use cargo_pup_lint_config::{ConfiguredLint, Severity, FunctionMatch, FunctionRule, ReturnTypePattern};
 use crate::ArchitectureLintRule;
 use crate::helpers::clippy_utils::span_lint_and_help;
-use crate::helpers::queries::get_full_module_name;
+use crate::helpers::queries::{get_full_module_name, implements_error_trait};
 use crate::declare_variable_severity_lint;
 
 pub struct FunctionLint {
@@ -68,6 +68,25 @@ impl FunctionLint {
                         // Fallback: use the string representation 
                         let type_string = return_ty.to_string();
                         type_string.contains("Result<")
+                    },
+                    ReturnTypePattern::ResultWithErrorImpl => {
+                        // First check if it's a Result type
+                        if let TyKind::Adt(adt_def, substs) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            
+                            // If it's a Result type
+                            if path.contains("result::Result") && substs.len() >= 2 {
+                                // Get the error type (second type parameter)
+                                let error_ty = substs[1].expect_ty();
+                                
+                                // Check if the error type implements Error trait
+                                let param_env = ctx.param_env;
+                                return implements_error_trait(ctx.tcx, param_env, error_ty);
+                            }
+                        }
+                        
+                        // Not a Result type or couldn't determine if error type implements Error
+                        false
                     },
                     ReturnTypePattern::Option => {
                         // Check for Adt with Option path
@@ -132,7 +151,7 @@ impl FunctionLint {
     // Evaluate function rules
     fn evaluate_function_rule<'tcx>(&self, rule: &FunctionRule, ctx: &LateContext<'tcx>, 
                                   item_name: &str, body_id: rustc_hir::BodyId, 
-                                  span: rustc_span::Span) -> bool {
+                                  span: rustc_span::Span, fn_def_id: rustc_hir::def_id::DefId) -> bool {
         match rule {
             FunctionRule::MaxLength(max_lines, _) => {
                 let body = ctx.tcx.hir_body(body_id);
@@ -143,8 +162,29 @@ impl FunctionLint {
                 } else {
                     false
                 }
+            },
+            FunctionRule::ResultErrorMustImplementError(_) => {
+                // Get the return type
+                let fn_sig = ctx.tcx.fn_sig(fn_def_id).skip_binder();
+                let return_ty = fn_sig.output().skip_binder();
+                
+                // Check if it's a Result type
+                if let TyKind::Adt(adt_def, substs) = return_ty.kind() {
+                    let path = ctx.tcx.def_path_str(adt_def.did());
+                    
+                    // If it's a Result type, check the error type
+                    if path.contains("result::Result") && substs.len() >= 2 {
+                        let error_ty = substs[1].expect_ty();
+                        let param_env = ctx.param_env;
+                        
+                        // Return true if error type does NOT implement Error trait
+                        return !implements_error_trait(ctx.tcx, param_env, error_ty);
+                    }
+                }
+                
+                // Not a Result type, so rule doesn't apply
+                false
             }
-            // Removed logical operator cases
         }
     }
 }
@@ -232,8 +272,43 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                                 );
                             }
                         }
+                    },
+                    FunctionRule::ResultErrorMustImplementError(severity) => {
+                        // Get the return type
+                        let fn_sig = ctx.tcx.fn_sig(fn_def_id).skip_binder();
+                        let return_ty = fn_sig.output().skip_binder();
+                        
+                        // Check if it's a Result type
+                        if let TyKind::Adt(adt_def, substs) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            
+                            // If it's a Result type
+                            if path.contains("result::Result") && substs.len() >= 2 {
+                                let error_ty = substs[1].expect_ty();
+                                let param_env = ctx.param_env;
+                                
+                                // Check if error type does NOT implement Error trait
+                                if !implements_error_trait(ctx.tcx, param_env, error_ty) {
+                                    let error_type_name = error_ty.to_string();
+                                    
+                                    // Create a span that only covers the function signature
+                                    let sig_span = item.span.with_hi(
+                                        item.span.lo() + BytePos((item_name.len() + 5) as u32) // "fn name"
+                                    );
+                                    
+                                    span_lint_and_help(
+                                        ctx,
+                                        get_lint(*severity),
+                                        self.name().as_str(),
+                                        sig_span,
+                                        format!("Error type '{}' in Result does not implement Error trait", error_type_name),
+                                        None,
+                                        "Consider implementing the Error trait for this type or using a type that already implements it",
+                                    );
+                                }
+                            }
+                        }
                     }
-                    // Removed logical operators cases
                 }
             }
         }
@@ -283,8 +358,43 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                                 );
                             }
                         }
+                    },
+                    FunctionRule::ResultErrorMustImplementError(severity) => {
+                        // Get the return type
+                        let fn_sig = ctx.tcx.fn_sig(fn_def_id).skip_binder();
+                        let return_ty = fn_sig.output().skip_binder();
+                        
+                        // Check if it's a Result type
+                        if let TyKind::Adt(adt_def, substs) = return_ty.kind() {
+                            let path = ctx.tcx.def_path_str(adt_def.did());
+                            
+                            // If it's a Result type
+                            if path.contains("result::Result") && substs.len() >= 2 {
+                                let error_ty = substs[1].expect_ty();
+                                let param_env = ctx.param_env;
+                                
+                                // Check if error type does NOT implement Error trait
+                                if !implements_error_trait(ctx.tcx, param_env, error_ty) {
+                                    let error_type_name = error_ty.to_string();
+                                    
+                                    // Create a span that only covers the method signature
+                                    let sig_span = impl_item.span.with_hi(
+                                        impl_item.span.lo() + BytePos((item_name.len() + 5) as u32) // "fn name"
+                                    );
+                                    
+                                    span_lint_and_help(
+                                        ctx,
+                                        get_lint(*severity),
+                                        self.name().as_str(),
+                                        sig_span,
+                                        format!("Error type '{}' in Result does not implement Error trait", error_type_name),
+                                        None,
+                                        "Consider implementing the Error trait for this type or using a type that already implements it",
+                                    );
+                                }
+                            }
+                        }
                     }
-                    // Removed logical operators cases
                 }
             }
         }
@@ -295,8 +405,8 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
 impl FunctionLint {
     fn get_rule_severity(&self, rule: &FunctionRule) -> Severity {
         match rule {
-            FunctionRule::MaxLength(_, severity) => *severity
-            // Removed logical operator cases
+            FunctionRule::MaxLength(_, severity) => *severity,
+            FunctionRule::ResultErrorMustImplementError(severity) => *severity,
         }
     }
 } 

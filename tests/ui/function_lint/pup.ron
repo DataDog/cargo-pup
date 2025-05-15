@@ -117,8 +117,7 @@
                     ReturnsType(Result)
                 ),
                 rules: [
-                    MaxLength(
-                        1,  // Strict limit to ensure it triggers
+                    ResultErrorMustImplementError(
                         Warn,
                     )
                 ]
@@ -202,8 +201,7 @@
                     ReturnsType(Result)
                 ),
                 rules: [
-                    MaxLength(
-                        1,  // Strict limit to ensure it triggers
+                    ResultErrorMustImplementError(
                         Warn,
                     )
                 ]
@@ -222,6 +220,63 @@
                     MaxLength(
                         1,  // Strict limit to ensure it triggers
                         Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // ======================================================================
+        // SECTION: Result Error Implementation Tests (for result_error_impl.rs)
+        // ======================================================================
+        
+        // Rule to enforce that Result error types implement the Error trait
+        Function(
+            (
+                name: "result_error_impl_test", 
+                matches: AndMatches(
+                    NameRegex("^test_result_error_"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Error,  // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Rule to enforce error trait implementation in a specific module
+        Function(
+            (
+                name: "module_result_error_impl_test",
+                matches: AndMatches(
+                    InModule("::error_module"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Error,  // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Complex rule combining NotMatch with ResultWithErrorImpl
+        Function(
+            (
+                name: "advanced_result_error_impl_test",
+                matches: AndMatches(
+                    NameRegex("^advanced_"),
+                    AndMatches(
+                        ReturnsType(Result),
+                        NotMatch(
+                            ReturnsType(ResultWithErrorImpl)
+                        )
+                    )
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Error,  // Severity
                     )
                 ]
             )

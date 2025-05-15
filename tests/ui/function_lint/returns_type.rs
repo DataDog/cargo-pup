@@ -3,15 +3,19 @@
 
 // This test verifies that the FunctionLint's ReturnsType matcher works correctly
 
+use std::error::Error;
+use std::fmt;
+
 // ====== Result Type Tests ======
 
-// Function returns Result<(), i32> and should trigger the Result matcher
-fn test_result_simple() -> Result<(), i32> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
+// Function returns Result<(), i32> and should trigger the ResultErrorMustImplementError rule
+// because i32 doesn't implement Error trait
+fn test_result_simple() -> Result<(), i32> { //~ ERROR: Error type 'i32' in Result does not implement Error trait
     Ok(())
 }
 
-// Function returns Result with a custom error type
-fn test_result_custom_error() -> Result<String, MyError> { //~ ERROR: Function exceeds maximum length of 1 lines with 3 lines
+// Function returns Result with a custom error type that doesn't implement Error
+fn test_result_custom_error() -> Result<String, MyError> { //~ ERROR: Error type 'MyError' in Result does not implement Error trait
     Ok("Success".to_string())
 }
 
@@ -67,7 +71,7 @@ mod inner_module {
     // Function in module returns Result
     pub fn module_result_function() -> Result<(), i32> { 
         //~^ ERROR: Function exceeds maximum length of 2 lines with 5 lines
-        //~| ERROR: Function exceeds maximum length of 1 lines with 5 lines
+        //~| ERROR: Error type 'i32' in Result does not implement Error trait
         Ok(())
     }
     
@@ -85,6 +89,7 @@ pub struct CustomType {
     pub value: i32,
 }
 
+// An error type that intentionally doesn't implement Error trait
 pub struct MyError {
     pub message: String,
 } 

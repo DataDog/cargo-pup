@@ -1,0 +1,77 @@
+error: Error type 'NoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:12:1
+   |
+LL | fn test_result_error_no_impl() -> Result<(), NoErrorImpl> { 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_return_type_test'.
+   = note: `-D function-lint` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(function_lint)]`
+
+error: Error type 'NoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:12:1
+   |
+LL | fn test_result_error_no_impl() -> Result<(), NoErrorImpl> { 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_error_impl_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Error type 'NoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:24:1
+   |
+LL | fn test_result_error_multi_line() -> Result<String, NoErrorImpl> { 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_return_type_test'.
+
+error: Error type 'NoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:24:1
+   |
+LL | fn test_result_error_multi_line() -> Result<String, NoErrorImpl> { 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_error_impl_test'.
+
+error: Error type 'ComplexNoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:32:1
+   |
+LL | fn test_result_error_complex() -> Result<Vec<String>, ComplexNoErrorImpl> { 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_return_type_test'.
+
+error: Error type 'ComplexNoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:32:1
+   |
+LL | fn test_result_error_complex() -> Result<Vec<String>, ComplexNoErrorImpl> { 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_error_impl_test'.
+
+error: Error type 'NoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:42:1
+   |
+LL | fn advanced_no_error_impl() -> Result<(), NoErrorImpl> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'advanced_result_error_impl_test'.
+
+error: Error type 'NoErrorImpl' in Result does not implement Error trait
+  --> tests/ui/function_lint/result_error_impl.rs:58:5
+   |
+LL |     pub fn module_function_no_impl() -> Result<(), NoErrorImpl> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'module_result_error_impl_test'.
+
+error: aborting due to 8 previous errors
+
