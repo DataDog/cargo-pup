@@ -597,7 +597,7 @@ pub fn help_message() -> String {
     {check}            Run architectural lints (default)
     {print_modules}    Print all modules and applicable lints
     {print_traits}     Print all traits
-    {generate_config}  Generates an initial pup.yaml for your project.
+    {generate_config}  Generates an initial pup.ron for your project.
 
 {options_label}:
     -h, --help             Print this message
@@ -1235,8 +1235,8 @@ mod tests {
             // Brief delay to ensure rename completes
             std::thread::sleep(std::time::Duration::from_millis(10));
 
-            // Verify pup.yaml now exists
-            assert!(pup_ron_path.exists(), "pup.yaml should exist after rename");
+            // Verify pup.ron now exists
+            assert!(pup_ron_path.exists(), "pup.ron should exist after rename");
 
             // The guard will automatically change back to the original directory when it goes out of scope
         }

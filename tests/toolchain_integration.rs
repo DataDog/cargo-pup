@@ -61,7 +61,7 @@ fn test_consistent_toolchain_handling() {
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
     
-    // Create a basic Cargo.toml and pup.yaml
+    // Create a basic Cargo.toml and pup.ron
     std::fs::write(
         temp_path.join("Cargo.toml"),
         r#"
@@ -73,15 +73,9 @@ fn test_consistent_toolchain_handling() {
     ).expect("Failed to write Cargo.toml");
     
     std::fs::write(
-        temp_path.join("pup.yaml"),
-        r#"
-            test_rule:
-              type: function_length
-              namespace: "test_app"
-              max_lines: 5
-              severity: Warn
-        "#,
-    ).expect("Failed to write pup.yaml");
+        temp_path.join("pup.ron"),
+        ""
+    ).expect("Failed to write pup.ron");
     
     // Create a basic Rust source file
     std::fs::create_dir_all(temp_path.join("src")).expect("Failed to create src dir");

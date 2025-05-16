@@ -1,17 +1,13 @@
 //! Integration test for pup.ron configuration
 //!
-//! This test verifies that we can build the same configuration programmatically
-//! with cargo_pup_lint_config that we previously defined in pup.yaml.
+//! This test verifies that we can build a configuration with pup.ron
 
 use cargo_pup_lint_config::{FunctionLintExt, LintBuilder, ModuleLintExt, Severity, StructLintExt};
 
 #[test]
-fn test_lint_config_matches_yaml() {
+fn test_lint_config() {
     // Create a new LintBuilder
     let mut builder = LintBuilder::new();
-
-    // Add rules that approximate those in pup.yaml
-    // Note: Some exact rules may not be available in the API, so we're using what's available
 
     builder
         .module()

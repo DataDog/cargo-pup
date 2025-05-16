@@ -26,8 +26,8 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-use cargo_pup_lint_impl::{register_all_lints, setup_lints_yaml, ArchitectureLintCollection, ArchitectureLintRunner, LintConfigurationFactory, Mode};
-use cargo_pup_lint_impl::lints::configuration_factory as new_factory;
+use cargo_pup_lint_impl::{register_all_lints, ArchitectureLintCollection, ArchitectureLintRunner, Mode};
+use cargo_pup_lint_impl::lints::configuration_factory::LintConfigurationFactory;
 
 pub fn main() -> Result<()> {
     register_all_lints();
@@ -96,10 +96,10 @@ pub fn main() -> Result<()> {
         let source_file = find_source_file(&orig_args)?;
         let test_dir = source_file.parent().unwrap_or(Path::new("."));
         
-        // Try loading from pup.ron with new factory first
+        // Try loading from pup.ron
         let ron_path = test_dir.join("pup.ron");
         if ron_path.exists() {
-            match new_factory::LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
+            match LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
                 Ok(lint_rules) => {
                     ArchitectureLintCollection::new(lint_rules)
                 },
@@ -113,25 +113,24 @@ pub fn main() -> Result<()> {
                 ArchitectureLintCollection::new(Vec::new())
             }
     } else {
-        // For normal operation, try pup.ron first with new factory, then fall back to pup.yaml
+        // For normal operation, load from pup.ron
         let cwd = env::current_dir()?;
         let ron_path = cwd.join("pup.ron");
         
         if ron_path.exists() {
-            match new_factory::LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
+            match LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
                 Ok(lint_rules) => {
                     ArchitectureLintCollection::new(lint_rules)
                 },
                 Err(e) => {
-                    // Fall back to old method
-                    let lint_rules = setup_lints_yaml()?;
-                    ArchitectureLintCollection::new(lint_rules)
+                    eprintln!("Failed to parse pup.ron: {}", e);
+                    ArchitectureLintCollection::new(Vec::new())
                 }
             }
         } else {
-            // Fall back to old method
-            let lint_rules = setup_lints_yaml()?;
-            ArchitectureLintCollection::new(lint_rules)
+            // No configuration found
+            eprintln!("No pup.ron configuration file found");
+            ArchitectureLintCollection::new(Vec::new())
         }
     };
 
