@@ -6,7 +6,7 @@
 use std::process::Command;
 use std::env;
 use std::path::PathBuf;
-use cargo_pup_lint_config::{LintBuilder, ModuleLintExt, StructLintExt, FunctionLintExt};
+use cargo_pup_lint_config::{LintBuilder, ModuleLintExt, StructLintExt};
 
 // Helper function to get the path to the cargo-pup binary
 fn get_cargo_pup_path() -> PathBuf {

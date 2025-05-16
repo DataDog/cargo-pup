@@ -57,25 +57,21 @@
 //!
 //!
 
-
 #![feature(let_chains)]
 #![feature(array_windows)]
 #![feature(try_blocks)]
-
 #![warn(rust_2018_idioms, unused_lifetimes)]
-
-
 
 use cargo_pup_common::cli::{PupArgs, PupCli, PupCommand};
 
 use ansi_term::Colour::{Blue, Cyan, Green, Red, Yellow};
 use ansi_term::Style;
+use cargo_pup_common::project_context::{PUP_DIR, ProjectContext};
 use std::env;
 use std::error::Error;
 use std::fmt;
 use std::path::Path;
-use std::process::{exit, Command};
-use cargo_pup_common::project_context::{ProjectContext, PUP_DIR};
+use std::process::{Command, exit};
 
 #[derive(Debug, PartialEq)]
 enum ProjectType {
@@ -184,10 +180,10 @@ pub fn main() {
     // Parse command and arguments
     // Normal invocation - process args and run cargo
     let args: Vec<String> = env::args().collect();
-    
+
     // Check command type
     let command = get_command_type(&args);
-    
+
     // Get if we're running generate-config
     let is_generate_config = if args.len() <= 1 {
         false
@@ -212,7 +208,11 @@ pub fn main() {
             ProjectType::RustProject => {
                 // In a Rust project but missing configuration file
                 show_ascii_puppy();
-                println!("{}", Red.bold().paint("Missing pup.ron configuration - nothing to do!"));
+                println!(
+                    "{}",
+                    Red.bold()
+                        .paint("Missing pup.ron configuration - nothing to do!")
+                );
                 println!("Consider generating an initial configuration:");
                 println!("  {}", Green.paint("cargo pup generate-config"));
                 exit(-1)
@@ -541,13 +541,13 @@ fn get_command_type(args: &[String]) -> CommandType {
 
 /// Process the print-modules command by loading contexts from disk and displaying them
 fn process_print_modules() -> anyhow::Result<()> {
-    use cargo_pup_common::project_context::{ProjectContext};
     use anyhow::Context;
+    use cargo_pup_common::project_context::ProjectContext;
 
     // Load all context data from .pup directory
     let (context, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
         .context("Failed to load project context data")?;
-    
+
     // Use the utility function to print the modules
     print_modules(&context, &crate_names)?;
     Ok(())
@@ -555,8 +555,8 @@ fn process_print_modules() -> anyhow::Result<()> {
 
 /// Process the print-traits command by loading contexts from disk and displaying them
 fn process_print_traits() -> anyhow::Result<()> {
-    use cargo_pup_common::project_context::{ProjectContext};
     use anyhow::Context;
+    use cargo_pup_common::project_context::ProjectContext;
 
     // Load all context data from .pup directory
     let (context, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
@@ -622,21 +622,25 @@ Any additional arguments will be passed directly to cargo:
     )
 }
 
-
 /// Format and print the modules in the project context
 pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
     use ansi_term::Colour::{Blue, Cyan, Green};
-    use std::collections::BTreeMap;
     use cargo_pup_common::project_context::ModuleInfo;
+    use std::collections::BTreeMap;
 
     // Print a header
-    println!("{}", Cyan.paint(r#"
+    println!(
+        "{}",
+        Cyan.paint(
+            r#"
      / \__
     (    @\___
     /         O
    /   (_____/
   /_____/   U
-"#));
+"#
+        )
+    );
 
     if crate_names.len() > 1 {
         println!("Modules from multiple crates: {}", crate_names.join(", "));
@@ -653,12 +657,14 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
         if let Some(idx) = module_info.name.find("::") {
             let crate_name = &module_info.name[..idx];
 
-            modules_by_crate.entry(crate_name.to_string())
+            modules_by_crate
+                .entry(crate_name.to_string())
                 .or_default()
                 .push(module_info);
         } else {
             // Handle case where there's no :: in the path
-            modules_by_crate.entry(module_info.name.clone())
+            modules_by_crate
+                .entry(module_info.name.clone())
                 .or_default();
         }
     }
@@ -700,7 +706,11 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
                 lints_list.join(", ")
             };
 
-            println!("  ::{} [{}]", Blue.paint(&module_path), Green.paint(&combined_lints));
+            println!(
+                "  ::{} [{}]",
+                Blue.paint(&module_path),
+                Green.paint(&combined_lints)
+            );
         }
 
         println!();
@@ -711,18 +721,23 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
 
 /// Format and print the traits in the project context
 pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
-    use ansi_term::Colour::{Blue, Green, Cyan};
-    use std::collections::BTreeMap;
+    use ansi_term::Colour::{Blue, Cyan, Green};
     use cargo_pup_common::project_context::TraitInfo;
+    use std::collections::BTreeMap;
 
     // Print a header
-    println!("{}", Cyan.paint(r#"
+    println!(
+        "{}",
+        Cyan.paint(
+            r#"
      / \__
     (    @\___
     /         O
    /   (_____/
   /_____/   U
-"#));
+"#
+        )
+    );
 
     if crate_names.len() > 1 {
         println!("Traits from multiple crates: {}", crate_names.join(", "));
@@ -739,13 +754,13 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow:
         if let Some(idx) = trait_info.name.find("::") {
             let crate_name = &trait_info.name[..idx];
 
-            traits_by_crate.entry(crate_name.to_string())
+            traits_by_crate
+                .entry(crate_name.to_string())
                 .or_default()
                 .push(trait_info);
         } else {
             // Handle case where there's no :: in the path
-            traits_by_crate.entry(trait_info.name.clone())
-                .or_default();
+            traits_by_crate.entry(trait_info.name.clone()).or_default();
         }
     }
 
@@ -770,7 +785,11 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow:
             if trait_path.is_empty() {
                 println!("  :: [{}]", Green.paint(&lints_str));
             } else {
-                println!("  ::{} [{}]", Blue.paint(&trait_path), Green.paint(&lints_str));
+                println!(
+                    "  ::{} [{}]",
+                    Blue.paint(&trait_path),
+                    Green.paint(&lints_str)
+                );
             }
 
             // Print implementors with indentation

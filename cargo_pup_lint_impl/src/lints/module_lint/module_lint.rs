@@ -1,12 +1,11 @@
 use crate::ArchitectureLintRule;
+use crate::declare_variable_severity_lint_new;
 use crate::helpers::clippy_utils::span_lint_and_help;
 use crate::helpers::queries::get_full_module_name;
-use crate::{declare_variable_severity_lint, declare_variable_severity_lint_new};
 use cargo_pup_lint_config::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
 use regex::Regex;
-use rustc_hir::{ImplItem, ImplItemKind, Item, ItemKind, OwnerId, UseKind};
-use rustc_lint::{LateContext, LateLintPass, Lint, LintContext, LintStore};
-use rustc_middle::ty::TyCtxt;
+use rustc_hir::{Item, ItemKind, UseKind};
+use rustc_lint::{LateContext, LateLintPass, LintContext, LintStore};
 use rustc_session::impl_lint_pass;
 
 pub struct ModuleLint {
@@ -41,6 +40,7 @@ enum ModuleRuleType {
 }
 
 impl ModuleLint {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(config: &ConfiguredLint) -> Box<dyn ArchitectureLintRule + Send> {
         // TODO - just clone this
         match config {
@@ -77,8 +77,8 @@ impl ModuleLint {
                                 severity,
                             } => {
                                 // Clone the string vectors inside allowed_only and denied
-                                let allowed_clone = allowed_only.as_ref().map(|v| v.clone());
-                                let denied_clone = denied.as_ref().map(|v| v.clone());
+                                let allowed_clone = allowed_only.clone();
+                                let denied_clone = denied.clone();
 
                                 Some(ModuleRuleInfo {
                                     rule_type: ModuleRuleType::RestrictImports {
@@ -117,11 +117,11 @@ impl ModuleLint {
 
     // Method to check if a module_lint path matches our configured module_lint patterns
     fn matches_module(&self, module_path: &str) -> bool {
-        self.evaluate_module_match(&self.matches, module_path)
+        Self::evaluate_module_match(&self.matches, module_path)
     }
 
     // Helper method to evaluate a ModuleMatch against a module_lint path
-    fn evaluate_module_match(&self, module_match: &ModuleMatch, module_path: &str) -> bool {
+    fn evaluate_module_match(module_match: &ModuleMatch, module_path: &str) -> bool {
         match module_match {
             ModuleMatch::Module(pattern) => {
                 // Try to compile the pattern as a regex and match against module_lint path
@@ -134,14 +134,14 @@ impl ModuleLint {
                 }
             }
             ModuleMatch::AndMatches(left, right) => {
-                self.evaluate_module_match(left, module_path)
-                    && self.evaluate_module_match(right, module_path)
+                Self::evaluate_module_match(left, module_path)
+                    && Self::evaluate_module_match(right, module_path)
             }
             ModuleMatch::OrMatches(left, right) => {
-                self.evaluate_module_match(left, module_path)
-                    || self.evaluate_module_match(right, module_path)
+                Self::evaluate_module_match(left, module_path)
+                    || Self::evaluate_module_match(right, module_path)
             }
-            ModuleMatch::NotMatch(inner) => !self.evaluate_module_match(inner, module_path),
+            ModuleMatch::NotMatch(inner) => !Self::evaluate_module_match(inner, module_path),
         }
     }
 
@@ -180,7 +180,7 @@ impl ModuleLint {
                 if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
                     span_lint_and_help(
                         ctx,
-                        MODULE_WILDCARD_IMPORT_LINT::get_by_severity(severity),
+                        ModuleWildcardImportLint::get_by_severity(severity),
                         self.name().as_str(),
                         item.span,
                         "Wildcard imports are not allowed",
@@ -191,7 +191,7 @@ impl ModuleLint {
             }
         }
     }
-    
+
     // Helper function to check if an item should be disallowed in an "empty" module context
     fn is_disallowed_in_empty_module(&self, item_kind: &ItemKind<'_>) -> bool {
         match item_kind {
@@ -205,64 +205,56 @@ impl ModuleLint {
             | ItemKind::Enum(..) => true,
             ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => true,
             // Everything else is allowed (re-exports, module declarations, etc.)
-            _ => false
+            _ => false,
         }
     }
-    
+
     // Helper to check if a file is a mod.rs file based on its path
     fn is_mod_rs_file(&self, ctx: &LateContext<'_>, span: &rustc_span::Span) -> bool {
         let filename = ctx.sess().source_map().span_to_filename(*span);
         if let rustc_span::FileName::Real(filename) = filename {
-            let filename_str = filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local);
+            let filename_str =
+                filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local);
             filename_str.ends_with("/mod.rs")
         } else {
             false
         }
     }
-    
+
     // Helper function to check for disallowed items in a module and call the callback when found
     fn check_for_disallowed_items<C>(
         &self,
         ctx: &LateContext<'_>,
         module_data: &rustc_hir::Mod<'_>,
-        on_disallowed_item: C
+        on_disallowed_item: C,
     ) where
-        C: Fn(&Self, &LateContext<'_>, &rustc_hir::Item<'_>, &str, bool)
+        C: Fn(&Self, &LateContext<'_>, &rustc_hir::Item<'_>, &str, bool),
     {
         for &item_id in module_data.item_ids.iter() {
             let nested_item = ctx.tcx.hir_item(item_id);
-            
+
             // Skip if the item is allowed in empty modules
             if !self.is_disallowed_in_empty_module(&nested_item.kind) {
-                continue; 
+                continue;
             }
-            
+
             // Get item name from HIR for error messages
             let hir = ctx.tcx.hir();
             let item_name = hir.name(nested_item.hir_id()).to_ident_string();
-            
+
             // Check if this is in a mod.rs file (pass to callback so it can decide what to do)
             let is_mod_rs = self.is_mod_rs_file(ctx, &nested_item.span);
-            
+
             // Call the callback to handle the disallowed item, passing only necessary context
-            on_disallowed_item(self, ctx, &nested_item, &item_name, is_mod_rs);
+            on_disallowed_item(self, ctx, nested_item, &item_name, is_mod_rs);
         }
     }
 }
 
-// Declare the module_lint lint with variable severity using the new macro
-declare_variable_severity_lint_new!(
-    pub,
-    MODULE_LINT,
-    MODULE_LINT_DENY,
-    MODULE_LINT_WARN,
-    "Module structure and organization rules"
-);
-
 // Define specific lints for different rule types
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_MUST_BE_NAMED_LINT,
+    ModuleMustBeNamedLint,
     MODULE_MUST_BE_NAMED_LINT_DENY,
     MODULE_MUST_BE_NAMED_LINT_WARN,
     "Module must match a specific naming pattern"
@@ -270,7 +262,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_MUST_NOT_BE_NAMED_LINT,
+    ModuleMustNotBeNamedLint,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY,
     MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
     "Module must not match a specific naming pattern"
@@ -278,7 +270,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_MUST_NOT_BE_EMPTY_LINT,
+    ModuleMustNotBeEmptyLint,
     MODULE_MUST_NOT_BE_EMPTY_LINT_DENY,
     MODULE_MUST_NOT_BE_EMPTY_LINT_WARN,
     "Module must not be empty"
@@ -286,7 +278,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_RESTRICT_IMPORTS_LINT,
+    ModuleRestrictImportsLint,
     MODULE_RESTRICT_IMPORTS_LINT_DENY,
     MODULE_RESTRICT_IMPORTS_LINT_WARN,
     "Module has import restrictions"
@@ -294,7 +286,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_WILDCARD_IMPORT_LINT,
+    ModuleWildcardImportLint,
     MODULE_WILDCARD_IMPORT_LINT_DENY,
     MODULE_WILDCARD_IMPORT_LINT_WARN,
     "Wildcard imports are not allowed"
@@ -303,7 +295,7 @@ declare_variable_severity_lint_new!(
 // Define specific lints for denied item types
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_DENIED_ITEMS_LINT,
+    ModuleDeniedItemsLint,
     MODULE_DENIED_ITEMS_LINT_DENY,
     MODULE_DENIED_ITEMS_LINT_WARN,
     "Module contains denied item types"
@@ -311,7 +303,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_MUST_BE_EMPTY_LINT,
+    ModuleMustBeEmptyLint,
     MODULE_MUST_BE_EMPTY_LINT_DENY,
     MODULE_MUST_BE_EMPTY_LINT_WARN,
     "Module must be empty"
@@ -319,14 +311,13 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT,
+    ModuleMustHaveEmptyModFileLint,
     MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_DENY,
     MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_WARN,
     "Module's mod.rs file must be empty (only allowed to re-export other modules)"
 );
 
 impl_lint_pass!(ModuleLint => [
-    MODULE_LINT_DENY, MODULE_LINT_WARN,
     MODULE_MUST_BE_NAMED_LINT_DENY, MODULE_MUST_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY, MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_EMPTY_LINT_DENY, MODULE_MUST_NOT_BE_EMPTY_LINT_WARN,
@@ -409,7 +400,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                             span_lint_and_help(
                                 ctx,
-                                MODULE_MUST_BE_NAMED_LINT::get_by_severity(rule_info.severity),
+                                ModuleMustBeNamedLint::get_by_severity(rule_info.severity),
                                 self.name().as_str(),
                                 item.span,
                                 message,
@@ -438,7 +429,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                             span_lint_and_help(
                                 ctx,
-                                MODULE_MUST_NOT_BE_NAMED_LINT::get_by_severity(rule_info.severity),
+                                ModuleMustNotBeNamedLint::get_by_severity(rule_info.severity),
                                 self.name().as_str(),
                                 item.span,
                                 message,
@@ -453,7 +444,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         if module_data.item_ids.is_empty() {
                             span_lint_and_help(
                                 ctx,
-                                MODULE_MUST_NOT_BE_EMPTY_LINT::get_by_severity(rule_info.severity),
+                                ModuleMustNotBeEmptyLint::get_by_severity(rule_info.severity),
                                 self.name().as_str(),
                                 item.span,
                                 "Module must not be empty",
@@ -468,19 +459,19 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         let severity = rule_info.severity;
                         self.check_for_disallowed_items(
                             ctx,
-                            &module_data,
+                            module_data,
                             |slf, ctx, item, item_name, _is_mod_rs| {
                                 // For MustBeEmpty, we don't care if it's a mod.rs file or not
                                 span_lint_and_help(
                                     ctx,
-                                    MODULE_MUST_BE_EMPTY_LINT::get_by_severity(severity),
+                                    ModuleMustBeEmptyLint::get_by_severity(severity),
                                     slf.name().as_str(),
                                     item.span,
                                     format!("Item '{}' not allowed in empty module", item_name),
                                     None,
-                                    "Remove this item from the module, which must be empty"
+                                    "Remove this item from the module, which must be empty",
                                 );
-                            }
+                            },
                         );
                     }
                 }
@@ -489,13 +480,13 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         let severity = rule_info.severity;
                         self.check_for_disallowed_items(
                             ctx,
-                            &module_data,
+                            module_data,
                             |slf, ctx, item, item_name, is_mod_rs| {
                                 // Only emit the lint if this is in a mod.rs file
                                 if is_mod_rs {
                                     span_lint_and_help(
                                         ctx,
-                                        MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(severity),
+                                        ModuleMustHaveEmptyModFileLint::get_by_severity(severity),
                                         slf.name().as_str(),
                                         item.span,
                                         format!("Item '{}' disallowed in mod.rs due to empty-mod-file policy", item_name),
@@ -535,9 +526,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                                 span_lint_and_help(
                                     ctx,
-                                    MODULE_RESTRICT_IMPORTS_LINT::get_by_severity(
-                                        rule_info.severity,
-                                    ),
+                                    ModuleRestrictImportsLint::get_by_severity(rule_info.severity),
                                     self.name().as_str(),
                                     item.span,
                                     message,
@@ -561,9 +550,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                                 span_lint_and_help(
                                     ctx,
-                                    MODULE_RESTRICT_IMPORTS_LINT::get_by_severity(
-                                        rule_info.severity,
-                                    ),
+                                    ModuleRestrictImportsLint::get_by_severity(rule_info.severity),
                                     self.name().as_str(),
                                     item.span,
                                     message,
@@ -579,7 +566,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
                         span_lint_and_help(
                             ctx,
-                            MODULE_WILDCARD_IMPORT_LINT::get_by_severity(rule_info.severity),
+                            ModuleWildcardImportLint::get_by_severity(rule_info.severity),
                             self.name().as_str(),
                             item.span,
                             "Wildcard imports are not allowed",
@@ -613,7 +600,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         span_lint_and_help(
                             ctx,
-                            MODULE_DENIED_ITEMS_LINT::get_by_severity(rule_info.severity),
+                            ModuleDeniedItemsLint::get_by_severity(rule_info.severity),
                             self.name().as_str(),
                             item.span,
                             format!(
@@ -627,24 +614,5 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                 }
             }
         }
-    }
-
-    fn check_impl_item(
-        &mut self,
-        ctx: &LateContext<'tcx>,
-        impl_item: &'tcx rustc_hir::ImplItem<'tcx>,
-    ) {
-        // Get the full module path
-        let impl_block = ctx.tcx.hir_get_parent_item(impl_item.owner_id.into());
-        let module = ctx.tcx.hir_get_parent_item(impl_block.into());
-        let module_path = get_full_module_name(&ctx.tcx, &module);
-
-        // Check if this module matches our patterns
-        if !self.matches_module(&module_path) {
-            return;
-        }
-
-        // Since we're removing RestrictFunctions, we can simplify check_impl_item
-        // It won't need to do anything now
     }
 }

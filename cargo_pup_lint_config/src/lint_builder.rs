@@ -1,14 +1,14 @@
+use ron::de::from_reader;
+use ron::ser::{PrettyConfig, to_writer_pretty};
 use std::fs::File;
 use std::io;
-use ron::de::from_reader;
-use ron::ser::{to_writer_pretty, PrettyConfig};
 // lint_builder.rs
-use serde::{Deserialize, Serialize};
-use cargo_pup_common::project_context::ProjectContext;
-use crate::{ConfiguredLint, GenerateFromContext};
+use crate::function_lint::FunctionLint;
 use crate::module_lint::ModuleLint;
 use crate::struct_lint::StructLint;
-use crate::function_lint::FunctionLint;
+use crate::{ConfiguredLint, GenerateFromContext};
+use cargo_pup_common::project_context::ProjectContext;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct LintBuilder {
@@ -30,41 +30,40 @@ impl LintBuilder {
     }
 
     /// Generate lint configurations from project contexts for all lint types
-    /// 
+    ///
     /// This method takes a slice of ProjectContext instances and uses the GenerateFromContext
     /// trait implementations for each lint type to generate a new LintBuilder.
-    /// 
+    ///
     /// Returns the populated LintBuilder containing all generated lints.
     pub fn generate_from_contexts(contexts: &[ProjectContext]) -> Self {
         let mut builder = LintBuilder::new();
-        
+
         // Generate lints from each lint type
         ModuleLint::generate_from_contexts(contexts, &mut builder);
         StructLint::generate_from_contexts(contexts, &mut builder);
         FunctionLint::generate_from_contexts(contexts, &mut builder);
-        
+
         builder
     }
 
     /// Generate lint configurations from project contexts and write directly to a file
-    /// 
+    ///
     /// This method combines the generation of lints from contexts with writing the result to a file.
     /// It returns an io::Result<()> to indicate whether the operation was successful.
     pub fn generate_and_write<P: AsRef<std::path::Path>>(
         contexts: &[ProjectContext],
-        path: P
+        path: P,
     ) -> io::Result<()> {
         // Generate the builder from contexts
         let builder = Self::generate_from_contexts(contexts);
-        
+
         // Write directly to file
         builder.write_to_file(path)
     }
 
     // Method to write the LintBuilder to a file
     pub fn write_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> io::Result<()> {
-        let file = File::create(path)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let file = File::create(path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         to_writer_pretty(file, &self, PrettyConfig::default())
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         Ok(())
@@ -72,11 +71,10 @@ impl LintBuilder {
 
     // Method to read the LintBuilder from a file
     pub fn read_from_file<P: AsRef<std::path::Path>>(path: P) -> io::Result<Self> {
-        let file = File::open(path)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map any io::Error
+        let file = File::open(path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map any io::Error
 
-        let lint_builder: LintBuilder = from_reader(file)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map ron::de::SpannedError to io::Error
+        let lint_builder: LintBuilder =
+            from_reader(file).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map ron::de::SpannedError to io::Error
 
         Ok(lint_builder)
     }
@@ -85,26 +83,25 @@ impl LintBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cargo_pup_common::project_context::{ModuleInfo, TraitInfo, ProjectContext};
+    use crate::function_lint::{FunctionLintExt, FunctionMatch, FunctionRule};
+    use crate::module_lint::ModuleLintExt;
+    use crate::struct_lint::{StructLintExt, StructMatch, StructRule};
+    use crate::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
+    use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo};
     use tempfile::NamedTempFile;
-    use crate::{ConfiguredLint, ModuleMatch, ModuleRule, module_matcher, struct_matcher, function_matcher, Severity};
-    use crate::module_lint::{ModuleLint, ModuleLintExt};
-    use crate::struct_lint::{StructMatch, StructRule, StructLintExt};
-    use crate::function_lint::{FunctionMatch, FunctionRule, FunctionLintExt};
 
     #[test]
     fn test_write_to_file() {
         let mut builder = LintBuilder::new();
 
         // Use a more complex matcher to demonstrate the DSL capabilities with regex
-        builder.module()
+        builder
+            .module()
             .lint_named("my_module_rules")
-            .matching(|m| 
+            .matching(|m| {
                 m.module("^core::(models|entities)$")
-                    .or(
-                        m.module("api::controllers")
-                    )
-            )
+                    .or(m.module("api::controllers"))
+            })
             .with_severity(Severity::Error)
             .must_be_named("domain_entity".into())
             .with_severity(Severity::Warn)
@@ -124,14 +121,13 @@ mod tests {
         let mut builder = LintBuilder::new();
 
         // Use the same complex matcher as in test_write_to_file
-        builder.module()
+        builder
+            .module()
             .lint_named("my_module_rules")
-            .matching(|m| 
+            .matching(|m| {
                 m.module("^core::(models|entities)$")
-                    .or(
-                        m.module("api::controllers")
-                    )
-            )
+                    .or(m.module("api::controllers"))
+            })
             .with_severity(Severity::Error)
             .must_be_named("domain_entity".into())
             .with_severity(Severity::Warn)
@@ -149,11 +145,11 @@ mod tests {
         assert_eq!(loaded_builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &loaded_builder.lints[0] {
             assert_eq!(module_lint.name, "my_module_rules");
-            
+
             // Check that it's a complex matcher with OR at the top level
-            if let ModuleMatch::OrMatches(left, right) = &module_lint.matches {
+            if let ModuleMatch::OrMatches(left, _) = &module_lint.matches {
                 // We don't check the entire structure, just that the serialization/deserialization worked
-                
+
                 // Check that the left side uses a regex module matcher
                 if let ModuleMatch::Module(pattern) = &**left {
                     assert_eq!(pattern, "^core::(models|entities)$");
@@ -163,10 +159,10 @@ mod tests {
             } else {
                 panic!("Expected OrMatches at top level");
             }
-            
+
             // Check rules and their severity levels
             assert_eq!(module_lint.rules.len(), 2);
-            
+
             // First rule should be MustBeNamed with Error severity
             if let ModuleRule::MustBeNamed(name, severity) = &module_lint.rules[0] {
                 assert_eq!(name, "domain_entity");
@@ -174,7 +170,7 @@ mod tests {
             } else {
                 panic!("Expected MustBeNamed with Error severity");
             }
-            
+
             // Second rule should be NoWildcardImports with Warn severity
             if let ModuleRule::NoWildcardImports(severity) = &module_lint.rules[1] {
                 assert_eq!(severity, &Severity::Warn);
@@ -189,18 +185,19 @@ mod tests {
     #[test]
     fn test_regex_struct_matcher() {
         let mut builder = LintBuilder::new();
-        
+
         // Test regex capabilities for struct matching
-        builder.struct_lint()
+        builder
+            .struct_lint()
             .lint_named("struct_lint")
-            .matching(|m| 
+            .matching(|m| {
                 m.name("^[A-Z][a-z]+Model$")
                     .and(m.has_attribute("derive\\(.*Debug.*\\)"))
-            )
+            })
             .with_severity(Severity::Error)
             .must_be_named("EntityModel".into())
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
             // Check that the matcher is an AND with regex patterns
@@ -210,7 +207,7 @@ mod tests {
                 } else {
                     panic!("Expected Name");
                 }
-                
+
                 if let StructMatch::HasAttribute(pattern) = &**right {
                     assert_eq!(pattern, "derive\\(.*Debug.*\\)");
                 } else {
@@ -219,7 +216,7 @@ mod tests {
             } else {
                 panic!("Expected AndMatches");
             }
-            
+
             // Check rule and severity
             assert_eq!(struct_lint.rules.len(), 1);
             if let StructRule::MustBeNamed(name, severity) = &struct_lint.rules[0] {
@@ -236,25 +233,26 @@ mod tests {
     #[test]
     fn test_function_lint_max_length() {
         let mut builder = LintBuilder::new();
-        
+
         // Test function lint with name matching and max length
-        builder.function()
+        builder
+            .function()
             .lint_named("process_data_lint")
             .matching(|m| m.name("process_data"))
             .with_severity(Severity::Error)
             .max_length(50)
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
             assert_eq!(function_lint.name, "function_lint");
-            
+
             if let FunctionMatch::NameEquals(name) = &function_lint.matches {
                 assert_eq!(name, "process_data");
             } else {
                 panic!("Expected NameEquals match");
             }
-            
+
             assert_eq!(function_lint.rules.len(), 1);
             if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
                 assert_eq!(*length, 50);
@@ -266,21 +264,22 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_function_lint_regex_matching() {
         let mut builder = LintBuilder::new();
-        
+
         // Test function lint with regex matching
-        builder.function()
+        builder
+            .function()
             .lint_named("regexp_lint")
-            .matching(|m| 
+            .matching(|m| {
                 m.name_regex("^(get|set)_[a-z_]+$")
                     .and(m.in_module("^core::models::[a-zA-Z]+$"))
-            )
+            })
             .max_length(30)
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
             // Check that the matcher is an AND with regex patterns
@@ -290,7 +289,7 @@ mod tests {
                 } else {
                     panic!("Expected NameRegex");
                 }
-                
+
                 if let FunctionMatch::InModule(pattern) = &**right {
                     assert_eq!(pattern, "^core::models::[a-zA-Z]+$");
                 } else {
@@ -299,7 +298,7 @@ mod tests {
             } else {
                 panic!("Expected AndMatches");
             }
-            
+
             // Check rule
             assert_eq!(function_lint.rules.len(), 1);
             if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
@@ -316,33 +315,36 @@ mod tests {
     #[test]
     fn test_function_lint_combined_rules() {
         let mut builder = LintBuilder::new();
-        
+
         // Test AND match
-        builder.function()
+        builder
+            .function()
             .lint_named("test_and")
             .matching(|m| m.name("test_and").and(m.name_regex(".*")))
             .with_severity(Severity::Error)
             .max_length(10)
             .build();
-            
+
         // Test OR match
-        builder.function()
+        builder
+            .function()
             .lint_named("test_or")
             .matching(|m| m.name("test_or_1").or(m.name("test_or_2")))
             .with_severity(Severity::Error)
             .max_length(20)
             .build();
-            
+
         // Test NOT match
-        builder.function()
+        builder
+            .function()
             .lint_named("test_not")
             .matching(|m| m.name_regex("test_.*").not())
             .with_severity(Severity::Error)
             .max_length(100)
             .build();
-            
+
         assert_eq!(builder.lints.len(), 3);
-        
+
         // Verify AND match
         if let ConfiguredLint::Function(function_lint) = &builder.lints[0] {
             if let FunctionMatch::AndMatches(left, right) = &function_lint.matches {
@@ -351,7 +353,7 @@ mod tests {
                 } else {
                     panic!("Expected NameEquals on left side");
                 }
-                
+
                 if let FunctionMatch::NameRegex(pattern) = &**right {
                     assert_eq!(pattern, ".*");
                 } else {
@@ -360,7 +362,7 @@ mod tests {
             } else {
                 panic!("Expected AndMatches");
             }
-            
+
             // Verify rule is a simple MaxLength
             assert_eq!(function_lint.rules.len(), 1);
             if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
@@ -370,7 +372,7 @@ mod tests {
                 panic!("Expected MaxLength rule");
             }
         }
-        
+
         // Verify OR match
         if let ConfiguredLint::Function(function_lint) = &builder.lints[1] {
             if let FunctionMatch::OrMatches(left, right) = &function_lint.matches {
@@ -379,7 +381,7 @@ mod tests {
                 } else {
                     panic!("Expected NameEquals on left side");
                 }
-                
+
                 if let FunctionMatch::NameEquals(name) = &**right {
                     assert_eq!(name, "test_or_2");
                 } else {
@@ -388,7 +390,7 @@ mod tests {
             } else {
                 panic!("Expected OrMatches");
             }
-            
+
             // Verify rule is a simple MaxLength
             assert_eq!(function_lint.rules.len(), 1);
             if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
@@ -398,7 +400,7 @@ mod tests {
                 panic!("Expected MaxLength rule");
             }
         }
-        
+
         // Verify NOT match
         if let ConfiguredLint::Function(function_lint) = &builder.lints[2] {
             if let FunctionMatch::NotMatch(inner) = &function_lint.matches {
@@ -410,7 +412,7 @@ mod tests {
             } else {
                 panic!("Expected NotMatch");
             }
-            
+
             // Verify rule is a simple MaxLength
             assert_eq!(function_lint.rules.len(), 1);
             if let FunctionRule::MaxLength(length, severity) = &function_lint.rules[0] {
@@ -425,14 +427,15 @@ mod tests {
     #[test]
     fn test_must_not_be_empty_rule() {
         let mut builder = LintBuilder::new();
-        
+
         // Test the builder extension method with new matcher DSL
-        builder.module()
+        builder
+            .module()
             .lint_named("module_matcher")
             .matching(|m| m.module("core::utils"))
             .must_not_be_empty()
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
             assert_eq!(module_lint.rules.len(), 1);
@@ -445,18 +448,19 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_no_wildcard_imports_rule() {
         let mut builder = LintBuilder::new();
-        
+
         // Test the builder extension method with new matcher DSL
-        builder.module()
+        builder
+            .module()
             .lint_named("wildcard_rule")
             .matching(|m| m.module("ui"))
             .no_wildcard_imports()
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
             assert_eq!(module_lint.rules.len(), 1);
@@ -469,24 +473,30 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_restrict_imports_rule() {
         let mut builder = LintBuilder::new();
         let allowed = vec!["std::collections".into(), "crate::utils".into()];
         let denied = vec!["std::sync".into()];
-        
+
         // Test the builder extension method with new matcher DSL
-        builder.module()
+        builder
+            .module()
             .lint_named("test_restrict_imports")
             .matching(|m| m.module("app::core"))
             .restrict_imports(Some(allowed.clone()), Some(denied.clone()))
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
             assert_eq!(module_lint.rules.len(), 1);
-            if let ModuleRule::RestrictImports { allowed_only, denied: denied_mods, severity } = &module_lint.rules[0] {
+            if let ModuleRule::RestrictImports {
+                allowed_only,
+                denied: denied_mods,
+                severity,
+            } = &module_lint.rules[0]
+            {
                 assert_eq!(allowed_only.as_ref().unwrap(), &allowed);
                 assert_eq!(denied_mods.as_ref().unwrap(), &denied);
                 assert_eq!(severity, &Severity::Warn); // Default severity is Warn
@@ -497,38 +507,39 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_multiple_rules() {
         let mut builder = LintBuilder::new();
-        
+
         // Apply multiple rules to the same module match
-        builder.module()
+        builder
+            .module()
             .lint_named("multiple_matches")
             .matching(|m| m.module("app::core"))
             .must_not_be_empty()
             .no_wildcard_imports()
             .must_be_named("core".into())
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
             assert_eq!(module_lint.rules.len(), 3);
-            
+
             // Check first rule - MustNotBeEmpty
             if let ModuleRule::MustNotBeEmpty(severity) = &module_lint.rules[0] {
                 assert_eq!(severity, &Severity::Warn); // Default severity
             } else {
                 panic!("Expected MustNotBeEmpty as first rule");
             }
-            
+
             // Check second rule - NoWildcardImports
             if let ModuleRule::NoWildcardImports(severity) = &module_lint.rules[1] {
                 assert_eq!(severity, &Severity::Warn); // Default severity
             } else {
                 panic!("Expected NoWildcardImports as second rule");
             }
-            
+
             // Check third rule - MustBeNamed
             if let ModuleRule::MustBeNamed(name, severity) = &module_lint.rules[2] {
                 assert_eq!(name, "core");
@@ -540,31 +551,32 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_struct_lint_builder() {
         let mut builder = LintBuilder::new();
-        
+
         // Use the builder interface for struct lints with new matcher DSL
-        builder.struct_lint()
+        builder
+            .struct_lint()
             .lint_named("builder_int")
             .matching(|m| m.name("User"))
             .must_be_named("User".into())
             .must_not_be_named("UserStruct".into())
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
             assert_eq!(struct_lint.name, "struct_lint");
-            
+
             if let StructMatch::Name(name) = &struct_lint.matches {
                 assert_eq!(name, "User");
             } else {
                 panic!("Expected Name match");
             }
-            
+
             assert_eq!(struct_lint.rules.len(), 2);
-            
+
             // Check first rule - MustBeNamed
             if let StructRule::MustBeNamed(name, severity) = &struct_lint.rules[0] {
                 assert_eq!(name, "User");
@@ -572,7 +584,7 @@ mod tests {
             } else {
                 panic!("Expected MustBeNamed as first rule");
             }
-            
+
             // Check second rule - MustNotBeNamed
             if let StructRule::MustNotBeNamed(name, severity) = &struct_lint.rules[1] {
                 assert_eq!(name, "UserStruct");
@@ -588,37 +600,36 @@ mod tests {
     #[test]
     fn test_complex_module_matcher() {
         let mut builder = LintBuilder::new();
-        
+
         // Test a complex matching expression
-        builder.module()
+        builder
+            .module()
             .lint_named("complex_module_matcher")
-            .matching(|m| 
-                m.module("app::core")
-                    .or(m.module("lib::utils").not())
-            )
+            .matching(|m| m.module("app::core").or(m.module("lib::utils").not()))
             .must_not_be_empty()
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         // We're not checking the complex match structure in depth,
         // just that it builds successfully
     }
-    
+
     #[test]
     fn test_complex_struct_matcher() {
         let mut builder = LintBuilder::new();
-        
+
         // Test a complex matching expression for structs
-        builder.struct_lint()
+        builder
+            .struct_lint()
             .lint_named("complex_struct_matcher")
-            .matching(|m| 
+            .matching(|m| {
                 m.name("User")
                     .or(m.name("Account"))
                     .and(m.has_attribute("derive(Debug)").not())
-            )
+            })
             .must_be_named("Entity".into())
             .build();
-            
+
         assert_eq!(builder.lints.len(), 1);
         // We're not checking the complex match structure in depth,
         // just that it builds successfully
@@ -630,92 +641,98 @@ mod tests {
     fn test_lint_builder_serialization_roundtrip() {
         // Create a builder with multiple different types of lint configurations
         let mut original_builder = LintBuilder::new();
-        
+
         // Add a module lint
-        original_builder.module()
+        original_builder
+            .module()
             .lint_named("module_lint")
             .matching(|m| m.module("^test::module$"))
             .with_severity(Severity::Warn)
             .must_not_be_empty()
             .build();
-            
+
         // Add a struct lint
-        original_builder.struct_lint()
+        original_builder
+            .struct_lint()
             .lint_named("struct_lint")
             .matching(|m| m.name("TestStruct"))
             .with_severity(Severity::Error)
             .must_be_named("TestStruct".into())
             .build();
-            
+
         // Add a function lint
-        original_builder.function()
+        original_builder
+            .function()
             .lint_named("function_lint")
             .matching(|m| m.name_regex("^test_.*$"))
             .with_severity(Severity::Warn)
             .max_length(50)
             .build();
-        
+
         // Serialize to RON
         let temp_file = NamedTempFile::new().unwrap();
         let temp_path = temp_file.path();
-        
+
         // Write to file
         original_builder.write_to_file(temp_path).unwrap();
-        
+
         // Read it back
         let deserialized_builder = LintBuilder::read_from_file(temp_path).unwrap();
-        
+
         // Verify the count of lints is the same
         assert_eq!(
-            original_builder.lints.len(), 
+            original_builder.lints.len(),
             deserialized_builder.lints.len(),
             "Deserialized builder should have the same number of lints"
         );
-        
+
         // Also directly test serialization and deserialization in memory (without file I/O)
-        let serialized = ron::to_string(&original_builder).expect("Failed to serialize to RON string");
-        let from_ron: LintBuilder = ron::from_str(&serialized).expect("Failed to deserialize from RON string");
-        
+        let serialized =
+            ron::to_string(&original_builder).expect("Failed to serialize to RON string");
+        let from_ron: LintBuilder =
+            ron::from_str(&serialized).expect("Failed to deserialize from RON string");
+
         assert_eq!(
-            original_builder.lints.len(), 
+            original_builder.lints.len(),
             from_ron.lints.len(),
             "In-memory deserialized builder should have the same number of lints"
         );
-        
+
         // Print the serialized RON for debugging
         println!("Serialized RON format:\n{}", serialized);
-        
+
         // Verify the types match for each lint after deserialization
         for (i, original_lint) in original_builder.lints.iter().enumerate() {
             let deserialized_lint = &deserialized_builder.lints[i];
-            
+
             match (original_lint, deserialized_lint) {
                 (ConfiguredLint::Module(_), ConfiguredLint::Module(_)) => {
                     // Both are module lints - correct
-                },
+                }
                 (ConfiguredLint::Struct(_), ConfiguredLint::Struct(_)) => {
                     // Both are struct lints - correct
-                },
+                }
                 (ConfiguredLint::Function(_), ConfiguredLint::Function(_)) => {
                     // Both are function lints - correct
-                },
+                }
                 _ => {
                     panic!("Lint type mismatch after deserialization at index {}", i);
                 }
             }
         }
-        
+
         // For additional verification, re-serialize the deserialized builder and compare the strings
-        let reserialize1 = ron::to_string(&original_builder).expect("Failed to reserialize original");
-        let reserialize2 = ron::to_string(&deserialized_builder).expect("Failed to serialize deserialized");
-        
+        let reserialize1 =
+            ron::to_string(&original_builder).expect("Failed to reserialize original");
+        let reserialize2 =
+            ron::to_string(&deserialized_builder).expect("Failed to serialize deserialized");
+
         assert_eq!(
-            reserialize1, 
-            reserialize2,
+            reserialize1, reserialize2,
             "Reserialized RON strings should be identical"
         );
     }
-    
+
     #[test]
     fn test_generate_from_contexts() {
         // Create test project contexts
@@ -731,14 +748,12 @@ mod tests {
                 applicable_lints: vec![],
             },
         ];
-        context1.traits = vec![
-            TraitInfo {
-                name: "crate1::Trait1".to_string(),
-                implementors: vec!["crate1::Type1".to_string()],
-                applicable_lints: vec![],
-            }
-        ];
-        
+        context1.traits = vec![TraitInfo {
+            name: "crate1::Trait1".to_string(),
+            implementors: vec!["crate1::Type1".to_string()],
+            applicable_lints: vec![],
+        }];
+
         let mut context2 = ProjectContext::new();
         context2.module_root = "crate2".to_string();
         context2.modules = vec![
@@ -751,61 +766,70 @@ mod tests {
                 applicable_lints: vec![],
             },
         ];
-        context2.traits = vec![
-            TraitInfo {
-                name: "crate2::TraitX".to_string(),
-                implementors: vec!["crate2::TypeX".to_string()],
-                applicable_lints: vec![],
-            }
-        ];
-        
+        context2.traits = vec![TraitInfo {
+            name: "crate2::TraitX".to_string(),
+            implementors: vec!["crate2::TypeX".to_string()],
+            applicable_lints: vec![],
+        }];
+
         // Generate lints from contexts
         let builder = LintBuilder::generate_from_contexts(&[context1, context2]);
-        
+
         // Verify that lints were generated
-        assert!(!builder.lints.is_empty(), "Builder should contain generated lints");
-        
+        assert!(
+            !builder.lints.is_empty(),
+            "Builder should contain generated lints"
+        );
+
         // Check that we have each lint type
-        let module_lints = builder.lints.iter().filter(|lint| matches!(lint, ConfiguredLint::Module(_))).count();
-        let struct_lints = builder.lints.iter().filter(|lint| matches!(lint, ConfiguredLint::Struct(_))).count();
-        let function_lints = builder.lints.iter().filter(|lint| matches!(lint, ConfiguredLint::Function(_))).count();
-        
+        let module_lints = builder
+            .lints
+            .iter()
+            .filter(|lint| matches!(lint, ConfiguredLint::Module(_)))
+            .count();
+        let struct_lints = builder
+            .lints
+            .iter()
+            .filter(|lint| matches!(lint, ConfiguredLint::Struct(_)))
+            .count();
+        let function_lints = builder
+            .lints
+            .iter()
+            .filter(|lint| matches!(lint, ConfiguredLint::Function(_)))
+            .count();
+
         // Verify we have at least one of each lint type
         assert!(module_lints > 0, "Should have at least one module lint");
         assert!(struct_lints > 0, "Should have at least one struct lint");
         assert!(function_lints > 0, "Should have at least one function lint");
     }
-    
+
     #[test]
     fn test_generate_and_write() {
         // Create test project contexts
         let mut context = ProjectContext::new();
         context.module_root = "test_crate".to_string();
-        context.modules = vec![
-            ModuleInfo {
-                name: "test_crate::module1".to_string(),
-                applicable_lints: vec![],
-            },
-        ];
-        context.traits = vec![
-            TraitInfo {
-                name: "test_crate::Trait1".to_string(),
-                implementors: vec!["test_crate::Type1".to_string()],
-                applicable_lints: vec![],
-            }
-        ];
-        
+        context.modules = vec![ModuleInfo {
+            name: "test_crate::module1".to_string(),
+            applicable_lints: vec![],
+        }];
+        context.traits = vec![TraitInfo {
+            name: "test_crate::Trait1".to_string(),
+            implementors: vec!["test_crate::Type1".to_string()],
+            applicable_lints: vec![],
+        }];
+
         // Create a temporary file
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
-        
+
         // Generate lints and write to file
         LintBuilder::generate_and_write(&[context], path).unwrap();
-        
+
         // Verify the file exists and is not empty
         let metadata = std::fs::metadata(path).unwrap();
         assert!(metadata.len() > 0, "File should not be empty");
-        
+
         // Read the file back and verify it's valid
         let builder = LintBuilder::read_from_file(path).unwrap();
         assert!(!builder.lints.is_empty(), "Builder should contain lints");

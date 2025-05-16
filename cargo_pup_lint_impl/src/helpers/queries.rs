@@ -58,38 +58,38 @@ pub fn implements_error_trait<'tcx>(
         | ty::TyKind::Char => return false,
         _ => {}
     }
-    
+
     // Get the Error trait if it exists
     if let Some(error_trait_def_id) = tcx.get_diagnostic_item(sym::Error) {
         // Special case for associated types with explicit trait bounds (like T::Error)
         // Check if it's a projection (associated) type
-        if let Some(_) = ty.ty_adt_def() {
+        if ty.ty_adt_def().is_some() {
             // For anyhow::Error, we know it implements std::error::Error
             if ty.to_string().contains("anyhow::Error") {
                 // anyhow::Error always implements std::error::Error
                 return true;
             }
         }
-        
+
         // For associated types, check if they have explicit bounds
         // in the param environment
         let ty_str = ty.to_string();
         if ty_str.contains("::Error") || ty_str.contains("<") {
             // This could be a projection type like T::Error or a generic type
-            // Let's examine all the predicates in the param_env to see if there's 
+            // Let's examine all the predicates in the param_env to see if there's
             // an explicit bound that this type implements Error
             for predicate in param_env.caller_bounds() {
                 // The specific variant names might differ based on rustc version
                 // so we'll use string comparison on the stringified predicate
                 let pred_str = format!("{:?}", predicate);
-                
+
                 // If there's a predicate directly stating the type implements Error trait
                 if pred_str.contains(&ty_str) && pred_str.contains("Error") {
                     return true;
                 }
             }
         }
-        
+
         // Try the standard trait implementation check for other types
         implements_trait(tcx, param_env, ty, error_trait_def_id)
     } else {

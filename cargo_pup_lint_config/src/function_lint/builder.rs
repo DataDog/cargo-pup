@@ -1,15 +1,15 @@
+use super::matcher::{FunctionMatchNode, FunctionMatcher, matcher};
+use super::types::{FunctionLint, FunctionMatch, FunctionRule};
 use crate::lint_builder::LintBuilder;
 use crate::{ConfiguredLint, Severity};
-use super::types::{FunctionLint, FunctionMatch, FunctionRule};
-use super::matcher::{matcher, FunctionMatcher, FunctionMatchNode};
 
 // Fluent Builder for Function Lints
 pub trait FunctionLintExt {
-    fn function<'a>(&'a mut self) -> FunctionLintBuilder<'a>;
+    fn function(&mut self) -> FunctionLintBuilder<'_>;
 }
 
 impl FunctionLintExt for LintBuilder {
-    fn function<'a>(&'a mut self) -> FunctionLintBuilder<'a> {
+    fn function(&mut self) -> FunctionLintBuilder<'_> {
         FunctionLintBuilder { parent: self }
     }
 }
@@ -22,9 +22,9 @@ pub struct FunctionLintBuilder<'a> {
 impl<'a> FunctionLintBuilder<'a> {
     // Required step to name the lint
     pub fn lint_named(self, name: impl Into<String>) -> FunctionNamedBuilder<'a> {
-        FunctionNamedBuilder { 
+        FunctionNamedBuilder {
             parent: self.parent,
-            name: name.into()
+            name: name.into(),
         }
     }
 }
@@ -46,11 +46,11 @@ impl<'a> FunctionNamedBuilder<'a> {
             name: self.name,
         }
     }
-    
+
     // New matcher method using the DSL
     pub fn matching<F>(self, f: F) -> FunctionConstraintBuilder<'a>
     where
-        F: FnOnce(&FunctionMatcher) -> FunctionMatchNode
+        F: FnOnce(&FunctionMatcher) -> FunctionMatchNode,
     {
         let matcher = matcher(f);
         self.matches(matcher)
@@ -70,13 +70,13 @@ impl<'a> FunctionConstraintBuilder<'a> {
     fn add_rule_internal(&mut self, rule: FunctionRule) {
         self.rules.push(rule);
     }
-    
+
     // Public API method that takes and returns self
     pub fn add_rule(mut self, rule: FunctionRule) -> Self {
         self.add_rule_internal(rule);
         self
     }
-    
+
     pub fn build(self) -> &'a mut LintBuilder {
         let lint = ConfiguredLint::Function(FunctionLint {
             name: self.name,
@@ -86,25 +86,27 @@ impl<'a> FunctionConstraintBuilder<'a> {
         self.parent.push(lint);
         self.parent
     }
-    
+
     // Set the severity level for subsequent rules
     pub fn with_severity(mut self, severity: Severity) -> Self {
         self.current_severity = severity;
         self
     }
-    
+
     // Helper method for function length limit
     pub fn max_length(mut self, length: usize) -> Self {
         self.add_rule_internal(FunctionRule::MaxLength(length, self.current_severity));
         self
     }
-    
+
     // Helper method for Result error type check
     pub fn enforce_error_trait_implementation(mut self) -> Self {
-        self.add_rule_internal(FunctionRule::ResultErrorMustImplementError(self.current_severity));
+        self.add_rule_internal(FunctionRule::ResultErrorMustImplementError(
+            self.current_severity,
+        ));
         self
     }
-    
+
     // Create a MaxLength rule that can be used in combinations
     pub fn create_max_length_rule(&self, length: usize) -> FunctionRule {
         FunctionRule::MaxLength(length, self.current_severity)

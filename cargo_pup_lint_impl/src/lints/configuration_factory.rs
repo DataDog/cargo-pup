@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
 use std::path::{Path};
 use std::fs;
 use crate::{ArchitectureLintRule};
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use cargo_pup_common::project_context::ProjectContext;
 use cargo_pup_lint_config::ConfiguredLint;
 use cargo_pup_lint_config::lint_builder::LintBuilder;
@@ -18,7 +16,7 @@ pub struct LintConfigurationFactory {
 
 impl LintConfigurationFactory {
 
-    pub fn from_file(file: String) -> anyhow::Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
+    pub fn from_file(file: String) -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
         // Check if this is a file path or actual content
         let path = Path::new(&file);
         if path.exists() {
@@ -67,7 +65,7 @@ impl LintConfigurationFactory {
                     }
                 }).collect())
             },
-            Err(e) => {
+            Err(_e) => {
                 // Extract an error line preview if possible
                 let error_preview = match content.lines().enumerate().take(10).map(|(i, line)| format!("{}: {}", i+1, line)).collect::<Vec<_>>() {
                     lines if !lines.is_empty() => format!("\nFirst few lines of the file:\n{}", lines.join("\n")),
@@ -78,7 +76,7 @@ impl LintConfigurationFactory {
         }
     }
 
-    pub fn generate_file(context: &ProjectContext) -> Result<String> {
+    pub fn generate_file(_context: &ProjectContext) -> Result<String> {
         panic!("Not implemented!");
     }
 }
