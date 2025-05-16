@@ -11,7 +11,6 @@ use crate::lints::module_lint::ModuleLint;
 use crate::lints::struct_lint::StructLint;
 use crate::lints::function_lint::FunctionLint;
 use ron;
-use serde_yaml;
 
 // Supercedes the old LintConfigurationFactory
 pub struct LintConfigurationFactory {
@@ -49,7 +48,7 @@ impl LintConfigurationFactory {
         // Read file contents
         let content = fs::read_to_string(&file)
             .map_err(|e| anyhow::anyhow!("Failed to read RON file {}: {}", file, e))?;
-        
+
         Self::from_content(&content)
     }
     
@@ -74,26 +73,7 @@ impl LintConfigurationFactory {
                     lines if !lines.is_empty() => format!("\nFirst few lines of the file:\n{}", lines.join("\n")),
                     _ => String::new()
                 };
-                
-                // If RON parsing fails, try as YAML
-                match serde_yaml::from_str::<LintBuilder>(content) {
-                    Ok(lint_builder) => {
-                        Ok(lint_builder.lints.iter().map(|l| {
-                            match l {
-                                ConfiguredLint::Module(_) => ModuleLint::new(l),
-                                ConfiguredLint::Struct(_) => StructLint::new(l),
-                                ConfiguredLint::Function(_) => FunctionLint::new(l),
-                            }
-                        }).collect())
-                    },
-                    Err(yaml_err) => {
-                        // Neither format worked - provide detailed error message
-                        Err(anyhow!("Failed to parse configuration file as RON: {}\n\
-                                    Also failed as YAML: {}\n\
-                                    Please check your configuration syntax.{}", 
-                                    e, yaml_err, error_preview))
-                    }
-                }
+                Result::Err(anyhow::anyhow!("Failed to parse RON file: {}", error_preview))
             }
         }
     }

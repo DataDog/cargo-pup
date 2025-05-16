@@ -912,7 +912,7 @@ mod tests {
             let temp_dir = setup_test_directory();
             let temp_path = temp_dir.path();
 
-            // Create Cargo.toml and pup.yaml files
+            // Create Cargo.toml and pup.ron files
             fs::write(
                 temp_path.join("Cargo.toml"),
                 "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",

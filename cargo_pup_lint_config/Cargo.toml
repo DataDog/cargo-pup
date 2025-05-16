@@ -7,7 +7,6 @@ edition = "2024"
 serde.workspace = true
 ron.workspace = true
 tempfile.workspace = true
-serde_yaml.workspace = true
 anyhow.workspace = true
 regex.workspace = true 
 cargo_pup_common = { path = "../cargo_pup_common" }
