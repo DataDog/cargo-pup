@@ -43,6 +43,13 @@
             ],
         )),
         Module((
+            name: "must_have_empty_mod_file",
+            matches: Module("^test_app::empty_mod_file$"),
+            rules: [
+                MustHaveEmptyModFile(Warn),
+            ],
+        )),
+        Module((
             name: "item_type_restrictions",
             matches: Module("^test_app::item_type$"),
             rules: [

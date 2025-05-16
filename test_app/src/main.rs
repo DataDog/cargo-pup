@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 mod empty_mod;
+mod empty_mod_file;
 mod function_length;
 mod item_type;
 mod module_usage;

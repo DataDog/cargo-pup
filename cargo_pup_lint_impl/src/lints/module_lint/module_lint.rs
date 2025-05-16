@@ -5,7 +5,7 @@ use crate::{declare_variable_severity_lint, declare_variable_severity_lint_new};
 use cargo_pup_lint_config::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
 use regex::Regex;
 use rustc_hir::{ImplItem, ImplItemKind, Item, ItemKind, OwnerId, UseKind};
-use rustc_lint::{LateContext, LateLintPass, Lint, LintStore};
+use rustc_lint::{LateContext, LateLintPass, Lint, LintContext, LintStore};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::impl_lint_pass;
 
@@ -31,6 +31,7 @@ enum ModuleRuleType {
     MustNotBeNamed(String),
     MustNotBeEmpty,
     MustBeEmpty,
+    MustHaveEmptyModFile,
     RestrictImports {
         allowed_only: Option<Vec<String>>,
         denied: Option<Vec<String>>,
@@ -41,6 +42,7 @@ enum ModuleRuleType {
 
 impl ModuleLint {
     pub fn new(config: &ConfiguredLint) -> Box<dyn ArchitectureLintRule + Send> {
+        // TODO - just clone this
         match config {
             ConfiguredLint::Module(m) => {
                 // Extract rule information to our simplified structure
@@ -63,6 +65,10 @@ impl ModuleLint {
                             }),
                             ModuleRule::MustBeEmpty(severity) => Some(ModuleRuleInfo {
                                 rule_type: ModuleRuleType::MustBeEmpty,
+                                severity: *severity,
+                            }),
+                            ModuleRule::MustHaveEmptyModFile(severity) => Some(ModuleRuleInfo {
+                                rule_type: ModuleRuleType::MustHaveEmptyModFile,
                                 severity: *severity,
                             }),
                             ModuleRule::RestrictImports {
@@ -254,12 +260,21 @@ declare_variable_severity_lint_new!(
     "Module must be empty"
 );
 
+declare_variable_severity_lint_new!(
+    pub,
+    MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT,
+    MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_DENY,
+    MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_WARN,
+    "Module's mod.rs file must be empty (only allowed to re-export other modules)"
+);
+
 impl_lint_pass!(ModuleLint => [
     MODULE_LINT_DENY, MODULE_LINT_WARN,
     MODULE_MUST_BE_NAMED_LINT_DENY, MODULE_MUST_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY, MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_EMPTY_LINT_DENY, MODULE_MUST_NOT_BE_EMPTY_LINT_WARN,
     MODULE_MUST_BE_EMPTY_LINT_DENY, MODULE_MUST_BE_EMPTY_LINT_WARN,
+    MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_DENY, MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_WARN,
     MODULE_RESTRICT_IMPORTS_LINT_DENY, MODULE_RESTRICT_IMPORTS_LINT_WARN,
     MODULE_WILDCARD_IMPORT_LINT_DENY, MODULE_WILDCARD_IMPORT_LINT_WARN,
     MODULE_DENIED_ITEMS_LINT_DENY, MODULE_DENIED_ITEMS_LINT_WARN
@@ -450,7 +465,93 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                     }
                                     _ => {}
                                 }
-
+                            }
+                        }
+                    }
+                }
+                ModuleRuleType::MustHaveEmptyModFile => {
+                    if let ItemKind::Mod(module_data) = item.kind {
+                        for &item_id in module_data.item_ids.iter() {
+                            let item = ctx.tcx.hir_item(item_id);
+                            let span = item.span;
+                            
+                            // Get item name safely using hir.name approach from empty_mod.rs
+                            let hir = ctx.tcx.hir();
+                            let item_name = hir.name(item.hir_id()).to_ident_string();
+                            
+                            // Check if the file is a mod.rs file
+                            let filename = ctx.sess().source_map().span_to_filename(span);
+                            if let rustc_span::FileName::Real(filename) = filename {
+                                let filename_str = filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local);
+                                
+                                if filename_str.ends_with("/mod.rs") {
+                                    // For mod.rs files, only allow module re-exports (pub mod / pub use statements)
+                                    match &item.kind {
+                                        ItemKind::Static(..)
+                                        | ItemKind::Struct(..)
+                                        | ItemKind::Union(..)
+                                        | ItemKind::Trait(..)
+                                        | ItemKind::Enum(..) => {
+                                            span_lint_and_help(
+                                                ctx,
+                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
+                                                self.name().as_str(),
+                                                span.shrink_to_lo(),
+                                                format!(
+                                                    "Item '{}' disallowed in mod.rs due to empty-mod-file policy",
+                                                    item_name
+                                                ),
+                                                None,
+                                                "Remove this definition from the mod.rs file.",
+                                            );
+                                        }
+                                        ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => {
+                                            span_lint_and_help(
+                                                ctx,
+                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
+                                                self.name().as_str(),
+                                                span,
+                                                format!(
+                                                    "Item '{}' disallowed in mod.rs due to empty-mod-file policy",
+                                                    item_name
+                                                ),
+                                                None,
+                                                "Remove this implementation from the mod.rs file.",
+                                            );
+                                        }
+                                        ItemKind::Fn { .. } => {
+                                            span_lint_and_help(
+                                                ctx,
+                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
+                                                self.name().as_str(),
+                                                span,
+                                                format!(
+                                                    "Function '{}' disallowed in mod.rs due to empty-mod-file policy",
+                                                    item_name
+                                                ),
+                                                None,
+                                                "Remove this function from the mod.rs file.",
+                                            );
+                                        }
+                                        ItemKind::Const(..) => {
+                                            span_lint_and_help(
+                                                ctx,
+                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
+                                                self.name().as_str(),
+                                                span,
+                                                format!(
+                                                    "Constant '{}' disallowed in mod.rs due to empty-mod-file policy",
+                                                    item_name
+                                                ),
+                                                None,
+                                                "Remove this constant from the mod.rs file.",
+                                            );
+                                        }
+                                        // Module declarations and use statements are allowed
+                                        ItemKind::Mod(..) | ItemKind::Use(..) => {}
+                                        _ => {}
+                                    }
+                                }
                             }
                         }
                     }

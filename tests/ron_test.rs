@@ -5,6 +5,8 @@
 
 use cargo_pup_lint_config::{FunctionLintExt, LintBuilder, ModuleLintExt, Severity, StructLintExt};
 
+
+
 #[test]
 fn test_lint_config_matches_yaml() {
     // Create a new LintBuilder
@@ -36,7 +38,7 @@ fn test_lint_config_matches_yaml() {
         .lint_named("empty_mod_rule")
         .matching(|m| m.module(".*"))
         .with_severity(Severity::Warn)
-        .must_be_empty()
+        .must_have_empty_mod_file()
         .build();
 
     // Add ItemType rule for helpers_no_structs_or_traits
@@ -51,7 +53,7 @@ fn test_lint_config_matches_yaml() {
         ])
         .build();
 
-    /// Utils shouldn't contain structs or traits
+    // Utils shouldn't contain structs or traits
     builder
         .module()
         .lint_named("utils_no_structs_or_traits")

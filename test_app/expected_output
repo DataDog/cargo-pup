@@ -1,3 +1,25 @@
+warning: Item 'DisallowedInModRs' disallowed in mod.rs due to empty-mod-file policy
+ --> src/empty_mod_file/mod.rs:8:1
+  |
+8 | pub struct DisallowedInModRs {
+  | ^
+  |
+  = help: Remove this definition from the mod.rs file.
+  = note: Applied by cargo-pup rule 'must_have_empty_mod_file'.
+  = note: `#[warn(module_must_have_empty_mod_file_lint)]` on by default
+
+warning: Function 'disallowed_function' disallowed in mod.rs due to empty-mod-file policy
+  --> src/empty_mod_file/mod.rs:13:1
+   |
+13 | / pub fn disallowed_function() -> i32 {
+14 | |     println!("This function should not be directly in mod.rs");
+15 | |     42
+16 | | }
+   | |_^
+   |
+   = help: Remove this function from the mod.rs file.
+   = note: Applied by cargo-pup rule 'must_have_empty_mod_file'.
+
 warning: Function exceeds maximum length of 5 lines with 8 lines
  --> src/function_length/mod.rs:5:1
   |
@@ -18,9 +40,9 @@ warning: Function exceeds maximum length of 5 lines with 8 lines
    = note: Applied by cargo-pup rule 'function_length_check'.
 
 warning: module 'item_type' is not allowed in this module
- --> src/main.rs:6:1
+ --> src/main.rs:7:1
   |
-6 | mod item_type;
+7 | mod item_type;
   | ^^^^^^^^^^^^^^
   |
   = help: Consider moving this item to a different module
@@ -196,4 +218,4 @@ warning: Struct 'MyBadlyNamedThing' is public, but must be private
    = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
-warning: `test_app` (bin "test_app") generated 20 warnings
+warning: `test_app` (bin "test_app") generated 22 warnings

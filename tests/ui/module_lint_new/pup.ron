@@ -116,6 +116,17 @@
             )
         ),
         
+        // Test MustHaveEmptyModFile rule - mod.rs files should only contain re-exports
+        Module(
+            (
+                name: "must_have_empty_mod_file_test",
+                matches: Module("^test_must_have_empty_mod_file$"),
+                rules: [
+                    MustHaveEmptyModFile(Error)
+                ]
+            )
+        ),
+                
         // Replace RestrictFunctions with Function lint
         Function(
             (

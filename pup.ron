@@ -20,7 +20,7 @@
             name: "empty_mod_rule",
             matches: Module(".*"),
             rules: [
-                MustBeEmpty(Warn),
+                MustHaveEmptyModFile(Warn),
             ],
         )),
         Module((

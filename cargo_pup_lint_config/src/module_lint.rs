@@ -91,6 +91,7 @@ pub enum ModuleRule {
     MustNotBeNamed(String, Severity),
     MustNotBeEmpty(Severity),
     MustBeEmpty(Severity),
+    MustHaveEmptyModFile(Severity),
     RestrictImports {
         allowed_only: Option<Vec<String>>,
         denied: Option<Vec<String>>,
@@ -205,6 +206,12 @@ impl<'a> ModuleConstraintBuilder<'a> {
     // Helper method for requiring a module to be empty
     pub fn must_be_empty(mut self) -> Self {
         self.add_rule_internal(ModuleRule::MustBeEmpty(self.current_severity));
+        self
+    }
+    
+    // Helper method for requiring a module.rs file to be empty (only allowed to export other modules)
+    pub fn must_have_empty_mod_file(mut self) -> Self {
+        self.add_rule_internal(ModuleRule::MustHaveEmptyModFile(self.current_severity));
         self
     }
     

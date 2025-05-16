@@ -49,13 +49,22 @@ fn test_lint_config_matches_yaml() {
         .must_not_be_empty()
         .build();
         
-    // Empty module rule - MUST be empty
+    // Empty module rule with empty mod file rule - MUST be empty
     builder
         .module()
         .lint_named("must_be_empty_module")
         .matching(|m| m.module("^test_app::must_be_empty$"))
         .with_severity(Severity::Warn)
         .must_be_empty()
+        .build();
+        
+    // Module must have an empty mod.rs file (only allowed to re-export)
+    builder
+        .module()
+        .lint_named("must_have_empty_mod_file")
+        .matching(|m| m.module("^test_app::empty_mod_file$"))
+        .with_severity(Severity::Warn)
+        .must_have_empty_mod_file()
         .build();
 
     // Item type restrictions
