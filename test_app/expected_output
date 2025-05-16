@@ -164,33 +164,6 @@ warning: Error type 'result_error::CustomError' in Result does not implement Err
    = help: Consider implementing the Error trait for this type or using a type that already implements it
    = note: Applied by cargo-pup rule 'result_type_check'.
 
-warning: Error type 'anyhow::Error' in Result does not implement Error trait
-  --> src/result_error/mod.rs:48:1
-   |
-48 | pub fn anyhow_result() -> AnyhowResult<String> {
-   | ^^^^^^^^^^^^^^^^^^
-   |
-   = help: Consider implementing the Error trait for this type or using a type that already implements it
-   = note: Applied by cargo-pup rule 'result_type_check'.
-
-warning: Error type 'anyhow::Error' in Result does not implement Error trait
-  --> src/result_error/mod.rs:53:1
-   |
-53 | pub fn anyhow_direct_error() -> Result<String, Error> {
-   | ^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = help: Consider implementing the Error trait for this type or using a type that already implements it
-   = note: Applied by cargo-pup rule 'result_type_check'.
-
-warning: Error type 'anyhow::Error' in Result does not implement Error trait
-  --> src/result_error/mod.rs:58:1
-   |
-58 | pub fn anyhow_error_creation() -> AnyhowResult<String> {
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = help: Consider implementing the Error trait for this type or using a type that already implements it
-   = note: Applied by cargo-pup rule 'result_type_check'.
-
 warning: Error type 'i32' in Result does not implement Error trait
   --> src/result_error/mod.rs:72:1
    |
@@ -220,4 +193,4 @@ warning: Struct 'MyBadlyNamedThing' is public, but must be private
    = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
-warning: `test_app` (bin "test_app") generated 22 warnings
+warning: `test_app` (bin "test_app") generated 19 warnings
