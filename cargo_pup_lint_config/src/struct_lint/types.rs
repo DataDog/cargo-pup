@@ -12,7 +12,7 @@ pub enum StructMatch {
     NotMatch(Box<StructMatch>),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructLint {
     pub name: String,
     pub matches: StructMatch,
@@ -25,6 +25,7 @@ pub enum StructRule {
     MustNotBeNamed(String, Severity),
     MustBePrivate(Severity),
     MustBePublic(Severity),
+    ImplementsTrait(String, Severity),
     And(Box<StructRule>, Box<StructRule>),
     Or(Box<StructRule>, Box<StructRule>),
     Not(Box<StructRule>),

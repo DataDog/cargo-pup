@@ -4,7 +4,11 @@ use ron::de::from_reader;
 use ron::ser::{to_writer_pretty, PrettyConfig};
 // lint_builder.rs
 use serde::{Deserialize, Serialize};
-use crate::ConfiguredLint;
+use cargo_pup_common::project_context::ProjectContext;
+use crate::{ConfiguredLint, GenerateFromContext};
+use crate::module_lint::ModuleLint;
+use crate::struct_lint::StructLint;
+use crate::function_lint::FunctionLint;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct LintBuilder {
@@ -18,6 +22,43 @@ impl LintBuilder {
 
     pub fn push(&mut self, lint: ConfiguredLint) {
         self.lints.push(lint);
+    }
+
+    /// Builds the configuration and returns all configured lints
+    pub fn build(&self) -> Vec<ConfiguredLint> {
+        self.lints.clone()
+    }
+
+    /// Generate lint configurations from project contexts for all lint types
+    /// 
+    /// This method takes a slice of ProjectContext instances and uses the GenerateFromContext
+    /// trait implementations for each lint type to generate a new LintBuilder.
+    /// 
+    /// Returns the populated LintBuilder containing all generated lints.
+    pub fn generate_from_contexts(contexts: &[ProjectContext]) -> Self {
+        let mut builder = LintBuilder::new();
+        
+        // Generate lints from each lint type
+        ModuleLint::generate_from_contexts(contexts, &mut builder);
+        StructLint::generate_from_contexts(contexts, &mut builder);
+        FunctionLint::generate_from_contexts(contexts, &mut builder);
+        
+        builder
+    }
+
+    /// Generate lint configurations from project contexts and write directly to a file
+    /// 
+    /// This method combines the generation of lints from contexts with writing the result to a file.
+    /// It returns an io::Result<()> to indicate whether the operation was successful.
+    pub fn generate_and_write<P: AsRef<std::path::Path>>(
+        contexts: &[ProjectContext],
+        path: P
+    ) -> io::Result<()> {
+        // Generate the builder from contexts
+        let builder = Self::generate_from_contexts(contexts);
+        
+        // Write directly to file
+        builder.write_to_file(path)
     }
 
     // Method to write the LintBuilder to a file
@@ -44,6 +85,7 @@ impl LintBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cargo_pup_common::project_context::{ModuleInfo, TraitInfo, ProjectContext};
     use tempfile::NamedTempFile;
     use crate::{ConfiguredLint, ModuleMatch, ModuleRule, module_matcher, struct_matcher, function_matcher, Severity};
     use crate::module_lint::{ModuleLint, ModuleLintExt};
@@ -656,5 +698,100 @@ mod tests {
             reserialize2,
             "Reserialized RON strings should be identical"
         );
+    }
+    
+    #[test]
+    fn test_generate_from_contexts() {
+        // Create test project contexts
+        let mut context1 = ProjectContext::new();
+        context1.module_root = "crate1".to_string();
+        context1.modules = vec![
+            ModuleInfo {
+                name: "crate1::module1".to_string(),
+                applicable_lints: vec![],
+            },
+            ModuleInfo {
+                name: "crate1::module2::submodule".to_string(),
+                applicable_lints: vec![],
+            },
+        ];
+        context1.traits = vec![
+            TraitInfo {
+                name: "crate1::Trait1".to_string(),
+                implementors: vec!["crate1::Type1".to_string()],
+                applicable_lints: vec![],
+            }
+        ];
+        
+        let mut context2 = ProjectContext::new();
+        context2.module_root = "crate2".to_string();
+        context2.modules = vec![
+            ModuleInfo {
+                name: "crate2::module1".to_string(),
+                applicable_lints: vec![],
+            },
+            ModuleInfo {
+                name: "crate2::module2::submodule::nested".to_string(),
+                applicable_lints: vec![],
+            },
+        ];
+        context2.traits = vec![
+            TraitInfo {
+                name: "crate2::TraitX".to_string(),
+                implementors: vec!["crate2::TypeX".to_string()],
+                applicable_lints: vec![],
+            }
+        ];
+        
+        // Generate lints from contexts
+        let builder = LintBuilder::generate_from_contexts(&[context1, context2]);
+        
+        // Verify that lints were generated
+        assert!(!builder.lints.is_empty(), "Builder should contain generated lints");
+        
+        // Check that we have each lint type
+        let module_lints = builder.lints.iter().filter(|lint| matches!(lint, ConfiguredLint::Module(_))).count();
+        let struct_lints = builder.lints.iter().filter(|lint| matches!(lint, ConfiguredLint::Struct(_))).count();
+        let function_lints = builder.lints.iter().filter(|lint| matches!(lint, ConfiguredLint::Function(_))).count();
+        
+        // Verify we have at least one of each lint type
+        assert!(module_lints > 0, "Should have at least one module lint");
+        assert!(struct_lints > 0, "Should have at least one struct lint");
+        assert!(function_lints > 0, "Should have at least one function lint");
+    }
+    
+    #[test]
+    fn test_generate_and_write() {
+        // Create test project contexts
+        let mut context = ProjectContext::new();
+        context.module_root = "test_crate".to_string();
+        context.modules = vec![
+            ModuleInfo {
+                name: "test_crate::module1".to_string(),
+                applicable_lints: vec![],
+            },
+        ];
+        context.traits = vec![
+            TraitInfo {
+                name: "test_crate::Trait1".to_string(),
+                implementors: vec!["test_crate::Type1".to_string()],
+                applicable_lints: vec![],
+            }
+        ];
+        
+        // Create a temporary file
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+        
+        // Generate lints and write to file
+        LintBuilder::generate_and_write(&[context], path).unwrap();
+        
+        // Verify the file exists and is not empty
+        let metadata = std::fs::metadata(path).unwrap();
+        assert!(metadata.len() > 0, "File should not be empty");
+        
+        // Read the file back and verify it's valid
+        let builder = LintBuilder::read_from_file(path).unwrap();
+        assert!(!builder.lints.is_empty(), "Builder should contain lints");
     }
 }

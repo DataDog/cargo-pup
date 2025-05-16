@@ -10,7 +10,7 @@ pub enum ModuleMatch {
     NotMatch(Box<ModuleMatch>),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModuleLint {
     pub name: String,
     pub matches: ModuleMatch,

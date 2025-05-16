@@ -41,7 +41,7 @@ impl Default for Severity {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConfiguredLint {
     Module(ModuleLint),
     Struct(StructLint),
