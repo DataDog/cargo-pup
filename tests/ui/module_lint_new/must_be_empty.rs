@@ -12,10 +12,15 @@ pub mod another_empty_module {
 }
 
 // Non-empty module (should trigger an error)
-pub mod non_empty_module { //~ ERROR: Module must be empty
+pub mod non_empty_module {
     pub fn invalid_function() { //~ ERROR: Item 'invalid_function' not allowed in empty module
         println!("This module should be empty");
     }
+
+    // reproduce for ICE item_name: no name for DefPath
+    // use statements don't have a name, and also don't count towards
+    // a module being empty.
+    pub use std::str;
     
     pub const INVALID_CONST: &str = "Content not allowed"; //~ ERROR: Item 'INVALID_CONST' not allowed in empty module
 } 

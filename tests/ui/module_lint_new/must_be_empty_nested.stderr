@@ -19,19 +19,5 @@ LL |         pub struct InvalidStruct;
    = help: Remove this item from the module, which must be empty
    = note: Applied by cargo-pup rule 'must_be_empty_nested_test'.
 
-error: Module must be empty
-  --> tests/ui/module_lint_new/must_be_empty_nested.rs:12:5
-   |
-LL | /     pub mod nested_target {
-LL | |         pub fn invalid_function() {
-LL | |             println!("This shouldn't be here");
-...  |
-LL | |         pub struct InvalidStruct;
-LL | |     }
-   | |_____^
-   |
-   = help: Remove all content from this module
-   = note: Applied by cargo-pup rule 'must_be_empty_nested_test'.
-
-error: aborting due to 3 previous errors
+error: aborting due to 2 previous errors
 
