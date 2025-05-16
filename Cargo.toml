@@ -35,6 +35,7 @@ serde_yaml = { workspace = true }
 anyhow = { workspace = true }
 regex = { workspace = true }
 tempfile = { workspace = true }
+ron = { workspace = true }
 cargo_pup_common = { path = "cargo_pup_common" }
 cargo_pup_lint_impl = { path = "cargo_pup_lint_impl" }
 
@@ -65,6 +66,7 @@ uuid = {version = "1.13.2", features = ["v4"]}
 rustc_version = "0.4"
 ui_test = "0.29.2"
 cargo_pup_lint_config = { path = "cargo_pup_lint_config" }
+ron = { workspace = true }
 
 [[test]]
 name = "ui-test"

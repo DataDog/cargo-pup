@@ -2,7 +2,7 @@
 mod tests {
     use super::*;
     use crate::lint_builder::LintBuilder;
-    use crate::Severity;
+    use crate::{Severity, StructLintExt, StructRule};
     use crate::ConfiguredLint;
     
     #[test]
@@ -11,12 +11,14 @@ mod tests {
         
         // Test both visibility rules
         builder.struct_lint()
+            .lint_named("struct_lint")
             .matching(|m| m.name("UserModel"))
             .with_severity(Severity::Error)
             .must_be_private() // First rule
             .build();
             
         builder.struct_lint()
+            .lint_named("struct_lint_2")
             .matching(|m| m.name("PublicAPI"))
             .with_severity(Severity::Warn)
             .must_be_public() // Second rule

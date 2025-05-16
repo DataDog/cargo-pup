@@ -192,6 +192,7 @@ mod tests {
         
         // Test regex capabilities for struct matching
         builder.struct_lint()
+            .lint_named("struct_lint")
             .matching(|m| 
                 m.name("^[A-Z][a-z]+Model$")
                     .and(m.has_attribute("derive\\(.*Debug.*\\)"))
@@ -238,6 +239,7 @@ mod tests {
         
         // Test function lint with name matching and max length
         builder.function()
+            .lint_named("process_data_lint")
             .matching(|m| m.name("process_data"))
             .with_severity(Severity::Error)
             .max_length(50)
@@ -271,6 +273,7 @@ mod tests {
         
         // Test function lint with regex matching
         builder.function()
+            .lint_named("regexp_lint")
             .matching(|m| 
                 m.name_regex("^(get|set)_[a-z_]+$")
                     .and(m.in_module("^core::models::[a-zA-Z]+$"))
@@ -316,6 +319,7 @@ mod tests {
         
         // Test AND match
         builder.function()
+            .lint_named("test_and")
             .matching(|m| m.name("test_and").and(m.name_regex(".*")))
             .with_severity(Severity::Error)
             .max_length(10)
@@ -323,6 +327,7 @@ mod tests {
             
         // Test OR match
         builder.function()
+            .lint_named("test_or")
             .matching(|m| m.name("test_or_1").or(m.name("test_or_2")))
             .with_severity(Severity::Error)
             .max_length(20)
@@ -330,6 +335,7 @@ mod tests {
             
         // Test NOT match
         builder.function()
+            .lint_named("test_not")
             .matching(|m| m.name_regex("test_.*").not())
             .with_severity(Severity::Error)
             .max_length(100)
@@ -422,6 +428,7 @@ mod tests {
         
         // Test the builder extension method with new matcher DSL
         builder.module()
+            .lint_named("module_matcher")
             .matching(|m| m.module("core::utils"))
             .must_not_be_empty()
             .build();
@@ -445,7 +452,8 @@ mod tests {
         
         // Test the builder extension method with new matcher DSL
         builder.module()
-            .matching(|m| m.module("src/ui"))
+            .lint_named("wildcard_rule")
+            .matching(|m| m.module("ui"))
             .no_wildcard_imports()
             .build();
             
@@ -470,6 +478,7 @@ mod tests {
         
         // Test the builder extension method with new matcher DSL
         builder.module()
+            .lint_named("test_restrict_imports")
             .matching(|m| m.module("app::core"))
             .restrict_imports(Some(allowed.clone()), Some(denied.clone()))
             .build();
@@ -495,6 +504,7 @@ mod tests {
         
         // Apply multiple rules to the same module match
         builder.module()
+            .lint_named("multiple_matches")
             .matching(|m| m.module("app::core"))
             .must_not_be_empty()
             .no_wildcard_imports()
@@ -537,6 +547,7 @@ mod tests {
         
         // Use the builder interface for struct lints with new matcher DSL
         builder.struct_lint()
+            .lint_named("builder_int")
             .matching(|m| m.name("User"))
             .must_be_named("User".into())
             .must_not_be_named("UserStruct".into())
@@ -580,6 +591,7 @@ mod tests {
         
         // Test a complex matching expression
         builder.module()
+            .lint_named("complex_module_matcher")
             .matching(|m| 
                 m.module("app::core")
                     .or(m.module("lib::utils").not())
@@ -598,6 +610,7 @@ mod tests {
         
         // Test a complex matching expression for structs
         builder.struct_lint()
+            .lint_named("complex_struct_matcher")
             .matching(|m| 
                 m.name("User")
                     .or(m.name("Account"))
@@ -620,6 +633,7 @@ mod tests {
         
         // Add a module lint
         original_builder.module()
+            .lint_named("module_lint")
             .matching(|m| m.module("^test::module$"))
             .with_severity(Severity::Warn)
             .must_not_be_empty()
@@ -627,6 +641,7 @@ mod tests {
             
         // Add a struct lint
         original_builder.struct_lint()
+            .lint_named("struct_lint")
             .matching(|m| m.name("TestStruct"))
             .with_severity(Severity::Error)
             .must_be_named("TestStruct".into())
@@ -634,6 +649,7 @@ mod tests {
             
         // Add a function lint
         original_builder.function()
+            .lint_named("function_lint")
             .matching(|m| m.name_regex("^test_.*$"))
             .with_severity(Severity::Warn)
             .max_length(50)

@@ -302,11 +302,11 @@ impl Callbacks for ArchitectureLintRunner {
             }
 
             // Track config file
-            if Path::new("../../../pup.yaml").exists() {
+            if Path::new("../../../pup.ron").exists() {
                 psess
                     .file_depinfo
                     .get_mut()
-                    .insert(Symbol::intern("pup.yaml"));
+                    .insert(Symbol::intern("pup.ron"));
             }
 
             // Add our test lint

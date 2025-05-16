@@ -181,6 +181,7 @@ dependencies = [
  "md5",
  "once_cell",
  "regex",
+ "ron",
  "rust-analyzer",
  "rustc_version",
  "rustup-toolchain",

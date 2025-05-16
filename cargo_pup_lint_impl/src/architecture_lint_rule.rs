@@ -13,8 +13,7 @@ use rustc_lint::LintStore;
 ///   doing.
 pub trait ArchitectureLintRule: Sync + Send {
     ///
-    /// Returns the name of the lint rule. This is the name specified
-    /// in pup.yaml
+    /// Returns the name of the lint rule.
     ///
     fn name(&self) -> String;
 

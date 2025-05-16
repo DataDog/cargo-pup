@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, Mutex};
-use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex};
+use std::path::{Path};
 use std::fs;
-use crate::{ArchitectureLintRule, LintFactory};
+use crate::{ArchitectureLintRule};
 use anyhow::{Result, anyhow};
 use cargo_pup_common::project_context::ProjectContext;
 use cargo_pup_lint_config::ConfiguredLint;
@@ -17,21 +17,7 @@ use serde_yaml;
 pub struct LintConfigurationFactory {
 }
 
-static INSTANCE: LazyLock<Mutex<crate::LintConfigurationFactory>> =
-    LazyLock::new(|| Mutex::new(crate::LintConfigurationFactory::new()));
-
 impl LintConfigurationFactory {
-    /// Get a mutable reference to the global instance of the factory
-    fn get_instance() -> std::sync::MutexGuard<'static, crate::LintConfigurationFactory> {
-        INSTANCE
-            .lock()
-            .expect("Failed to lock the global LintConfigurationFactory")
-    }
-
-    /// Create a new factory
-    pub fn new() -> Self {
-        Self {}
-    }
 
     pub fn from_file(file: String) -> anyhow::Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
         // Check if this is a file path or actual content

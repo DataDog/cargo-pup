@@ -6,7 +6,7 @@
 use std::process::Command;
 use std::env;
 use std::path::PathBuf;
-use std::fs;
+use cargo_pup_lint_config::{LintBuilder, ModuleLintExt, StructLintExt, FunctionLintExt};
 
 // Helper function to get the path to the cargo-pup binary
 fn get_cargo_pup_path() -> PathBuf {
@@ -34,27 +34,32 @@ fn get_cargo_pup_path() -> PathBuf {
 }
 
 #[test]
-fn test_config_generation_yaml_validation() {
+fn test_config_generation_ron_validation() {
     // In CI environments, just mark the test as passed without running it
     if env::var("CI").is_ok() {
         println!("Running in CI environment - skipping actual config generation");
-        // Just verify our test can successfully parse a simple yaml
-        let simple_yaml = r#"
-            rule1:
-              type: test
-              value: 1
-            rule2:
-              type: test2
-              value: 2
-        "#;
+        // Just verify we can create and deserialize a simple LintBuilder from RON
+        let mut builder = LintBuilder::new();
+        builder.module()
+            .lint_named("test_rule_1")
+            .matching(|m| m.module("test"))
+            .must_not_be_empty()
+            .build();
+            
+        builder.struct_lint()
+            .lint_named("test_rule_2")
+            .matching(|m| m.name("Test"))
+            .must_be_named("Test".into())
+            .build();
+            
+        // Serialize to RON string
+        let ron_str = ron::to_string(&builder).expect("Failed to serialize to RON");
         
-        let yaml_value: serde_yaml::Value = serde_yaml::from_str(simple_yaml)
-            .expect("Failed to parse simple test YAML");
+        // Deserialize back from RON
+        let deserialized: LintBuilder = ron::from_str(&ron_str).expect("Failed to deserialize from RON");
         
-        let mapping = yaml_value.as_mapping()
-            .expect("Simple YAML is not a mapping");
-        
-        assert_eq!(mapping.len(), 2, "Simple YAML should have 2 rules");
+        // Verify correct number of lints
+        assert_eq!(deserialized.lints.len(), 2, "Deserialized LintBuilder should have 2 rules");
         return;
     }
     
@@ -102,38 +107,40 @@ fn test_config_generation_yaml_validation() {
     assert!(output.status.success(), "cargo-pup generate-config failed: {}", 
         String::from_utf8_lossy(&output.stderr));
     
-    // The generated config file should be at pup.yaml
-    let pup_yaml_path = temp_path.join("pup.yaml");
+    // The generated config file should be at pup.ron
+    let pup_ron_path = temp_path.join("pup.ron");
     
-    // Make sure pup.yaml exists
-    assert!(pup_yaml_path.exists(), "pup.yaml file was not generated");
+    // Make sure pup.ron exists
+    assert!(pup_ron_path.exists(), "pup.ron file was not generated");
     
-    // Read the generated config
-    let content = fs::read_to_string(&pup_yaml_path)
-        .expect("Failed to read generated pup.yaml");
-    
-    // Parse the YAML to verify it's valid
-    let yaml_result = serde_yaml::from_str::<serde_yaml::Value>(&content);
-    
-    // Check if parsing was successful
-    if let Err(err) = &yaml_result {
-        println!("YAML parsing error: {}", err);
-        println!("Content that failed to parse: {}", content);
-    }
-    
-    let yaml_value = yaml_result.expect("Failed to parse generated YAML");
-    
-    // Verify it's a mapping (dictionary)
-    let mapping = yaml_value.as_mapping()
-        .expect("Generated YAML is not a mapping");
+    // Read the generated config using the LintBuilder
+    let lint_builder = LintBuilder::read_from_file(&pup_ron_path)
+        .expect("Failed to read generated pup.ron as LintBuilder");
     
     // Count the number of lint rules
-    let lint_count = mapping.len();
+    let lint_count = lint_builder.lints.len();
     
-    // We expect at least 4 lint types
+    // We expect at least 4 lint rules
     assert!(lint_count >= 4, "Expected at least 4 lint rules, but found {}", lint_count);
     
-    println!("Successfully validated config file with {} lint rules", lint_count);
+    // Check that we have each lint type
+    let module_lints = lint_builder.lints.iter()
+        .filter(|lint| matches!(lint, cargo_pup_lint_config::ConfiguredLint::Module(_)))
+        .count();
+    let struct_lints = lint_builder.lints.iter()
+        .filter(|lint| matches!(lint, cargo_pup_lint_config::ConfiguredLint::Struct(_)))
+        .count();
+    let function_lints = lint_builder.lints.iter()
+        .filter(|lint| matches!(lint, cargo_pup_lint_config::ConfiguredLint::Function(_)))
+        .count();
+    
+    // Verify we have lints of each type
+    assert!(module_lints > 0, "Should have at least one module lint");
+    assert!(struct_lints > 0, "Should have at least one struct lint");
+    assert!(function_lints > 0, "Should have at least one function lint");
+    
+    println!("Successfully validated config file with {} lint rules ({} module, {} struct, {} function)", 
+        lint_count, module_lints, struct_lints, function_lints);
     
     // Clean up
     temp_dir.close().expect("Failed to clean up temp directory");

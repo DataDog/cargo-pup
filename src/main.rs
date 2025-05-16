@@ -105,16 +105,14 @@ impl Error for CommandExitStatus {}
 
 /// Validates the current directory to determine the project type
 fn validate_project() -> ProjectType {
-    let pup_yaml_path = Path::new("./pup.yaml");
     let pup_ron_path = Path::new("./pup.ron");
     let cargo_toml_path = Path::new("./Cargo.toml");
 
-    let has_pup_yaml = pup_yaml_path.exists();
     let has_pup_ron = pup_ron_path.exists();
     let has_cargo_toml = cargo_toml_path.exists();
 
     // We now prefer RON files, but still check for YAML for backwards compatibility
-    if (has_pup_yaml || has_pup_ron) && has_cargo_toml {
+    if has_pup_ron && has_cargo_toml {
         ProjectType::ConfiguredPupProject
     } else if has_cargo_toml {
         ProjectType::RustProject
@@ -920,8 +918,8 @@ mod tests {
                 "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
             )
             .expect("Failed to write Cargo.toml");
-            fs::write(temp_path.join("pup.yaml"), "# Test pup.yaml\n")
-                .expect("Failed to write pup.yaml");
+            fs::write(temp_path.join("pup.ron"), "# Test pup.ron\n")
+                .expect("Failed to write pup.ron");
 
             // Change to the temporary directory
             let original_dir = env::current_dir().expect("Failed to get current dir");
@@ -1203,19 +1201,19 @@ mod tests {
             // Change to the temporary directory
             env::set_current_dir(&temp_path).expect("Failed to change directory");
 
-            // Verify pup.yaml doesn't exist yet in the temp directory
-            let pup_yaml_path = temp_path.join("pup.yaml");
+            // Verify pup.ron doesn't exist yet in the temp directory
+            let pup_ron_path = temp_path.join("pup.ron");
             assert!(
-                !pup_yaml_path.exists(),
-                "pup.yaml should not exist at start of test"
+                !pup_ron_path.exists(),
+                "pup.ron should not exist at start of test"
             );
 
             // Use absolute paths for all file operations to avoid current directory issues
-            let generated_config_path = temp_path.join("pup.generated.test.yaml");
+            let generated_config_path = temp_path.join("pup.generated.test.ron");
 
             // Create a generated config file manually
             fs::write(&generated_config_path, "# Test generated config\n")
-                .expect("Failed to write pup.generated.test.yaml");
+                .expect("Failed to write pup.generated.test.ron");
 
             // Brief delay to ensure file operations complete
             std::thread::sleep(std::time::Duration::from_millis(10));
@@ -1229,7 +1227,7 @@ mod tests {
             // We already have the destination path for pup.yaml defined above
 
             // Rename it manually for the test
-            match fs::rename(&generated_config_path, &pup_yaml_path) {
+            match fs::rename(&generated_config_path, &pup_ron_path) {
                 Ok(_) => {}
                 Err(e) => panic!("Failed to rename file: {}", e),
             }
@@ -1238,7 +1236,7 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(10));
 
             // Verify pup.yaml now exists
-            assert!(pup_yaml_path.exists(), "pup.yaml should exist after rename");
+            assert!(pup_ron_path.exists(), "pup.yaml should exist after rename");
 
             // The guard will automatically change back to the original directory when it goes out of scope
         }
