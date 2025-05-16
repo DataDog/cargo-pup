@@ -10,10 +10,21 @@ pub use module_lint::{ModuleMatch, ModuleLintExt, ModuleRule, ModuleMatcher, Mod
 pub use struct_lint::{StructMatch, StructLintExt, StructRule, StructMatcher, StructMatchNode, matcher as struct_matcher};
 pub use function_lint::{FunctionMatch, FunctionLintExt, FunctionRule, FunctionMatcher, FunctionMatchNode, ReturnTypePattern, matcher as function_matcher};
 
+use cargo_pup_common::project_context::ProjectContext;
 use serde::{Deserialize, Serialize};
 use crate::module_lint::ModuleLint;
 use crate::struct_lint::StructLint;
 use crate::function_lint::FunctionLint;
+
+/// Trait for lint types that can generate configurations from multiple ProjectContexts
+pub trait GenerateFromContext {
+    /// Generate lint configuration based on project contexts and add it to the provided builder
+    /// 
+    /// This accepts a vector of contexts, allowing generation of lints that span
+    /// multiple crates or projects. Multiple lint types can contribute to the same
+    /// LintBuilder, creating a composable API.
+    fn generate_from_contexts(contexts: &[ProjectContext], builder: &mut LintBuilder);
+}
 
 /// Severity level for lint rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

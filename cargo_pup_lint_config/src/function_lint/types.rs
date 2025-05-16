@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 use crate::Severity;
+use crate::lint_builder::LintBuilder;
+use crate::ConfiguredLint;
+use crate::GenerateFromContext;
+use cargo_pup_common::project_context::ProjectContext;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ReturnTypePattern {

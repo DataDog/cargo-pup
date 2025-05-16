@@ -38,3 +38,4 @@ pub enum ModuleRule {
     Or(Box<ModuleRule>, Box<ModuleRule>),
     Not(Box<ModuleRule>),
 }
+

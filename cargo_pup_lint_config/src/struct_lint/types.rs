@@ -29,3 +29,4 @@ pub enum StructRule {
     Or(Box<StructRule>, Box<StructRule>),
     Not(Box<StructRule>),
 }
+

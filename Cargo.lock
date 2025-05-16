@@ -240,6 +240,7 @@ name = "cargo_pup_lint_config"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cargo_pup_common",
  "regex",
  "ron",
  "serde",
