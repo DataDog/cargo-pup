@@ -234,7 +234,7 @@ impl ArchitectureLintRunner {
 
     // Implementation function that returns Result
     fn generate_config(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<String> {
-        use crate::LintConfigurationFactory;
+        use cargo_pup_lint_config::LintBuilder;
         use anyhow::Context;
 
         // Build the project context
@@ -242,8 +242,8 @@ impl ArchitectureLintRunner {
             .build_project_context(tcx)
             .context("Failed to build project context")?;
 
-        // Create filename with module_lint root that we'll use later
-        let config_filename = format!("pup.generated.{}.yaml", context.module_root);
+        // Create filename with module root that we'll use later
+        let config_filename = format!("pup.generated.{}.ron", context.module_root);
         
         // Ensure .pup directory exists
         let pup_dir = std::path::Path::new(PUP_DIR);
@@ -255,17 +255,12 @@ impl ArchitectureLintRunner {
         // Full path in the .pup directory
         let config_path = pup_dir.join(&config_filename);
 
-        // Generate config file
-        let yaml = LintConfigurationFactory::generate_yaml(&context)
-            .context("Failed to generate YAML configuration")?;
+        // Generate config file using the new LintBuilder's generate_and_write method
+        LintBuilder::generate_and_write(&[context.clone()], &config_path)
+            .context(format!("Failed to write configuration to {}", config_path.display()))?;
 
-        // Write to file
-        LintConfigurationFactory::generate_config_file(&context, config_path.to_str().unwrap()).context(
-            format!("Failed to write configuration to {}", config_path.display()),
-        )?;
-
-        // Return success message
-        Ok(format!("{}\n\nConfig written to {}", yaml, config_path.display()))
+        // Return success message without showing the entire config content
+        Ok(format!("Configuration successfully generated and written to {}", config_path.display()))
     }
 }
 

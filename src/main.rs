@@ -113,7 +113,7 @@ fn validate_project() -> ProjectType {
     let has_pup_ron = pup_ron_path.exists();
     let has_cargo_toml = cargo_toml_path.exists();
 
-
+    // We now prefer RON files, but still check for YAML for backwards compatibility
     if (has_pup_yaml || has_pup_ron) && has_cargo_toml {
         ProjectType::ConfiguredPupProject
     } else if has_cargo_toml {
@@ -212,9 +212,9 @@ pub fn main() {
                 // Good to go - continue with normal operation
             }
             ProjectType::RustProject => {
-                // In a Rust project but missing pup.yaml
+                // In a Rust project but missing configuration file
                 show_ascii_puppy();
-                println!("{}", Red.bold().paint("Missing pup.ron - nothing to do!"));
+                println!("{}", Red.bold().paint("Missing pup.ron configuration - nothing to do!"));
                 println!("Consider generating an initial configuration:");
                 println!("  {}", Green.paint("cargo pup generate-config"));
                 exit(-1)
@@ -231,7 +231,7 @@ pub fn main() {
                 println!("\nTo use cargo-pup:");
                 println!("  1. Navigate to a Rust project directory");
                 println!("  2. Run {}", Green.paint("cargo pup generate-config"));
-                println!("  3. Edit the generated pup.yaml file");
+                println!("  3. Edit the generated pup.ron file");
                 println!("  4. Run {}", Green.paint("cargo pup"));
                 exit(-1)
             }
@@ -288,20 +288,20 @@ where
 
     // Check if we're generating config and the file already exists
     if command == PupCommand::GenerateConfig {
-        // Check for existing pup.yaml and pup.generated.yaml in the project root
-        let pup_yaml_exists = Path::exists(Path::new("./pup.yaml"));
-        let pup_generated_yaml_exists = Path::exists(Path::new("./pup.generated.yaml"));
+        // Check for existing pup.ron and pup.generated.ron in the project root
+        let pup_ron_exists = Path::exists(Path::new("./pup.ron"));
+        let pup_generated_ron_exists = Path::exists(Path::new("./pup.generated.ron"));
 
-        // Determine target filename based on existence of pup.yaml
-        let target_filename = if pup_yaml_exists {
-            "pup.generated.yaml"
+        // Determine target filename based on existence of pup.ron
+        let target_filename = if pup_ron_exists {
+            "pup.generated.ron"
         } else {
-            "pup.yaml"
+            "pup.ron"
         };
 
         // If target file already exists, show error
-        if (target_filename == "pup.yaml" && pup_yaml_exists)
-            || (target_filename == "pup.generated.yaml" && pup_generated_yaml_exists)
+        if (target_filename == "pup.ron" && pup_ron_exists)
+            || (target_filename == "pup.generated.ron" && pup_generated_ron_exists)
         {
             println!(
                 "Error: {} already exists in the project root.",
@@ -375,7 +375,7 @@ where
             .filter_map(Result::ok)
             .filter(|entry| {
                 if let Some(name) = entry.file_name().to_str() {
-                    name.starts_with("pup.generated.") && name.ends_with(".yaml")
+                    name.starts_with("pup.generated.") && name.ends_with(".ron")
                 } else {
                     false
                 }
@@ -386,11 +386,11 @@ where
         if !generated_configs.is_empty() {
             // Use the target filename previously determined during the check phase
             // Since we've already checked for file existence, we know this is safe
-            let pup_yaml_exists = Path::exists(Path::new("./pup.yaml"));
-            let target_filename = if pup_yaml_exists {
-                "pup.generated.yaml"
+            let pup_ron_exists = Path::exists(Path::new("./pup.ron"));
+            let target_filename = if pup_ron_exists {
+                "pup.generated.ron"
             } else {
-                "pup.yaml"
+                "pup.ron"
             };
 
             // Combine all config files into a single one
