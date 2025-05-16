@@ -191,6 +191,63 @@ impl ModuleLint {
             }
         }
     }
+    
+    // Helper function to check if an item should be disallowed in an "empty" module context
+    fn is_disallowed_in_empty_module(&self, item_kind: &ItemKind<'_>) -> bool {
+        match item_kind {
+            // These items are not allowed in "empty" modules
+            ItemKind::Static(..)
+            | ItemKind::Struct(..)
+            | ItemKind::Union(..)
+            | ItemKind::Trait(..)
+            | ItemKind::Fn { .. }
+            | ItemKind::Const(..)
+            | ItemKind::Enum(..) => true,
+            ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => true,
+            // Everything else is allowed (re-exports, module declarations, etc.)
+            _ => false
+        }
+    }
+    
+    // Helper to check if a file is a mod.rs file based on its path
+    fn is_mod_rs_file(&self, ctx: &LateContext<'_>, span: &rustc_span::Span) -> bool {
+        let filename = ctx.sess().source_map().span_to_filename(*span);
+        if let rustc_span::FileName::Real(filename) = filename {
+            let filename_str = filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local);
+            filename_str.ends_with("/mod.rs")
+        } else {
+            false
+        }
+    }
+    
+    // Helper function to check for disallowed items in a module and call the callback when found
+    fn check_for_disallowed_items<C>(
+        &self,
+        ctx: &LateContext<'_>,
+        module_data: &rustc_hir::Mod<'_>,
+        on_disallowed_item: C
+    ) where
+        C: Fn(&Self, &LateContext<'_>, &rustc_hir::Item<'_>, &str, bool)
+    {
+        for &item_id in module_data.item_ids.iter() {
+            let nested_item = ctx.tcx.hir_item(item_id);
+            
+            // Skip if the item is allowed in empty modules
+            if !self.is_disallowed_in_empty_module(&nested_item.kind) {
+                continue; 
+            }
+            
+            // Get item name from HIR for error messages
+            let hir = ctx.tcx.hir();
+            let item_name = hir.name(nested_item.hir_id()).to_ident_string();
+            
+            // Check if this is in a mod.rs file (pass to callback so it can decide what to do)
+            let is_mod_rs = self.is_mod_rs_file(ctx, &nested_item.span);
+            
+            // Call the callback to handle the disallowed item, passing only necessary context
+            on_disallowed_item(self, ctx, &nested_item, &item_name, is_mod_rs);
+        }
+    }
 }
 
 // Declare the module_lint lint with variable severity using the new macro
@@ -408,152 +465,46 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                 }
                 ModuleRuleType::MustBeEmpty => {
                     if let ItemKind::Mod(module_data) = item.kind {
-                        let full_path = get_full_module_name(&ctx.tcx, &item.owner_id);
-                        let mod_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
-
-                        // // If module has items, emit a lint for each one
-                        for &item_id in module_data.item_ids.iter() {
-                            let def_id = item_id.owner_id.to_def_id();
-                            if let Some(local_def_id) = def_id.as_local() {
-                                let nested_item = ctx.tcx.hir().expect_item(local_def_id);
-
-                                match &nested_item.kind {
-                                    ItemKind::Static(..)
-                                    | ItemKind::Struct(..)
-                                    | ItemKind::Union(..)
-                                    | ItemKind::Trait(..)
-                                    | ItemKind::Fn { .. }
-                                    | ItemKind::Const(..)
-                                    | ItemKind::Enum(..) => {
-                                        let item_name = ctx
-                                            .tcx
-                                            .item_name(nested_item.owner_id.def_id.to_def_id());
-                                        let nested_path =
-                                            get_full_module_name(&ctx.tcx, &nested_item.owner_id);
-
-                                        span_lint_and_help(
-                                            ctx,
-                                            MODULE_MUST_BE_EMPTY_LINT::get_by_severity(
-                                                rule_info.severity,
-                                            ),
-                                            self.name().as_str(),
-                                            nested_item.span,
-                                            format!(
-                                                "Item '{}' not allowed in empty module",
-                                                ctx.tcx.item_name(
-                                                    nested_item.owner_id.def_id.to_def_id()
-                                                )
-                                            ),
-                                            None,
-                                            "Remove this item from the module, which must be empty",
-                                        );
-                                    }
-                                    ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => {
-                                        span_lint_and_help(
-                                            ctx,
-                                            MODULE_MUST_BE_EMPTY_LINT::get_by_severity(
-                                                rule_info.severity,
-                                            ),
-                                            self.name().as_str(),
-                                            nested_item.span,
-                                            format!(
-                                                "Impl not allowed in empty module",
-                                            ),
-                                            None,
-                                            "Remove this item from the module, which must be empty",
-                                        );
-                                    }
-                                    _ => {}
-                                }
+                        let severity = rule_info.severity;
+                        self.check_for_disallowed_items(
+                            ctx,
+                            &module_data,
+                            |slf, ctx, item, item_name, _is_mod_rs| {
+                                // For MustBeEmpty, we don't care if it's a mod.rs file or not
+                                span_lint_and_help(
+                                    ctx,
+                                    MODULE_MUST_BE_EMPTY_LINT::get_by_severity(severity),
+                                    slf.name().as_str(),
+                                    item.span,
+                                    format!("Item '{}' not allowed in empty module", item_name),
+                                    None,
+                                    "Remove this item from the module, which must be empty"
+                                );
                             }
-                        }
+                        );
                     }
                 }
                 ModuleRuleType::MustHaveEmptyModFile => {
                     if let ItemKind::Mod(module_data) = item.kind {
-                        for &item_id in module_data.item_ids.iter() {
-                            let item = ctx.tcx.hir_item(item_id);
-                            let span = item.span;
-                            
-                            // Get item name safely using hir.name approach from empty_mod.rs
-                            let hir = ctx.tcx.hir();
-                            let item_name = hir.name(item.hir_id()).to_ident_string();
-                            
-                            // Check if the file is a mod.rs file
-                            let filename = ctx.sess().source_map().span_to_filename(span);
-                            if let rustc_span::FileName::Real(filename) = filename {
-                                let filename_str = filename.to_string_lossy(rustc_span::FileNameDisplayPreference::Local);
-                                
-                                if filename_str.ends_with("/mod.rs") {
-                                    // For mod.rs files, only allow module re-exports (pub mod / pub use statements)
-                                    match &item.kind {
-                                        ItemKind::Static(..)
-                                        | ItemKind::Struct(..)
-                                        | ItemKind::Union(..)
-                                        | ItemKind::Trait(..)
-                                        | ItemKind::Enum(..) => {
-                                            span_lint_and_help(
-                                                ctx,
-                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
-                                                self.name().as_str(),
-                                                span.shrink_to_lo(),
-                                                format!(
-                                                    "Item '{}' disallowed in mod.rs due to empty-mod-file policy",
-                                                    item_name
-                                                ),
-                                                None,
-                                                "Remove this definition from the mod.rs file.",
-                                            );
-                                        }
-                                        ItemKind::Impl(impl_data) if impl_data.of_trait.is_none() => {
-                                            span_lint_and_help(
-                                                ctx,
-                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
-                                                self.name().as_str(),
-                                                span,
-                                                format!(
-                                                    "Item '{}' disallowed in mod.rs due to empty-mod-file policy",
-                                                    item_name
-                                                ),
-                                                None,
-                                                "Remove this implementation from the mod.rs file.",
-                                            );
-                                        }
-                                        ItemKind::Fn { .. } => {
-                                            span_lint_and_help(
-                                                ctx,
-                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
-                                                self.name().as_str(),
-                                                span,
-                                                format!(
-                                                    "Function '{}' disallowed in mod.rs due to empty-mod-file policy",
-                                                    item_name
-                                                ),
-                                                None,
-                                                "Remove this function from the mod.rs file.",
-                                            );
-                                        }
-                                        ItemKind::Const(..) => {
-                                            span_lint_and_help(
-                                                ctx,
-                                                MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(rule_info.severity),
-                                                self.name().as_str(),
-                                                span,
-                                                format!(
-                                                    "Constant '{}' disallowed in mod.rs due to empty-mod-file policy",
-                                                    item_name
-                                                ),
-                                                None,
-                                                "Remove this constant from the mod.rs file.",
-                                            );
-                                        }
-                                        // Module declarations and use statements are allowed
-                                        ItemKind::Mod(..) | ItemKind::Use(..) => {}
-                                        _ => {}
-                                    }
+                        let severity = rule_info.severity;
+                        self.check_for_disallowed_items(
+                            ctx,
+                            &module_data,
+                            |slf, ctx, item, item_name, is_mod_rs| {
+                                // Only emit the lint if this is in a mod.rs file
+                                if is_mod_rs {
+                                    span_lint_and_help(
+                                        ctx,
+                                        MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT::get_by_severity(severity),
+                                        slf.name().as_str(),
+                                        item.span,
+                                        format!("Item '{}' disallowed in mod.rs due to empty-mod-file policy", item_name),
+                                        None,
+                                        "Remove this item from the mod.rs file or move it to a submodule"
+                                    );
                                 }
                             }
-                        }
+                        );
                     }
                 }
                 ModuleRuleType::RestrictImports {
