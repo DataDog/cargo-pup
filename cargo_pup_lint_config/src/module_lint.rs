@@ -108,27 +108,45 @@ pub enum ModuleRule {
 
 // Fluent Builder for Module Lints
 pub trait ModuleLintExt {
-    fn module<'a>(&'a mut self) -> ModuleMatchBuilder<'a>;
+    fn module<'a>(&'a mut self) -> ModuleLintBuilder<'a>;
 }
 
 impl ModuleLintExt for LintBuilder {
-    fn module<'a>(&'a mut self) -> ModuleMatchBuilder<'a> {
-        ModuleMatchBuilder { parent: self }
+    fn module<'a>(&'a mut self) -> ModuleLintBuilder<'a> {
+        ModuleLintBuilder { parent: self }
     }
 }
 
-pub struct ModuleMatchBuilder<'a> {
+// First builder to establish a named lint
+pub struct ModuleLintBuilder<'a> {
     parent: &'a mut LintBuilder,
 }
 
-impl<'a> ModuleMatchBuilder<'a> {
-    // Original matches method
+impl<'a> ModuleLintBuilder<'a> {
+    // Required step to name the lint
+    pub fn lint_named(self, name: impl Into<String>) -> ModuleNamedBuilder<'a> {
+        ModuleNamedBuilder { 
+            parent: self.parent,
+            name: name.into()
+        }
+    }
+}
+
+// Builder after the name is provided
+pub struct ModuleNamedBuilder<'a> {
+    parent: &'a mut LintBuilder,
+    name: String,
+}
+
+impl<'a> ModuleNamedBuilder<'a> {
+    // Original matches method now on NamedBuilder
     pub fn matches(self, m: ModuleMatch) -> ModuleConstraintBuilder<'a> {
         ModuleConstraintBuilder {
             parent: self.parent,
             match_: m,
             rules: Vec::new(),
             current_severity: Severity::default(),
+            name: self.name,
         }
     }
     
@@ -147,6 +165,7 @@ pub struct ModuleConstraintBuilder<'a> {
     match_: ModuleMatch,
     rules: Vec<ModuleRule>,
     current_severity: Severity,
+    name: String,
 }
 
 impl<'a> ModuleConstraintBuilder<'a> {
@@ -163,7 +182,7 @@ impl<'a> ModuleConstraintBuilder<'a> {
     
     pub fn build(self) -> &'a mut LintBuilder {
         let lint = ConfiguredLint::Module(ModuleLint {
-            name: "module_lint".into(),
+            name: self.name,
             matches: self.match_,
             rules: self.rules,
         });

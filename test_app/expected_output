@@ -5,7 +5,7 @@ warning: Function exceeds maximum length of 5 lines with 8 lines
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = help: Consider breaking this function into smaller parts
-  = note: Applied by cargo-pup rule 'function_lint'.
+  = note: Applied by cargo-pup rule 'function_length_check'.
   = note: `#[warn(function_lint)]` on by default
 
 warning: Function exceeds maximum length of 5 lines with 8 lines
@@ -15,7 +15,7 @@ warning: Function exceeds maximum length of 5 lines with 8 lines
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: Consider breaking this function into smaller parts
-   = note: Applied by cargo-pup rule 'function_lint'.
+   = note: Applied by cargo-pup rule 'function_length_check'.
 
 warning: module 'item_type' is not allowed in this module
  --> src/main.rs:6:1
@@ -24,7 +24,7 @@ warning: module 'item_type' is not allowed in this module
   | ^^^^^^^^^^^^^^
   |
   = help: Consider moving this item to a different module
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: Applied by cargo-pup rule 'item_type_restrictions'.
   = note: `#[warn(module_denied_items_lint)]` on by default
 
 warning: struct 'DeniedStruct' is not allowed in this module
@@ -36,7 +36,7 @@ warning: struct 'DeniedStruct' is not allowed in this module
   | |_^
   |
   = help: Consider moving this item to a different module
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: Applied by cargo-pup rule 'item_type_restrictions'.
 
 warning: enum 'DeniedEnum' is not allowed in this module
  --> src/item_type/mod.rs:6:1
@@ -48,7 +48,7 @@ warning: enum 'DeniedEnum' is not allowed in this module
   | |_^
   |
   = help: Consider moving this item to a different module
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: Applied by cargo-pup rule 'item_type_restrictions'.
 
 warning: trait 'DeniedTrait' is not allowed in this module
   --> src/item_type/mod.rs:11:1
@@ -59,7 +59,7 @@ warning: trait 'DeniedTrait' is not allowed in this module
    | |_^
    |
    = help: Consider moving this item to a different module
-   = note: Applied by cargo-pup rule 'module_lint'.
+   = note: Applied by cargo-pup rule 'item_type_restrictions'.
 
 warning: module 'nested' is not allowed in this module
   --> src/item_type/mod.rs:23:1
@@ -70,7 +70,7 @@ warning: module 'nested' is not allowed in this module
    | |_^
    |
    = help: Consider moving this item to a different module
-   = note: Applied by cargo-pup rule 'module_lint'.
+   = note: Applied by cargo-pup rule 'item_type_restrictions'.
 
 warning: Wildcard imports are not allowed
  --> src/module_usage/mod.rs:3:1
@@ -79,7 +79,7 @@ warning: Wildcard imports are not allowed
   | ^^^^^^^^^^^^^^^
   |
   = help: Import specific items instead of using a wildcard
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: Applied by cargo-pup rule 'module_usage'.
   = note: `#[warn(module_wildcard_import_lint)]` on by default
 
 warning: Use of module 'std::collections::HashMap' is denied
@@ -89,7 +89,7 @@ warning: Use of module 'std::collections::HashMap' is denied
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = help: Remove this import
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: Applied by cargo-pup rule 'module_usage'.
   = note: `#[warn(module_restrict_imports_lint)]` on by default
 
 warning: Item 'this_should_not_be_here' not allowed in empty module
@@ -101,7 +101,7 @@ warning: Item 'this_should_not_be_here' not allowed in empty module
   | |_^
   |
   = help: Remove this item from the module, which must be empty
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: Applied by cargo-pup rule 'must_be_empty_module'.
   = note: `#[warn(module_must_be_empty_lint)]` on by default
 
 warning: Item 'ALSO_NOT_ALLOWED' not allowed in empty module
@@ -111,16 +111,16 @@ warning: Item 'ALSO_NOT_ALLOWED' not allowed in empty module
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = help: Remove this item from the module, which must be empty
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = note: Applied by cargo-pup rule 'must_be_empty_module'.
 
-warning: Module must be empty
- --> src/main.rs:8:1
+warning: Error type 'std::string::String' in Result does not implement Error trait
+ --> src/result_error/mod.rs:4:1
   |
-8 | mod must_be_empty;
-  | ^^^^^^^^^^^^^^^^^^
+4 | pub fn good_result() -> Result<String, String> {
+  | ^^^^^^^^^^^^^^^^
   |
-  = help: Remove all content from this module
-  = note: Applied by cargo-pup rule 'module_lint'.
+  = help: Consider implementing the Error trait for this type or using a type that already implements it
+  = note: Applied by cargo-pup rule 'result_type_check'.
 
 warning: Error type 'i32' in Result does not implement Error trait
   --> src/result_error/mod.rs:14:1
@@ -129,7 +129,7 @@ warning: Error type 'i32' in Result does not implement Error trait
    | ^^^^^^^^^^^^^^^
    |
    = help: Consider implementing the Error trait for this type or using a type that already implements it
-   = note: Applied by cargo-pup rule 'function_lint'.
+   = note: Applied by cargo-pup rule 'result_type_check'.
 
 warning: Error type 'result_error::CustomError' in Result does not implement Error trait
   --> src/result_error/mod.rs:23:1
@@ -138,7 +138,34 @@ warning: Error type 'result_error::CustomError' in Result does not implement Err
    | ^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: Consider implementing the Error trait for this type or using a type that already implements it
-   = note: Applied by cargo-pup rule 'function_lint'.
+   = note: Applied by cargo-pup rule 'result_type_check'.
+
+warning: Error type 'anyhow::Error' in Result does not implement Error trait
+  --> src/result_error/mod.rs:48:1
+   |
+48 | pub fn anyhow_result() -> AnyhowResult<String> {
+   | ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_type_check'.
+
+warning: Error type 'anyhow::Error' in Result does not implement Error trait
+  --> src/result_error/mod.rs:53:1
+   |
+53 | pub fn anyhow_direct_error() -> Result<String, Error> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_type_check'.
+
+warning: Error type 'anyhow::Error' in Result does not implement Error trait
+  --> src/result_error/mod.rs:58:1
+   |
+58 | pub fn anyhow_error_creation() -> AnyhowResult<String> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_type_check'.
 
 warning: Error type 'i32' in Result does not implement Error trait
   --> src/result_error/mod.rs:72:1
@@ -147,7 +174,7 @@ warning: Error type 'i32' in Result does not implement Error trait
    | ^^^^^^^^^^^^^^^^^^^^^
    |
    = help: Consider implementing the Error trait for this type or using a type that already implements it
-   = note: Applied by cargo-pup rule 'function_lint'.
+   = note: Applied by cargo-pup rule 'result_type_check'.
 
 warning: Struct must match pattern '.*MyTraitImpl$', found 'MyBadlyNamedThing'
   --> src/trait_impl/mod.rs:15:1
@@ -156,7 +183,7 @@ warning: Struct must match pattern '.*MyTraitImpl$', found 'MyBadlyNamedThing'
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: Rename this struct to match the pattern '.*MyTraitImpl$'
-   = note: Applied by cargo-pup rule 'struct_lint'.
+   = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_named)]` on by default
 
 warning: Struct 'MyBadlyNamedThing' is public, but must be private
@@ -166,7 +193,7 @@ warning: Struct 'MyBadlyNamedThing' is public, but must be private
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: Remove the 'pub' visibility modifier
-   = note: Applied by cargo-pup rule 'struct_lint'.
+   = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
-warning: `test_app` (bin "test_app") generated 17 warnings
+warning: `test_app` (bin "test_app") generated 20 warnings

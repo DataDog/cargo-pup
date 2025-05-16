@@ -131,27 +131,45 @@ pub enum StructRule {
 // This is the trait for struct lint operations, ideally these would be implemented
 // for LintBuilder, but for now we'll use the builder pattern approach
 pub trait StructLintExt {
-    fn struct_lint<'a>(&'a mut self) -> StructMatchBuilder<'a>;
+    fn struct_lint<'a>(&'a mut self) -> StructLintBuilder<'a>;
 }
 
 impl StructLintExt for crate::lint_builder::LintBuilder {
-    fn struct_lint<'a>(&'a mut self) -> StructMatchBuilder<'a> {
-        StructMatchBuilder { parent: self }
+    fn struct_lint<'a>(&'a mut self) -> StructLintBuilder<'a> {
+        StructLintBuilder { parent: self }
     }
 }
 
-pub struct StructMatchBuilder<'a> {
+// First builder to establish a named lint
+pub struct StructLintBuilder<'a> {
     parent: &'a mut crate::lint_builder::LintBuilder,
 }
 
-impl<'a> StructMatchBuilder<'a> {
-    // Original matches method
+impl<'a> StructLintBuilder<'a> {
+    // Required step to name the lint
+    pub fn lint_named(self, name: impl Into<String>) -> StructNamedBuilder<'a> {
+        StructNamedBuilder { 
+            parent: self.parent,
+            name: name.into()
+        }
+    }
+}
+
+// Builder after the name is provided
+pub struct StructNamedBuilder<'a> {
+    parent: &'a mut crate::lint_builder::LintBuilder,
+    name: String,
+}
+
+impl<'a> StructNamedBuilder<'a> {
+    // Original matches method now on NamedBuilder
     pub fn matches(self, m: StructMatch) -> StructConstraintBuilder<'a> {
         StructConstraintBuilder {
             parent: self.parent,
             match_: m,
             rules: Vec::new(),
             current_severity: Severity::default(),
+            name: self.name,
         }
     }
     
@@ -170,6 +188,7 @@ pub struct StructConstraintBuilder<'a> {
     match_: StructMatch,
     rules: Vec<StructRule>,
     current_severity: Severity,
+    name: String,
 }
 
 impl<'a> StructConstraintBuilder<'a> {
@@ -186,7 +205,7 @@ impl<'a> StructConstraintBuilder<'a> {
     
     pub fn build(self) -> &'a mut crate::lint_builder::LintBuilder {
         let lint = ConfiguredLint::Struct(StructLint {
-            name: "struct_lint".into(),
+            name: self.name,
             matches: self.match_,
             rules: self.rules,
         });

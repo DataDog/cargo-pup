@@ -1,21 +1,21 @@
 (
     lints: [
         Module((
-            name: "module_lint",
+            name: "empty_module_check",
             matches: Module("^test_app::function_length$"),
             rules: [
                 MustNotBeEmpty(Warn),
             ],
         )),
         Function((
-            name: "function_lint",
+            name: "function_length_check",
             matches: InModule("^test_app::function_length$"),
             rules: [
                 MaxLength(5, Warn),
             ],
         )),
         Module((
-            name: "module_lint",
+            name: "module_usage",
             matches: Module("^test_app::module_usage$"),
             rules: [
                 RestrictImports(
@@ -29,21 +29,21 @@
             ],
         )),
         Module((
-            name: "module_lint",
+            name: "must_not_be_empty_module",
             matches: Module("^test_app::empty_mod$"),
             rules: [
                 MustNotBeEmpty(Warn),
             ],
         )),
         Module((
-            name: "module_lint",
+            name: "must_be_empty_module",
             matches: Module("^test_app::must_be_empty$"),
             rules: [
                 MustBeEmpty(Warn),
             ],
         )),
         Module((
-            name: "module_lint",
+            name: "item_type_restrictions",
             matches: Module("^test_app::item_type$"),
             rules: [
                 DeniedItems(
@@ -58,7 +58,7 @@
             ],
         )),
         Struct((
-            name: "struct_lint",
+            name: "trait_restrictions",
             matches: ImplementsTrait("^test_app::trait_impl::MyTrait$"),
             rules: [
                 MustBeNamed(".*MyTraitImpl$", Warn),
@@ -66,7 +66,7 @@
             ],
         )),
         Function((
-            name: "function_lint",
+            name: "result_type_check",
             matches: InModule("^test_app::result_error$"),
             rules: [
                 ResultErrorMustImplementError(Warn),

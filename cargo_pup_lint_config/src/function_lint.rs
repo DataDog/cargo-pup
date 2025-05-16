@@ -160,27 +160,45 @@ impl FunctionRule {
 
 // Fluent Builder for Function Lints
 pub trait FunctionLintExt {
-    fn function<'a>(&'a mut self) -> FunctionMatchBuilder<'a>;
+    fn function<'a>(&'a mut self) -> FunctionLintBuilder<'a>;
 }
 
 impl FunctionLintExt for LintBuilder {
-    fn function<'a>(&'a mut self) -> FunctionMatchBuilder<'a> {
-        FunctionMatchBuilder { parent: self }
+    fn function<'a>(&'a mut self) -> FunctionLintBuilder<'a> {
+        FunctionLintBuilder { parent: self }
     }
 }
 
-pub struct FunctionMatchBuilder<'a> {
+// First builder to establish a named lint
+pub struct FunctionLintBuilder<'a> {
     parent: &'a mut LintBuilder,
 }
 
-impl<'a> FunctionMatchBuilder<'a> {
-    // Original matches method
+impl<'a> FunctionLintBuilder<'a> {
+    // Required step to name the lint
+    pub fn lint_named(self, name: impl Into<String>) -> FunctionNamedBuilder<'a> {
+        FunctionNamedBuilder { 
+            parent: self.parent,
+            name: name.into()
+        }
+    }
+}
+
+// Builder after the name is provided
+pub struct FunctionNamedBuilder<'a> {
+    parent: &'a mut LintBuilder,
+    name: String,
+}
+
+impl<'a> FunctionNamedBuilder<'a> {
+    // Original matches method now on NamedBuilder
     pub fn matches(self, m: FunctionMatch) -> FunctionConstraintBuilder<'a> {
         FunctionConstraintBuilder {
             parent: self.parent,
             match_: m,
             rules: Vec::new(),
             current_severity: Severity::default(),
+            name: self.name,
         }
     }
     
@@ -199,6 +217,7 @@ pub struct FunctionConstraintBuilder<'a> {
     match_: FunctionMatch,
     rules: Vec<FunctionRule>,
     current_severity: Severity,
+    name: String,
 }
 
 impl<'a> FunctionConstraintBuilder<'a> {
@@ -215,7 +234,7 @@ impl<'a> FunctionConstraintBuilder<'a> {
     
     pub fn build(self) -> &'a mut LintBuilder {
         let lint = ConfiguredLint::Function(FunctionLint {
-            name: "function_lint".into(),
+            name: self.name,
             matches: self.match_,
             rules: self.rules,
         });

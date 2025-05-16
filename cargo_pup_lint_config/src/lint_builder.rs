@@ -56,6 +56,7 @@ mod tests {
 
         // Use a more complex matcher to demonstrate the DSL capabilities with regex
         builder.module()
+            .lint_named("my_module_rules")
             .matching(|m| 
                 m.module("^core::(models|entities)$")
                     .or(
@@ -82,6 +83,7 @@ mod tests {
 
         // Use the same complex matcher as in test_write_to_file
         builder.module()
+            .lint_named("my_module_rules")
             .matching(|m| 
                 m.module("^core::(models|entities)$")
                     .or(
@@ -104,7 +106,7 @@ mod tests {
         // Verify that the loaded builder contains the correct data
         assert_eq!(loaded_builder.lints.len(), 1);
         if let ConfiguredLint::Module(module_lint) = &loaded_builder.lints[0] {
-            assert_eq!(module_lint.name, "module_lint");
+            assert_eq!(module_lint.name, "my_module_rules");
             
             // Check that it's a complex matcher with OR at the top level
             if let ModuleMatch::OrMatches(left, right) = &module_lint.matches {
@@ -123,12 +125,12 @@ mod tests {
             // Check rules and their severity levels
             assert_eq!(module_lint.rules.len(), 2);
             
-            // First rule should be MustBeNamed with Deny severity
+            // First rule should be MustBeNamed with Error severity
             if let ModuleRule::MustBeNamed(name, severity) = &module_lint.rules[0] {
                 assert_eq!(name, "domain_entity");
                 assert_eq!(severity, &Severity::Error);
             } else {
-                panic!("Expected MustBeNamed with Deny severity");
+                panic!("Expected MustBeNamed with Error severity");
             }
             
             // Second rule should be NoWildcardImports with Warn severity

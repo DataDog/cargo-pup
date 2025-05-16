@@ -13,9 +13,9 @@ fn test_lint_config_matches_yaml() {
     // Add rules that approximate those in pup.yaml
     // Note: Some exact rules may not be available in the API, so we're using what's available
 
-    // This is meant to represent the function_length lint for module check
     builder
         .module()
+        .lint_named("empty_module_check")
         .matching(|m| m.module("^test_app::function_length$"))
         .with_severity(Severity::Warn)
         .must_not_be_empty()
@@ -24,14 +24,16 @@ fn test_lint_config_matches_yaml() {
     // Function length limit for functions in function_length module
     builder
         .function()
+        .lint_named("function_length_check")
         .matching(|m| m.in_module("^test_app::function_length$"))
         .with_severity(Severity::Warn)
         .max_length(5)
         .build();
 
-    // This approximates module_usage rules
+
     builder
         .module()
+        .lint_named("module_usage")
         .matching(|m| m.module("^test_app::module_usage$"))
         .with_severity(Severity::Warn)
         .restrict_imports(None, Some(vec!["^std::collections".to_string()]))
@@ -41,6 +43,7 @@ fn test_lint_config_matches_yaml() {
     // Empty module rule - must NOT be empty
     builder
         .module()
+        .lint_named("must_not_be_empty_module")
         .matching(|m| m.module("^test_app::empty_mod$"))
         .with_severity(Severity::Warn)
         .must_not_be_empty()
@@ -49,6 +52,7 @@ fn test_lint_config_matches_yaml() {
     // Empty module rule - MUST be empty
     builder
         .module()
+        .lint_named("must_be_empty_module")
         .matching(|m| m.module("^test_app::must_be_empty$"))
         .with_severity(Severity::Warn)
         .must_be_empty()
@@ -57,6 +61,7 @@ fn test_lint_config_matches_yaml() {
     // Item type restrictions
     builder
         .module()
+        .lint_named("item_type_restrictions")
         .matching(|m| m.module("^test_app::item_type$"))
         .with_severity(Severity::Warn)
         .denied_items(vec![
@@ -69,6 +74,7 @@ fn test_lint_config_matches_yaml() {
 
     // Trait restrictions
     builder.struct_lint()
+        .lint_named("trait_restrictions")
         .matching(|m|
         m.implements_trait("^test_app::trait_impl::MyTrait$"))
         .with_severity(Severity::Warn)
@@ -79,6 +85,7 @@ fn test_lint_config_matches_yaml() {
     // Result error implementation check
     builder
         .function()
+        .lint_named("result_type_check")
         .matching(|m| m.in_module("^test_app::result_error$"))
         .with_severity(Severity::Warn)
         .enforce_error_trait_implementation()
