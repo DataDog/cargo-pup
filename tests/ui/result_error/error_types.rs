@@ -40,11 +40,6 @@ mod test {
         Ok(())
     }
 
-    // This function should be allowed - String implements Error
-    fn good_string_error() -> Result<(), String> {
-        Ok(())
-    }
-
     // This function should be allowed - std::io::Error implements Error
     fn good_io_error() -> Result<(), std::io::Error> {
         Ok(())

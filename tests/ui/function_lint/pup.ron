@@ -280,6 +280,26 @@
                     )
                 ]
             )
+        ),
+
+        // ======================================================================
+        // SECTION: Projection Type Tests (for projection_type_reproduce.rs)
+        // ======================================================================
+
+        Function(
+            (
+                name: "projection_type_error_impl_test",
+                matches: NameEquals("test"),
+                rules: [
+                    ResultErrorMustImplementError(
+                    Error,
+                    ),
+                    MaxLength(
+                    1,   // Force an error. This doesn't matter, we just want to check the function
+                    Error, // Severity
+                    )
+                ]
+            )
         )
     ]
 ) 

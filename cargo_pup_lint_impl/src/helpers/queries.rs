@@ -15,7 +15,7 @@ pub fn get_full_module_name(tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> String
         .crate_name(module_def_id.to_def_id().krate)
         .to_ident_string();
     let module_name = tcx.def_path_str(module_def_id.to_def_id());
-    
+
     // If the module_name is empty, this is the root module_lint
     // In that case, return just the crate name without "::"
     if module_name.is_empty() {
@@ -31,7 +31,9 @@ pub fn implements_trait<'tcx>(
     ty: Ty<'tcx>,
     trait_def_id: DefId,
 ) -> bool {
-    let infcx = tcx.infer_ctxt().build(TypingMode::Coherence);
+    let infcx = tcx.infer_ctxt().build(TypingMode::Analysis {
+        defining_opaque_types: Default::default(),
+    });
 
     let cause = ObligationCause::dummy();
     let trait_ref = ty::TraitRef::new(tcx, trait_def_id, [ty]);
@@ -59,6 +61,7 @@ pub fn implements_error_trait<'tcx>(
 
     // Try the standard approach
     if let Some(error_trait_def_id) = tcx.get_diagnostic_item(sym::Error) {
+        // TODO - here
         implements_trait(tcx, param_env, ty, error_trait_def_id)
     } else {
         // If we can't find the Error trait, be conservative and consider it might implement Error
@@ -69,7 +72,7 @@ pub fn implements_error_trait<'tcx>(
 
 /// Creates a canonical trait name from a potentially generic trait name.
 /// This removes any generic parameters (including lifetimes) from the trait name.
-/// 
+///
 /// Example: "Iterator<'a, T>" becomes "Iterator"
 ///
 /// Used to standardize trait names for display and for lint rule matching.
@@ -82,7 +85,7 @@ pub fn get_canonical_trait_name(trait_name: &str) -> String {
 }
 
 /// Creates a fully qualified canonical trait name with crate prefix.
-/// 
+///
 /// Example: if crate_name = "std" and trait_name = "Iterator<'a, T>",
 /// returns "std::Iterator"
 pub fn get_full_canonical_trait_name(crate_name: &str, trait_name: &str) -> String {
@@ -105,7 +108,7 @@ pub fn get_full_canonical_trait_name_from_def_id(tcx: &TyCtxt<'_>, def_id: DefId
 }
 
 /// Creates a canonical type representation by removing generic parameters.
-/// 
+///
 /// Example: "Vec<String>" becomes "Vec"
 pub fn get_canonical_type_name(type_name: &str) -> String {
     if let Some(pos) = type_name.find('<') {
