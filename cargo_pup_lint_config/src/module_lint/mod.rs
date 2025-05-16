@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::lint_builder::LintBuilder;
-use super::{ConfiguredLint, Severity};
+use crate::{ConfiguredLint, Severity};
 use regex::Regex;
 
 // === Module Matcher DSL === //

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::ConfiguredLint;
-use super::Severity;
+use crate::Severity;
 
 // === Struct Matcher DSL === //
 

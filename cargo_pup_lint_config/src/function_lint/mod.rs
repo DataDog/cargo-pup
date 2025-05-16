@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::lint_builder::LintBuilder;
-use super::{ConfiguredLint, Severity};
+use crate::{ConfiguredLint, Severity};
 use regex::Regex;
 
 // === Function Matcher DSL === //
@@ -264,4 +264,4 @@ impl<'a> FunctionConstraintBuilder<'a> {
     pub fn create_max_length_rule(&self, length: usize) -> FunctionRule {
         FunctionRule::MaxLength(length, self.current_severity)
     }
-} 
+}
