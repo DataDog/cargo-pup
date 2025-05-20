@@ -8,7 +8,7 @@ LL | | }
    |
    = help: Consider moving this item to a different module
    = note: Applied by cargo-pup rule 'module_denied_items'.
-   = note: `#[deny(module_denied_items_lint)]` on by default
+   = note: `#[deny(module_denied_items)]` on by default
 
 error: enum 'ForbiddenEnum' is not allowed in this module
   --> tests/ui/module_lint_new/denied_items.rs:10:1

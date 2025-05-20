@@ -6,7 +6,7 @@ LL | use std::fmt::*;
    |
    = help: Import specific items instead of using a wildcard
    = note: Applied by cargo-pup rule 'no_wildcard_imports_test'.
-   = note: `#[deny(module_wildcard_import_lint)]` on by default
+   = note: `#[deny(module_wildcard_import)]` on by default
 
 error: Wildcard imports are not allowed
   --> tests/ui/module_lint_new/no_wildcard_imports.rs:11:1

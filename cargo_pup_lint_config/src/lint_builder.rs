@@ -96,7 +96,7 @@ mod tests {
 
         // Use a more complex matcher to demonstrate the DSL capabilities with regex
         builder
-            .module()
+            .module_lint()
             .lint_named("my_module_rules")
             .matching(|m| {
                 m.module("^core::(models|entities)$")
@@ -122,7 +122,7 @@ mod tests {
 
         // Use the same complex matcher as in test_write_to_file
         builder
-            .module()
+            .module_lint()
             .lint_named("my_module_rules")
             .matching(|m| {
                 m.module("^core::(models|entities)$")
@@ -236,7 +236,7 @@ mod tests {
 
         // Test function lint with name matching and max length
         builder
-            .function()
+            .function_lint()
             .lint_named("process_data_lint")
             .matching(|m| m.name("process_data"))
             .with_severity(Severity::Error)
@@ -271,7 +271,7 @@ mod tests {
 
         // Test function lint with regex matching
         builder
-            .function()
+            .function_lint()
             .lint_named("regexp_lint")
             .matching(|m| {
                 m.name_regex("^(get|set)_[a-z_]+$")
@@ -318,7 +318,7 @@ mod tests {
 
         // Test AND match
         builder
-            .function()
+            .function_lint()
             .lint_named("test_and")
             .matching(|m| m.name("test_and").and(m.name_regex(".*")))
             .with_severity(Severity::Error)
@@ -327,7 +327,7 @@ mod tests {
 
         // Test OR match
         builder
-            .function()
+            .function_lint()
             .lint_named("test_or")
             .matching(|m| m.name("test_or_1").or(m.name("test_or_2")))
             .with_severity(Severity::Error)
@@ -336,7 +336,7 @@ mod tests {
 
         // Test NOT match
         builder
-            .function()
+            .function_lint()
             .lint_named("test_not")
             .matching(|m| m.name_regex("test_.*").not())
             .with_severity(Severity::Error)
@@ -430,7 +430,7 @@ mod tests {
 
         // Test the builder extension method with new matcher DSL
         builder
-            .module()
+            .module_lint()
             .lint_named("module_matcher")
             .matching(|m| m.module("core::utils"))
             .must_not_be_empty()
@@ -455,7 +455,7 @@ mod tests {
 
         // Test the builder extension method with new matcher DSL
         builder
-            .module()
+            .module_lint()
             .lint_named("wildcard_rule")
             .matching(|m| m.module("ui"))
             .no_wildcard_imports()
@@ -482,7 +482,7 @@ mod tests {
 
         // Test the builder extension method with new matcher DSL
         builder
-            .module()
+            .module_lint()
             .lint_named("test_restrict_imports")
             .matching(|m| m.module("app::core"))
             .restrict_imports(Some(allowed.clone()), Some(denied.clone()))
@@ -514,7 +514,7 @@ mod tests {
 
         // Apply multiple rules to the same module match
         builder
-            .module()
+            .module_lint()
             .lint_named("multiple_matches")
             .matching(|m| m.module("app::core"))
             .must_not_be_empty()
@@ -603,7 +603,7 @@ mod tests {
 
         // Test a complex matching expression
         builder
-            .module()
+            .module_lint()
             .lint_named("complex_module_matcher")
             .matching(|m| m.module("app::core").or(m.module("lib::utils").not()))
             .must_not_be_empty()
@@ -644,7 +644,7 @@ mod tests {
 
         // Add a module lint
         original_builder
-            .module()
+            .module_lint()
             .lint_named("module_lint")
             .matching(|m| m.module("^test::module$"))
             .with_severity(Severity::Warn)
@@ -662,7 +662,7 @@ mod tests {
 
         // Add a function lint
         original_builder
-            .function()
+            .function_lint()
             .lint_named("function_lint")
             .matching(|m| m.name_regex("^test_.*$"))
             .with_severity(Severity::Warn)

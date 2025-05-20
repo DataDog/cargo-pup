@@ -8,7 +8,7 @@ LL | |         }
    |
    = help: Remove this item from the module, which must be empty
    = note: Applied by cargo-pup rule 'must_be_empty_nested_test'.
-   = note: `#[deny(module_must_be_empty_lint)]` on by default
+   = note: `#[deny(module_must_be_empty)]` on by default
 
 error: Item 'InvalidStruct' not allowed in empty module
   --> tests/ui/module_lint_new/must_be_empty_nested.rs:17:9

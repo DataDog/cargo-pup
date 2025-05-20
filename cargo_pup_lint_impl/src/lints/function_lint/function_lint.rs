@@ -1,13 +1,12 @@
 use crate::ArchitectureLintRule;
-use crate::declare_variable_severity_lint;
+use crate::declare_variable_severity_lint_new;
 use crate::helpers::clippy_utils::span_lint_and_help;
 use crate::helpers::queries::{get_full_module_name, implements_error_trait};
 use cargo_pup_lint_config::{
-    ConfiguredLint, FunctionMatch, FunctionRule, ReturnTypePattern, Severity,
-};
+    ConfiguredLint, FunctionMatch, FunctionRule, ReturnTypePattern};
 use regex::Regex;
 use rustc_hir::{ImplItem, ImplItemKind, Item, ItemKind, def_id::LOCAL_CRATE};
-use rustc_lint::{LateContext, LateLintPass, Lint, LintStore};
+use rustc_lint::{LateContext, LateLintPass, LintStore};
 use rustc_middle::ty::TyKind;
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
@@ -160,7 +159,7 @@ fn evaluate_function_match(
 }
 
 // Declare the function_lint lint with variable severity
-declare_variable_severity_lint!(
+declare_variable_severity_lint_new!(
     pub,
     FUNCTION_LINT,
     FUNCTION_LINT_DENY,
@@ -232,7 +231,7 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
 
                                 span_lint_and_help(
                                     ctx,
-                                    get_lint(*severity),
+                                    FUNCTION_LINT::get_by_severity(*severity),
                                     self.name().as_str(),
                                     sig_span,
                                     format!(
@@ -271,7 +270,7 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
 
                                     span_lint_and_help(
                                         ctx,
-                                        get_lint(*severity),
+                                        FUNCTION_LINT::get_by_severity(*severity),
                                         self.name().as_str(),
                                         sig_span,
                                         format!(
@@ -321,7 +320,7 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
 
                                 span_lint_and_help(
                                     ctx,
-                                    get_lint(*severity),
+                                    FUNCTION_LINT::get_by_severity(*severity),
                                     self.name().as_str(),
                                     sig_span,
                                     format!(
@@ -360,7 +359,7 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
 
                                     span_lint_and_help(
                                         ctx,
-                                        get_lint(*severity),
+                                        FUNCTION_LINT::get_by_severity(*severity),
                                         self.name().as_str(),
                                         sig_span,
                                         format!(

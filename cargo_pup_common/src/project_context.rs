@@ -35,7 +35,7 @@ impl PartialEq<&str> for ModuleInfo {
 pub struct ProjectContext {
     /// List of all modules with their applicable lints, fully qualified
     pub modules: Vec<ModuleInfo>,
-    /// The top-level crate name (root module_lint)
+    /// The top-level crate name (root module)
     pub module_root: String,
     /// List of all traits, fully qualified, and their implementations
     pub traits: Vec<TraitInfo>,

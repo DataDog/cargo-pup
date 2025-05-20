@@ -5,11 +5,11 @@ use crate::{ConfiguredLint, Severity};
 
 // Fluent Builder for Module Lints
 pub trait ModuleLintExt {
-    fn module(&mut self) -> ModuleLintBuilder;
+    fn module_lint(&mut self) -> ModuleLintBuilder;
 }
 
 impl ModuleLintExt for LintBuilder {
-    fn module(&mut self) -> ModuleLintBuilder {
+    fn module_lint(&mut self) -> ModuleLintBuilder {
         ModuleLintBuilder { parent: self }
     }
 }

@@ -154,7 +154,7 @@ impl StructLint {
 
 declare_variable_severity_lint_new!(
     pub,
-    StructLintMustBeNamed,
+    STRUCT_LINT_MUST_BE_NAMED,
     STRUCT_LINT_MUST_BE_NAMED_DENY,
     STRUCT_LINT_MUST_BE_NAMED_WARN,
     "Struct naming and attribute rules"
@@ -162,7 +162,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    StructLintMustNotBeNamed,
+    STRUCT_LINT_MUST_NOT_BE_NAMED,
     STRUCT_LINT_MUST_NOT_BE_NAMED_DENY,
     STRUCT_LINT_MUST_NOT_BE_NAMED_WARN,
     "Struct naming and attribute rules"
@@ -170,7 +170,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    StructLintMustBePrivate,
+    STRUCT_LINT_MUST_BE_PRIVATE,
     STRUCT_LINT_MUST_BE_PRIVATE_DENY,
     STRUCT_LINT_MUST_BE_PRIVATE_WARN,
     "Struct must have private visibility"
@@ -178,7 +178,7 @@ declare_variable_severity_lint_new!(
 
 declare_variable_severity_lint_new!(
     pub,
-    StructLintMustBePublic,
+    STRUCT_LINT_MUST_BE_PUBLIC,
     STRUCT_LINT_MUST_BE_PUBLIC_DENY,
     STRUCT_LINT_MUST_BE_PUBLIC_WARN,
     "Struct must have public visibility"
@@ -283,7 +283,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
 
                             span_lint_and_help(
                                 ctx,
-                                StructLintMustBeNamed::get_by_severity(*severity),
+                                STRUCT_LINT_MUST_BE_NAMED::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
                                 message,
@@ -306,7 +306,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
 
                             span_lint_and_help(
                                 ctx,
-                                StructLintMustNotBeNamed::get_by_severity(*severity),
+                                STRUCT_LINT_MUST_NOT_BE_NAMED::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
                                 message,
@@ -319,7 +319,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                         if is_public {
                             span_lint_and_help(
                                 ctx,
-                                StructLintMustBePrivate::get_by_severity(*severity),
+                                STRUCT_LINT_MUST_BE_PRIVATE::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
                                 format!("Struct '{}' is public, but must be private", item_name),
@@ -332,7 +332,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                         if !is_public {
                             span_lint_and_help(
                                 ctx,
-                                StructLintMustBePublic::get_by_severity(*severity),
+                                STRUCT_LINT_MUST_BE_PUBLIC::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
                                 format!("Struct '{}' is private, but must be public", item_name),

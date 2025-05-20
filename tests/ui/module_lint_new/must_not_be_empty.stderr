@@ -7,7 +7,7 @@ LL | | }
    |
    = help: Add content to this module or remove it
    = note: Applied by cargo-pup rule 'must_not_be_empty_test'.
-   = note: `#[deny(module_must_not_be_empty_lint)]` on by default
+   = note: `#[deny(module_must_not_be_empty)]` on by default
 
 error: Module must not be empty
   --> tests/ui/module_lint_new/must_not_be_empty.rs:18:1

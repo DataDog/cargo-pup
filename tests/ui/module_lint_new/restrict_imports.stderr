@@ -6,7 +6,7 @@ LL | use crate::dummy_denied::anything;
    |
    = help: Use only allowed module imports
    = note: Applied by cargo-pup rule 'restrict_imports_allowed_test'.
-   = note: `#[deny(module_restrict_imports_lint)]` on by default
+   = note: `#[deny(module_restrict_imports)]` on by default
 
 error: Use of module 'crate::dummy_denied::anything' is denied
   --> tests/ui/module_lint_new/restrict_imports.rs:15:1

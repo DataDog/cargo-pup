@@ -34,7 +34,7 @@ fn test_lint_config_matches_yaml() {
 
     // Add EmptyMod rule for modules following the mod.rs structure
     builder
-        .module()
+        .module_lint()
         .lint_named("empty_mod_rule")
         .matching(|m| m.module(".*"))
         .with_severity(Severity::Warn)
@@ -43,7 +43,7 @@ fn test_lint_config_matches_yaml() {
 
     // Add ItemType rule for helpers_no_structs_or_traits
     builder
-        .module()
+        .module_lint()
         .lint_named("helpers_no_structs_or_traits")
         .matching(|m| m.module("^pup_driver::lints::helpers$"))
         .with_severity(Severity::Error)
@@ -55,7 +55,7 @@ fn test_lint_config_matches_yaml() {
 
     // Utils shouldn't contain structs or traits
     builder
-        .module()
+        .module_lint()
         .lint_named("utils_no_structs_or_traits")
         .matching(|m| m.module("^pup_driver::utils$"))
         .with_severity(Severity::Error)
@@ -67,7 +67,7 @@ fn test_lint_config_matches_yaml() {
 
     // All Result<_,T> must return something implementing the error trait
     builder
-        .function()
+        .function_lint()
         .lint_named("result_error_impl_rule")
         .matching(|m| m.in_module(".*"))
         .with_severity(Severity::Error)
@@ -76,7 +76,7 @@ fn test_lint_config_matches_yaml() {
 
     // cargo_pup shouldn't use the lints subsystem
     builder
-        .module()
+        .module_lint()
         .lint_named("cargo_pup_no_lints_usage")
         .matching(|m| m.module("^cargo_pup::"))
         .with_severity(Severity::Error)

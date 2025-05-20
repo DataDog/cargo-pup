@@ -40,7 +40,7 @@ fn test_config_generation_ron_validation() {
         println!("Running in CI environment - skipping actual config generation");
         // Just verify we can create and deserialize a simple LintBuilder from RON
         let mut builder = LintBuilder::new();
-        builder.module()
+        builder.module_lint()
             .lint_named("test_rule_1")
             .matching(|m| m.module("test"))
             .must_not_be_empty()

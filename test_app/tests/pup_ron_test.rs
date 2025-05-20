@@ -10,7 +10,7 @@ fn test_lint_config() {
     let mut builder = LintBuilder::new();
 
     builder
-        .module()
+        .module_lint()
         .lint_named("empty_module_check")
         .matching(|m| m.module("^test_app::function_length$"))
         .with_severity(Severity::Warn)
@@ -19,7 +19,7 @@ fn test_lint_config() {
 
     // Function length limit for functions in function_length module
     builder
-        .function()
+        .function_lint()
         .lint_named("function_length_check")
         .matching(|m| m.in_module("^test_app::function_length$"))
         .with_severity(Severity::Warn)
@@ -28,7 +28,7 @@ fn test_lint_config() {
 
 
     builder
-        .module()
+        .module_lint()
         .lint_named("module_usage")
         .matching(|m| m.module("^test_app::module_usage$"))
         .with_severity(Severity::Warn)
@@ -38,7 +38,7 @@ fn test_lint_config() {
 
     // Empty module rule - must NOT be empty
     builder
-        .module()
+        .module_lint()
         .lint_named("must_not_be_empty_module")
         .matching(|m| m.module("^test_app::empty_mod$"))
         .with_severity(Severity::Warn)
@@ -47,7 +47,7 @@ fn test_lint_config() {
         
     // Empty module rule with empty mod file rule - MUST be empty
     builder
-        .module()
+        .module_lint()
         .lint_named("must_be_empty_module")
         .matching(|m| m.module("^test_app::must_be_empty$"))
         .with_severity(Severity::Warn)
@@ -56,7 +56,7 @@ fn test_lint_config() {
         
     // Module must have an empty mod.rs file (only allowed to re-export)
     builder
-        .module()
+        .module_lint()
         .lint_named("must_have_empty_mod_file")
         .matching(|m| m.module("^test_app::empty_mod_file$"))
         .with_severity(Severity::Warn)
@@ -65,7 +65,7 @@ fn test_lint_config() {
 
     // Item type restrictions
     builder
-        .module()
+        .module_lint()
         .lint_named("item_type_restrictions")
         .matching(|m| m.module("^test_app::item_type$"))
         .with_severity(Severity::Warn)
@@ -89,7 +89,7 @@ fn test_lint_config() {
         
     // Result error implementation check
     builder
-        .function()
+        .function_lint()
         .lint_named("result_type_check")
         .matching(|m| m.in_module("^test_app::result_error$"))
         .with_severity(Severity::Warn)

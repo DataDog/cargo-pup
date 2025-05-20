@@ -5,11 +5,11 @@ use crate::{ConfiguredLint, Severity};
 
 // Fluent Builder for Function Lints
 pub trait FunctionLintExt {
-    fn function(&mut self) -> FunctionLintBuilder<'_>;
+    fn function_lint(&mut self) -> FunctionLintBuilder<'_>;
 }
 
 impl FunctionLintExt for LintBuilder {
-    fn function(&mut self) -> FunctionLintBuilder<'_> {
+    fn function_lint(&mut self) -> FunctionLintBuilder<'_> {
         FunctionLintBuilder { parent: self }
     }
 }

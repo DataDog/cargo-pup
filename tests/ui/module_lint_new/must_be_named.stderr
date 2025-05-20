@@ -10,7 +10,7 @@ LL | | }
    |
    = help: Rename this module to match the pattern 'good_*'
    = note: Applied by cargo-pup rule 'must_be_named_test'.
-   = note: `#[deny(module_must_be_named_lint)]` on by default
+   = note: `#[deny(module_must_be_named)]` on by default
 
 error: Module must match pattern 'good_*', found 'another_bad_name'
   --> tests/ui/module_lint_new/must_be_named.rs:18:1
