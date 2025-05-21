@@ -3,112 +3,25 @@ use crate::declare_variable_severity_lint;
 use crate::helpers::clippy_utils::span_lint_and_help;
 use crate::helpers::queries::get_full_module_name;
 use cargo_pup_lint_config::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
+use cargo_pup_lint_config::module_lint::ModuleLint as ConfigModuleLint;
 use regex::Regex;
 use rustc_hir::{Item, ItemKind, UseKind};
 use rustc_lint::{LateContext, LateLintPass, LintContext, LintStore};
 use rustc_session::impl_lint_pass;
 
 pub struct ModuleLint {
-    name: String,
-    matches: ModuleMatch,
-    // Store minimal data needed instead of cloning ConfiguredLint
-    // We'll store just what we need from the rules
-    module_rules: Vec<ModuleRuleInfo>,
-}
-
-// A simplified representation of rules we need to store
-#[derive(Clone)]
-struct ModuleRuleInfo {
-    rule_type: ModuleRuleType,
-    severity: Severity,
-}
-
-// Types of rules we handle
-#[derive(Clone)]
-enum ModuleRuleType {
-    MustBeNamed(String),
-    MustNotBeNamed(String),
-    MustNotBeEmpty,
-    MustBeEmpty,
-    MustHaveEmptyModFile,
-    RestrictImports {
-        allowed_only: Option<Vec<String>>,
-        denied: Option<Vec<String>>,
-    },
-    NoWildcardImports,
-    DeniedItems(Vec<String>),
+    // Store the original configuration
+    config: ConfigModuleLint,
 }
 
 impl ModuleLint {
     #[allow(clippy::new_ret_no_self)]
     pub fn new(config: &ConfiguredLint) -> Box<dyn ArchitectureLintRule + Send> {
-        // TODO - just clone this
         match config {
-            ConfiguredLint::Module(m) => {
-                // Extract rule information to our simplified structure
-                let module_rules = m
-                    .rules
-                    .iter()
-                    .filter_map(|rule| {
-                        match rule {
-                            ModuleRule::MustBeNamed(name, severity) => Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::MustBeNamed(name.clone()),
-                                severity: *severity,
-                            }),
-                            ModuleRule::MustNotBeNamed(name, severity) => Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::MustNotBeNamed(name.clone()),
-                                severity: *severity,
-                            }),
-                            ModuleRule::MustNotBeEmpty(severity) => Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::MustNotBeEmpty,
-                                severity: *severity,
-                            }),
-                            ModuleRule::MustBeEmpty(severity) => Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::MustBeEmpty,
-                                severity: *severity,
-                            }),
-                            ModuleRule::MustHaveEmptyModFile(severity) => Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::MustHaveEmptyModFile,
-                                severity: *severity,
-                            }),
-                            ModuleRule::RestrictImports {
-                                allowed_only,
-                                denied,
-                                severity,
-                            } => {
-                                // Clone the string vectors inside allowed_only and denied
-                                let allowed_clone = allowed_only.clone();
-                                let denied_clone = denied.clone();
-
-                                Some(ModuleRuleInfo {
-                                    rule_type: ModuleRuleType::RestrictImports {
-                                        allowed_only: allowed_clone,
-                                        denied: denied_clone,
-                                    },
-                                    severity: *severity,
-                                })
-                            }
-                            ModuleRule::NoWildcardImports(severity) => Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::NoWildcardImports,
-                                severity: *severity,
-                            }),
-                            // Handle the DeniedItems variant
-                            ModuleRule::DeniedItems { items, severity } => Some(ModuleRuleInfo {
-                                rule_type: ModuleRuleType::DeniedItems(items.clone()),
-                                severity: *severity,
-                            }),
-                            // Not handling logical combinations for now
-                            ModuleRule::And(_, _) => None,
-                            ModuleRule::Or(_, _) => None,
-                            ModuleRule::Not(_) => None,
-                        }
-                    })
-                    .collect();
-
+            ConfiguredLint::Module(module_config) => {
+                // Simply clone the original configuration
                 Box::new(Self {
-                    name: m.name.clone(),
-                    matches: m.matches.clone(),
-                    module_rules,
+                    config: module_config.clone(),
                 })
             }
             _ => panic!("Expected a Module lint configuration"),
@@ -117,7 +30,7 @@ impl ModuleLint {
 
     // Method to check if a module_lint path matches our configured module_lint patterns
     fn matches_module(&self, module_path: &str) -> bool {
-        Self::evaluate_module_match(&self.matches, module_path)
+        Self::evaluate_module_match(&self.config.matches, module_path)
     }
 
     // Helper method to evaluate a ModuleMatch against a module_lint path
@@ -150,17 +63,6 @@ impl ModuleLint {
         match Regex::new(pattern) {
             Ok(regex) => regex.is_match(string),
             Err(_) => string == pattern, // Fall back to exact match
-        }
-    }
-
-    // Helper method to get a user-friendly description of a pattern
-    fn describe_pattern(&self, pattern: &str) -> &'static str {
-        if pattern.contains(|c: char| {
-            c == '*' || c == '.' || c == '+' || c == '[' || c == '(' || c == '|'
-        }) {
-            "pattern"
-        } else {
-            "name"
         }
     }
 
@@ -330,7 +232,7 @@ impl_lint_pass!(ModuleLint => [
 
 impl ArchitectureLintRule for ModuleLint {
     fn name(&self) -> String {
-        self.name.clone()
+        self.config.name.clone()
     }
 
     fn applies_to_module(&self, namespace: &str) -> bool {
@@ -338,20 +240,16 @@ impl ArchitectureLintRule for ModuleLint {
     }
 
     fn applies_to_trait(&self, _trait_path: &str) -> bool {
-        false // Module lints don't apply to traits by default
+        false // Module lints don't apply to traits
     }
 
     fn register_late_pass(&self, lint_store: &mut LintStore) {
-        let name = self.name.clone();
-        let matches = self.matches.clone();
-        let module_rules = self.module_rules.clone();
+        let config_clone = self.config.clone();
 
         lint_store.register_late_pass(move |_| {
             // Create a new instance of ModuleLint to be used as LateLintPass
             Box::new(ModuleLint {
-                name: name.clone(),
-                matches: matches.clone(),
-                module_rules: module_rules.clone(),
+                config: config_clone.clone()
             })
         });
     }
@@ -362,7 +260,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
         let parent_item = ctx.tcx.hir_get_parent_item(item.hir_id());
         let parent_module_path = get_full_module_name(&ctx.tcx, &parent_item);
 
-        // Check if the parent module matches our patterns (original behavior)
+        // Check if the parent module matches our patterns
         if !self.matches_module(&parent_module_path) {
             // Get the full path of the current item for module-specific rules
             if let ItemKind::Mod(_) = item.kind {
@@ -377,74 +275,60 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
         }
 
         // Apply each rule
-        for rule_info in &self.module_rules {
-            match &rule_info.rule_type {
-                ModuleRuleType::MustBeNamed(pattern) => {
+        for rule in &self.config.rules {
+            match rule {
+                ModuleRule::MustBeNamed(pattern, severity) => {
                     if let ItemKind::Mod(_) = item.kind {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         let item_name_str = item_name.to_string();
 
-                        // Check if module_lint name matches the pattern
-                        if !self.string_matches_pattern(&item_name_str, pattern) {
-                            let pattern_type = self.describe_pattern(pattern);
+                        // Check if module name matches the pattern
+                        if !self.string_matches_pattern(&item_name_str, &pattern) {
                             let message = format!(
-                                "Module must match {} '{}', found '{}'",
-                                pattern_type, pattern, item_name_str
+                                "Module must match pattern '{}', found '{}'",
+                                pattern, item_name_str
                             );
-
-                            let help = if pattern_type == "pattern" {
-                                format!("Rename this module to match the pattern '{}'", pattern)
-                            } else {
-                                format!("Rename this module to '{}'", pattern)
-                            };
 
                             span_lint_and_help(
                                 ctx,
-                                MODULE_MUST_BE_NAMED::get_by_severity(rule_info.severity),
+                                MODULE_MUST_BE_NAMED::get_by_severity(*severity),
                                 self.name().as_str(),
                                 item.span,
                                 message,
                                 None,
-                                help,
+                                format!("Rename this module to match the pattern '{}'", pattern),
                             );
                         }
                     }
                 }
-                ModuleRuleType::MustNotBeNamed(pattern) => {
+                ModuleRule::MustNotBeNamed(pattern, severity) => {
                     if let ItemKind::Mod(_) = item.kind {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         let item_name_str = item_name.to_string();
 
-                        // Check if module_lint name matches the pattern (which it shouldn't)
+                        // Check if module name matches the pattern (which it shouldn't)
                         if self.string_matches_pattern(&item_name_str, pattern) {
-                            let pattern_type = self.describe_pattern(pattern);
                             let message =
-                                format!("Module must not match {} '{}'", pattern_type, pattern);
-
-                            let help = if pattern_type == "pattern" {
-                                "Choose a name that doesn't match this pattern"
-                            } else {
-                                "Choose a different name for this module"
-                            };
+                                format!("Module must not match pattern '{}'", pattern);
 
                             span_lint_and_help(
                                 ctx,
-                                MODULE_MUST_NOT_BE_NAMED::get_by_severity(rule_info.severity),
+                                MODULE_MUST_NOT_BE_NAMED::get_by_severity(*severity),
                                 self.name().as_str(),
                                 item.span,
                                 message,
                                 None,
-                                help,
+                                "Choose a name that doesn't match this pattern",
                             );
                         }
                     }
                 }
-                ModuleRuleType::MustNotBeEmpty => {
+                ModuleRule::MustNotBeEmpty(severity) => {
                     if let ItemKind::Mod(module_data) = item.kind {
                         if module_data.item_ids.is_empty() {
                             span_lint_and_help(
                                 ctx,
-                                MODULE_MUST_NOT_BE_EMPTY::get_by_severity(rule_info.severity),
+                                MODULE_MUST_NOT_BE_EMPTY::get_by_severity(*severity),
                                 self.name().as_str(),
                                 item.span,
                                 "Module must not be empty",
@@ -454,9 +338,9 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         }
                     }
                 }
-                ModuleRuleType::MustBeEmpty => {
+                ModuleRule::MustBeEmpty(severity) => {
                     if let ItemKind::Mod(module_data) = item.kind {
-                        let severity = rule_info.severity;
+                        let sev = severity; // Use severity in closure
                         self.check_for_disallowed_items(
                             ctx,
                             module_data,
@@ -464,7 +348,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 // For MustBeEmpty, we don't care if it's a mod.rs file or not
                                 span_lint_and_help(
                                     ctx,
-                                    MODULE_MUST_BE_EMPTY::get_by_severity(severity),
+                                    MODULE_MUST_BE_EMPTY::get_by_severity(*sev),
                                     slf.name().as_str(),
                                     item.span,
                                     format!("Item '{}' not allowed in empty module", item_name),
@@ -475,9 +359,9 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         );
                     }
                 }
-                ModuleRuleType::MustHaveEmptyModFile => {
+                ModuleRule::MustHaveEmptyModFile(severity) => {
                     if let ItemKind::Mod(module_data) = item.kind {
-                        let severity = rule_info.severity;
+                        let sev = severity; // Use severity in closure
                         self.check_for_disallowed_items(
                             ctx,
                             module_data,
@@ -486,7 +370,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 if is_mod_rs {
                                     span_lint_and_help(
                                         ctx,
-                                        MODULE_MUST_HAVE_EMPTY_MOD_FILE::get_by_severity(severity),
+                                        MODULE_MUST_HAVE_EMPTY_MOD_FILE::get_by_severity(*sev),
                                         slf.name().as_str(),
                                         item.span,
                                         format!("Item '{}' disallowed in mod.rs due to empty-mod-file policy", item_name),
@@ -498,10 +382,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         );
                     }
                 }
-                ModuleRuleType::RestrictImports {
-                    allowed_only,
-                    denied,
-                } => {
+                ModuleRule::RestrictImports { allowed_only, denied, severity } => {
                     if let ItemKind::Use(path, _) = &item.kind {
                         let import_path: Vec<_> = path
                             .segments
@@ -526,7 +407,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                                 span_lint_and_help(
                                     ctx,
-                                    MODULE_RESTRICT_IMPORTS::get_by_severity(rule_info.severity),
+                                    MODULE_RESTRICT_IMPORTS::get_by_severity(*severity),
                                     self.name().as_str(),
                                     item.span,
                                     message,
@@ -550,7 +431,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                                 span_lint_and_help(
                                     ctx,
-                                    MODULE_RESTRICT_IMPORTS::get_by_severity(rule_info.severity),
+                                    MODULE_RESTRICT_IMPORTS::get_by_severity(*severity),
                                     self.name().as_str(),
                                     item.span,
                                     message,
@@ -561,12 +442,12 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         }
                     }
                 }
-                ModuleRuleType::NoWildcardImports => {
+                ModuleRule::NoWildcardImports(severity) => {
                     // Check if the current item is a wildcard import
                     if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
                         span_lint_and_help(
                             ctx,
-                            MODULE_WILDCARD_IMPORT::get_by_severity(rule_info.severity),
+                            MODULE_WILDCARD_IMPORT::get_by_severity(*severity),
                             self.name().as_str(),
                             item.span,
                             "Wildcard imports are not allowed",
@@ -577,10 +458,10 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                     // Also check nested modules for wildcard imports
                     if let ItemKind::Mod(module) = &item.kind {
-                        self.check_for_wildcard_imports(ctx, module, rule_info.severity);
+                        self.check_for_wildcard_imports(ctx, module, *severity);
                     }
                 }
-                ModuleRuleType::DeniedItems(denied_items) => {
+                ModuleRule::DeniedItems { items, severity } => {
                     // Get the item type as a string
                     let item_type = match &item.kind {
                         ItemKind::Enum(..) => "enum",
@@ -596,11 +477,11 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     };
 
                     // Check if the current item type is in the denied list
-                    if !item_type.is_empty() && denied_items.contains(&item_type.to_string()) {
+                    if !item_type.is_empty() && items.contains(&item_type.to_string()) {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         span_lint_and_help(
                             ctx,
-                            MODULE_DENIED_ITEMS::get_by_severity(rule_info.severity),
+                            MODULE_DENIED_ITEMS::get_by_severity(*severity),
                             self.name().as_str(),
                             item.span,
                             format!(
@@ -612,6 +493,8 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         );
                     }
                 }
+                // Skip logical combinations for now (And, Or, Not)
+                ModuleRule::And(_, _) | ModuleRule::Or(_, _) | ModuleRule::Not(_) => {}
             }
         }
     }
