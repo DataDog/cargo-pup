@@ -52,6 +52,8 @@ impl<'a> FunctionNamedBuilder<'a> {
     /// 
     /// # Example
     /// ```
+    /// use cargo_pup_lint_config::{FunctionLintExt, LintBuilder};
+    /// let mut lint_builder = LintBuilder::new();
     /// lint_builder.function_lint()
     ///     .lint_named("result_error_impl")
     ///     .matching(|m| m.returns_result())

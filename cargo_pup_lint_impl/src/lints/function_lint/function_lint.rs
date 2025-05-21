@@ -1,5 +1,5 @@
 use crate::ArchitectureLintRule;
-use crate::declare_variable_severity_lint_new;
+use crate::declare_variable_severity_lint;
 use crate::helpers::clippy_utils::span_lint_and_help;
 use crate::helpers::queries::{get_full_module_name, implements_error_trait};
 use cargo_pup_lint_config::{
@@ -159,7 +159,7 @@ fn evaluate_function_match(
 }
 
 // Declare the function_lint lint with variable severity
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     FUNCTION_LINT,
     FUNCTION_LINT_DENY,

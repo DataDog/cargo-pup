@@ -52,6 +52,8 @@ impl<'a> ModuleNamedBuilder<'a> {
     /// 
     /// # Example
     /// ```
+    /// use cargo_pup_lint_config::{LintBuilder, ModuleLintExt};
+    /// let mut lint_builder = LintBuilder::new();
     /// lint_builder.module_lint()
     ///     .lint_named("empty_handlers")
     ///     .matching(|m| m.module("handlers"))

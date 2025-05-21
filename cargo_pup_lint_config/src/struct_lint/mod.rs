@@ -8,11 +8,11 @@
 /// 
 /// # Example
 /// ```
-/// use cargo_pup_lint_config::{LintBuilder, Severity};
+/// use cargo_pup_lint_config::{LintBuilder, Severity, StructRule};
 /// use cargo_pup_lint_config::struct_lint::StructLintExt;
-/// 
-/// let mut builder = LintBuilder::new("my_crate");
-/// 
+///
+/// let mut builder = LintBuilder::new();
+///
 /// // Enforce that model structs must be private
 /// builder.struct_lint()
 ///     .lint_named("model_visibility")

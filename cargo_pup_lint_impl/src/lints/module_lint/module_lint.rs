@@ -1,5 +1,5 @@
 use crate::ArchitectureLintRule;
-use crate::declare_variable_severity_lint_new;
+use crate::declare_variable_severity_lint;
 use crate::helpers::clippy_utils::span_lint_and_help;
 use crate::helpers::queries::get_full_module_name;
 use cargo_pup_lint_config::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
@@ -252,7 +252,7 @@ impl ModuleLint {
 }
 
 // Define specific lints for different rule types
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_MUST_BE_NAMED,
     MODULE_MUST_BE_NAMED_LINT_DENY,
@@ -260,7 +260,7 @@ declare_variable_severity_lint_new!(
     "Module must match a specific naming pattern"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_MUST_NOT_BE_NAMED,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY,
@@ -268,7 +268,7 @@ declare_variable_severity_lint_new!(
     "Module must not match a specific naming pattern"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_MUST_NOT_BE_EMPTY,
     MODULE_MUST_NOT_BE_EMPTY_LINT_DENY,
@@ -276,7 +276,7 @@ declare_variable_severity_lint_new!(
     "Module must not be empty"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_RESTRICT_IMPORTS,
     MODULE_RESTRICT_IMPORTS_LINT_DENY,
@@ -284,7 +284,7 @@ declare_variable_severity_lint_new!(
     "Module has import restrictions"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_WILDCARD_IMPORT,
     MODULE_WILDCARD_IMPORT_LINT_DENY,
@@ -293,7 +293,7 @@ declare_variable_severity_lint_new!(
 );
 
 // Define specific lints for denied item types
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_DENIED_ITEMS,
     MODULE_DENIED_ITEMS_LINT_DENY,
@@ -301,7 +301,7 @@ declare_variable_severity_lint_new!(
     "Module contains denied item types"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_MUST_BE_EMPTY,
     MODULE_MUST_BE_EMPTY_LINT_DENY,
@@ -309,7 +309,7 @@ declare_variable_severity_lint_new!(
     "Module must be empty"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     MODULE_MUST_HAVE_EMPTY_MOD_FILE,
     MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_DENY,

@@ -52,6 +52,8 @@ impl<'a> StructNamedBuilder<'a> {
     /// 
     /// # Example
     /// ```
+    /// use cargo_pup_lint_config::{LintBuilder, StructLintExt};
+    /// let mut lint_builder = LintBuilder::new();
     /// lint_builder.struct_lint()
     ///     .lint_named("model_visibility")
     ///     .matching(|m| m.name(".*Model"))

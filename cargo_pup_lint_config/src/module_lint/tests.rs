@@ -1,4 +1,162 @@
 #[cfg(test)]
+mod builder_tests {
+    use crate::lint_builder::LintBuilder;
+    use crate::ConfiguredLint;
+    use crate::module_lint::{ModuleRule, ModuleMatch, ModuleLintExt};
+    use crate::Severity;
+    use tempfile::NamedTempFile;
+    
+    // Helper function to verify default severity
+    fn assert_default_severity(severity: &Severity) {
+        assert_eq!(severity, &Severity::Warn, "Default severity should be Warn");
+    }
+    
+    #[test]
+    fn test_must_not_be_empty_rule() {
+        let mut builder = LintBuilder::new();
+
+        // Test the builder extension method with new matcher DSL
+        builder
+            .module_lint()
+            .lint_named("module_matcher")
+            .matching(|m| m.module("core::utils"))
+            .must_not_be_empty()
+            .build();
+
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 1);
+            if let ModuleRule::MustNotBeEmpty(severity) = &module_lint.rules[0] {
+                assert_default_severity(severity);
+            } else {
+                panic!("Expected MustNotBeEmpty rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_no_wildcard_imports_rule() {
+        let mut builder = LintBuilder::new();
+
+        // Test the builder extension method with new matcher DSL
+        builder
+            .module_lint()
+            .lint_named("wildcard_rule")
+            .matching(|m| m.module("ui"))
+            .no_wildcard_imports()
+            .build();
+
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 1);
+            if let ModuleRule::NoWildcardImports(severity) = &module_lint.rules[0] {
+                assert_default_severity(severity);
+            } else {
+                panic!("Expected NoWildcardImports rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_restrict_imports_rule() {
+        let mut builder = LintBuilder::new();
+        let allowed = vec!["std::collections".into(), "crate::utils".into()];
+        let denied = vec!["std::sync".into()];
+
+        // Test the builder extension method with new matcher DSL
+        builder
+            .module_lint()
+            .lint_named("test_restrict_imports")
+            .matching(|m| m.module("app::core"))
+            .restrict_imports(Some(allowed.clone()), Some(denied.clone()))
+            .build();
+
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 1);
+            if let ModuleRule::RestrictImports {
+                allowed_only,
+                denied: denied_mods,
+                severity,
+            } = &module_lint.rules[0]
+            {
+                assert_eq!(allowed_only.as_ref().unwrap(), &allowed);
+                assert_eq!(denied_mods.as_ref().unwrap(), &denied);
+                assert_default_severity(severity);
+            } else {
+                panic!("Expected RestrictImports rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_multiple_rules() {
+        let mut builder = LintBuilder::new();
+
+        // Apply multiple rules to the same module match
+        builder
+            .module_lint()
+            .lint_named("multiple_matches")
+            .matching(|m| m.module("app::core"))
+            .must_not_be_empty()
+            .no_wildcard_imports()
+            .must_be_named("core".into())
+            .build();
+
+        assert_eq!(builder.lints.len(), 1);
+        if let ConfiguredLint::Module(module_lint) = &builder.lints[0] {
+            assert_eq!(module_lint.rules.len(), 3);
+
+            // Check first rule - MustNotBeEmpty
+            if let ModuleRule::MustNotBeEmpty(severity) = &module_lint.rules[0] {
+                assert_default_severity(severity);
+            } else {
+                panic!("Expected MustNotBeEmpty as first rule");
+            }
+
+            // Check second rule - NoWildcardImports
+            if let ModuleRule::NoWildcardImports(severity) = &module_lint.rules[1] {
+                assert_default_severity(severity);
+            } else {
+                panic!("Expected NoWildcardImports as second rule");
+            }
+
+            // Check third rule - MustBeNamed
+            if let ModuleRule::MustBeNamed(name, severity) = &module_lint.rules[2] {
+                assert_eq!(name, "core");
+                assert_default_severity(severity);
+            } else {
+                panic!("Expected MustBeNamed as third rule");
+            }
+        } else {
+            panic!("Unexpected lint type");
+        }
+    }
+    
+    #[test]
+    fn test_complex_module_matcher() {
+        let mut builder = LintBuilder::new();
+
+        // Test a complex matching expression
+        builder
+            .module_lint()
+            .lint_named("complex_module_matcher")
+            .matching(|m| m.module("app::core").or(m.module("lib::utils").not()))
+            .must_not_be_empty()
+            .build();
+
+        assert_eq!(builder.lints.len(), 1);
+        assert!(matches!(&builder.lints[0], ConfiguredLint::Module(_)));
+    }
+}
+
+#[cfg(test)]
 mod context_generation_tests {
     use cargo_pup_common::project_context::{ProjectContext, ModuleInfo};
     use crate::GenerateFromContext;

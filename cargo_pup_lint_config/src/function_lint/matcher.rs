@@ -16,13 +16,14 @@ impl FunctionMatcher {
         FunctionMatchNode::Leaf(FunctionMatch::NameRegex(pattern.into()))
     }
 
-    /// Matches functions in a specific module
+    /// Matches functions in a specific module, with the module
+    /// name given as a regular expression.
     ///
-    /// The module parameter can be either:
-    /// - An exact module path (e.g., "core::utils")
-    /// - A regular expression pattern (e.g., "^core::(utils|models)::[a-zA-Z]+$")
+    /// e.g., "^core::(utils|models)::[a-zA-Z]+$"
     ///
-    /// The implementation will determine if it's a regex based on the presence of special regex characters.
+    /// Hint: you can use `cargo pup print-modules` to see the modules in your
+    /// project and their fully-qualified names.
+    ///
     pub fn in_module(&self, module: impl Into<String>) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::InModule(module.into()))
     }

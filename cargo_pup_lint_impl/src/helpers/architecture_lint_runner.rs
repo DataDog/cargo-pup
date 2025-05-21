@@ -108,7 +108,7 @@ impl ArchitectureLintRunner {
         }
     }
 
-    /// Build ProjectContext. This includes module_lint and trait information - and is typically
+    /// Build ProjectContext. This includes module and trait information - and is typically
     /// used by cargo-pup - on the outside of the pup-driver execution - to display project
     /// info to the user.
     fn build_project_context(&self, tcx: TyCtxt<'_>) -> anyhow::Result<ProjectContext> {
@@ -118,8 +118,8 @@ impl ArchitectureLintRunner {
         let mut namespace_set: BTreeSet<(String, String)> = BTreeSet::new();
         collect_modules(tcx, LocalModDefId::CRATE_DEF_ID, &mut namespace_set);
 
-        // Get the current crate name (module_lint root)
-        // Just take the first entry's module_lint name, which is the current crate
+        // Get the current crate name (module root)
+        // Just take the first entry's module name, which is the current crate
         let module_root = if let Some((crate_name, _)) = namespace_set.iter().next() {
             crate_name.clone()
         } else {
@@ -133,7 +133,7 @@ impl ArchitectureLintRunner {
         for (module, path) in &namespace_set {
             let full_module_path = format!("{}::{}", module, path);
 
-            // Find lints that apply to this module_lint
+            // Find lints that apply to this module
             let applicable_lints: Vec<String> = lints
                 .iter()
                 .filter(|lint| lint.applies_to_module(&full_module_path))
@@ -349,7 +349,7 @@ impl Callbacks for ArchitectureLintRunner {
     }
 }
 
-// Fetch all the modules from a top-level module_lint down
+// Fetch all the modules from a top-level module down
 fn collect_modules(
     tcx: TyCtxt<'_>,
     mod_id: LocalModDefId,
@@ -446,7 +446,7 @@ mod tests {
     fn test_project_context_json_serialization() {
         // Create a project context
         let context = ProjectContext::with_data(
-            vec!["test::module_lint".to_string()],
+            vec!["test::module".to_string()],
             "test".to_string(),
             vec![TraitInfo {
                 name: "test::Trait1".to_string(),
@@ -459,7 +459,7 @@ mod tests {
         let json = serde_json::to_string(&context).expect("Failed to serialize context");
 
         // Verify JSON contains expected data
-        assert!(json.contains("\"name\":\"test::module_lint\""));
+        assert!(json.contains("\"name\":\"test::module\""));
         assert!(json.contains("\"module_root\":\"test\""));
         assert!(json.contains("\"traits\":[{"));
         assert!(json.contains("\"name\":\"test::Trait1\""));
@@ -474,7 +474,7 @@ mod tests {
         {
             "modules": [
                 {
-                    "name": "test::module_lint",
+                    "name": "test::module",
                     "applicable_lints": []
                 }
             ],
@@ -496,7 +496,7 @@ mod tests {
         // Verify context properties
         assert_eq!(context.module_root, "test");
         assert_eq!(context.modules.len(), 1);
-        assert_eq!(context.modules[0], "test::module_lint");
+        assert_eq!(context.modules[0], "test::module");
         assert_eq!(context.traits.len(), 1);
         assert_eq!(context.traits[0].name, "test::Trait1");
         assert_eq!(context.traits[0].implementors.len(), 1);

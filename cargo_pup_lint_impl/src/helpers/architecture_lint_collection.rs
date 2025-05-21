@@ -22,10 +22,3 @@ impl ArchitectureLintCollection {
         &self.lints
     }
 }
-
-///
-/// Should be called once at startup to register
-/// all the lints with the configuration factory.
-pub fn register_all_lints() {
-
-}

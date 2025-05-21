@@ -1,9 +1,13 @@
-/// New version of declare_variable_severity_lint that uses a struct-based approach.
-/// 
-/// This provides a more flexible way to create lints with variable severity,
-/// allowing multiple lints to be defined in the same file without naming conflicts.
+/// Lets us create two lints in the fashion of declare_lint!,
+/// but with a variant for Deny and a variant for Warn, using
+/// the same lint name. We also emit a struct that wraps these lints
+/// up with a get_by_severity wrapper, so that we can have multiple
+/// lint declarations in the same file.
+///
+/// This lets us do dynamic lint level selection at runtime
+/// based on the user's configuration.
 #[macro_export]
-macro_rules! declare_variable_severity_lint_new {
+macro_rules! declare_variable_severity_lint {
     ($(#[$attr:meta])* $vis: vis, $NAME: ident, $NAME_DENY: ident, $NAME_WARN: ident, $desc: expr) => (
         // Deny severity: Directly define the lint with the Deny severity.
         $(#[$attr])*

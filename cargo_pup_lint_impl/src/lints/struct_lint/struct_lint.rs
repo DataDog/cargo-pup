@@ -1,5 +1,5 @@
 use crate::ArchitectureLintRule;
-use crate::declare_variable_severity_lint_new;
+use crate::declare_variable_severity_lint;
 use crate::helpers::clippy_utils::span_lint_and_help;
 use cargo_pup_lint_config::{ConfiguredLint, StructMatch, StructRule};
 use regex::Regex;
@@ -152,7 +152,7 @@ impl StructLint {
     }
 }
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     STRUCT_LINT_MUST_BE_NAMED,
     STRUCT_LINT_MUST_BE_NAMED_DENY,
@@ -160,7 +160,7 @@ declare_variable_severity_lint_new!(
     "Struct naming and attribute rules"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     STRUCT_LINT_MUST_NOT_BE_NAMED,
     STRUCT_LINT_MUST_NOT_BE_NAMED_DENY,
@@ -168,7 +168,7 @@ declare_variable_severity_lint_new!(
     "Struct naming and attribute rules"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     STRUCT_LINT_MUST_BE_PRIVATE,
     STRUCT_LINT_MUST_BE_PRIVATE_DENY,
@@ -176,7 +176,7 @@ declare_variable_severity_lint_new!(
     "Struct must have private visibility"
 );
 
-declare_variable_severity_lint_new!(
+declare_variable_severity_lint!(
     pub,
     STRUCT_LINT_MUST_BE_PUBLIC,
     STRUCT_LINT_MUST_BE_PUBLIC_DENY,

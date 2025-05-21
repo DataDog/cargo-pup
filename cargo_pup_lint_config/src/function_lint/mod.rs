@@ -10,7 +10,7 @@
 /// use cargo_pup_lint_config::{LintBuilder, Severity};
 /// use cargo_pup_lint_config::function_lint::FunctionLintExt;
 /// 
-/// let mut builder = LintBuilder::new("my_crate");
+/// let mut builder = LintBuilder::new();
 /// 
 /// // Create a lint that enforces Result error types implement the Error trait
 /// builder.function_lint()

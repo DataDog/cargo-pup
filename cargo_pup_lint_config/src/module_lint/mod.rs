@@ -11,13 +11,13 @@
 /// use cargo_pup_lint_config::{LintBuilder, Severity};
 /// use cargo_pup_lint_config::module_lint::ModuleLintExt;
 /// 
-/// let mut builder = LintBuilder::new("my_crate");
+/// let mut builder = LintBuilder::new();
 /// 
 /// // Create a lint that enforces handler modules must be empty (re-export only)
 /// builder.module_lint()
 ///     .lint_named("empty_handlers")
 ///     .matching(|m| m.module("handlers"))
-///     .with_severity(Severity::Warning)
+///     .with_severity(Severity::Warn)
 ///     .must_be_empty()
 ///     .build();
 /// 

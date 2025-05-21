@@ -26,11 +26,10 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-use cargo_pup_lint_impl::{register_all_lints, ArchitectureLintCollection, ArchitectureLintRunner, Mode};
+use cargo_pup_lint_impl::{ArchitectureLintCollection, ArchitectureLintRunner, Mode};
 use cargo_pup_lint_impl::lints::configuration_factory::LintConfigurationFactory;
 
 pub fn main() -> Result<()> {
-    register_all_lints();
 
     let early_dcx = EarlyDiagCtxt::new(ErrorOutputType::default());
     rustc_driver::init_rustc_env_logger(&early_dcx);

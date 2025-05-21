@@ -4,36 +4,24 @@ use super::types::StructMatch;
 pub struct StructMatcher;
 
 impl StructMatcher {
-    /// Matches structs by name
-    ///
-    /// The name parameter can be either:
-    /// - An exact struct name (e.g., "User")
-    /// - A regular expression pattern (e.g., "^[A-Z][a-z]+Model$")
-    ///
-    /// The implementation will determine if it's a regex based on the presence of special regex characters.
+    /// Matches structs by name, given a regular expression.
+    /// e.g., "^[A-Z][a-z]+Model$")
     pub fn name(&self, name: impl Into<String>) -> StructMatchNode {
         StructMatchNode::Leaf(StructMatch::Name(name.into()))
     }
 
-    /// Matches structs by attribute
+    /// Matches structs by attribute. The attribute name is
+    /// given by a regular expression.
+    /// e.g., "derive\\(.*Debug.*\\)"
     ///
-    /// The attribute parameter can be either:
-    /// - An exact attribute (e.g., "derive(Debug)")
-    /// - A regular expression pattern (e.g., "derive\\(.*Debug.*\\)")
-    ///
-    /// The implementation will determine if it's a regex based on the presence of special regex characters.
     pub fn has_attribute(&self, attr: impl Into<String>) -> StructMatchNode {
         StructMatchNode::Leaf(StructMatch::HasAttribute(attr.into()))
     }
 
-    /// Matches structs that implement a specific trait
+    /// Matches structs that implement a specific trait. The trait name
+    /// is given as a regular expression,
+    /// e.g. "^(Read|Write)$"
     ///
-    /// The trait_name parameter can be either:
-    /// - An exact trait name (e.g., "Debug")
-    /// - A trait with path (e.g., "std::fmt::Debug")
-    /// - A regular expression pattern (e.g., "^(Read|Write)$")
-    ///
-    /// The implementation will determine if it's a regex based on the presence of special regex characters.
     pub fn implements_trait(&self, trait_name: impl Into<String>) -> StructMatchNode {
         StructMatchNode::Leaf(StructMatch::ImplementsTrait(trait_name.into()))
     }
