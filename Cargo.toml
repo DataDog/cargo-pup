@@ -36,6 +36,7 @@ tempfile = { workspace = true }
 ron = { workspace = true }
 cargo_pup_common = { path = "cargo_pup_common" }
 cargo_pup_lint_impl = { path = "cargo_pup_lint_impl" }
+cargo_pup_lint_config = { path = "cargo_pup_lint_config" }
 
 termize = "0.1.1"
 
