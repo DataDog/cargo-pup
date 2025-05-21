@@ -5,7 +5,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 use std::sync::Arc;
 use std::{collections::BTreeSet, path::Path};
-use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo, PUP_DIR};
+use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo};
 use crate::ArchitectureLintCollection;
 
 ///
@@ -99,10 +99,20 @@ impl ArchitectureLintRunner {
                 Ok(())
             }
             Mode::GenerateConfig => {
-                // For config generation, get the result and update result_text. We're
-                // actually writing the project config template out.
-                let result = self.generate_config(tcx)?;
-                self.result_text = result;
+                // For config generation, just build the project context and serialize it
+                // like we do for PrintModules and PrintTraits. The cargo-pup tool will handle
+                // generating the config from the serialized context.
+                let context = self
+                    .build_project_context(tcx)
+                    .context("Failed to build project context for generate-config mode")?;
+
+                // Serialize the context to a file
+                if let Err(e) = context.serialize_to_file() {
+                    eprintln!("Warning: Failed to serialize project context: {}", e);
+                }
+
+                // Set a simple success message
+                self.result_text = format!("Project context successfully generated for crate {}", context.module_root);
                 Ok(())
             }
         }
@@ -232,36 +242,6 @@ impl ArchitectureLintRunner {
         Ok(context)
     }
 
-    // Implementation function that returns Result
-    fn generate_config(&mut self, tcx: TyCtxt<'_>) -> anyhow::Result<String> {
-        use cargo_pup_lint_config::LintBuilder;
-        use anyhow::Context;
-
-        // Build the project context
-        let context = self
-            .build_project_context(tcx)
-            .context("Failed to build project context")?;
-
-        // Create filename with module root that we'll use later
-        let config_filename = format!("pup.generated.{}.ron", context.module_root);
-        
-        // Ensure .pup directory exists
-        let pup_dir = std::path::Path::new(PUP_DIR);
-        if !pup_dir.exists() {
-            std::fs::create_dir_all(pup_dir)
-                .context(format!("Failed to create directory: {}", pup_dir.display()))?;
-        }
-        
-        // Full path in the .pup directory
-        let config_path = pup_dir.join(&config_filename);
-
-        // Generate config file using the new LintBuilder's generate_and_write method
-        LintBuilder::generate_and_write(&[context.clone()], &config_path)
-            .context(format!("Failed to write configuration to {}", config_path.display()))?;
-
-        // Return success message without showing the entire config content
-        Ok(format!("Configuration successfully generated and written to {}", config_path.display()))
-    }
 }
 
 ///
