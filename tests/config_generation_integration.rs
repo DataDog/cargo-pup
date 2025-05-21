@@ -35,34 +35,6 @@ fn get_cargo_pup_path() -> PathBuf {
 
 #[test]
 fn test_config_generation_ron_validation() {
-    // In CI environments, just mark the test as passed without running it
-    if env::var("CI").is_ok() {
-        println!("Running in CI environment - skipping actual config generation");
-        // Just verify we can create and deserialize a simple LintBuilder from RON
-        let mut builder = LintBuilder::new();
-        builder.module_lint()
-            .lint_named("test_rule_1")
-            .matching(|m| m.module("test"))
-            .must_not_be_empty()
-            .build();
-            
-        builder.struct_lint()
-            .lint_named("test_rule_2")
-            .matching(|m| m.name("Test"))
-            .must_be_named("Test".into())
-            .build();
-            
-        // Serialize to RON string
-        let ron_str = ron::to_string(&builder).expect("Failed to serialize to RON");
-        
-        // Deserialize back from RON
-        let deserialized: LintBuilder = ron::from_str(&ron_str).expect("Failed to deserialize from RON");
-        
-        // Verify correct number of lints
-        assert_eq!(deserialized.lints.len(), 2, "Deserialized LintBuilder should have 2 rules");
-        return;
-    }
-    
     // Create a temporary directory for our test
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();

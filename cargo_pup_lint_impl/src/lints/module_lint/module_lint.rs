@@ -41,8 +41,9 @@ impl ModuleLint {
                 match Regex::new(pattern) {
                     Ok(regex) => regex.is_match(module_path),
                     Err(_) => {
-                        // If not a valid regex, fall back to direct string comparison
-                        pattern == module_path
+                        // Log error and return false for invalid regex
+                        eprintln!("Invalid regex pattern: {}", pattern);
+                        false
                     }
                 }
             }
@@ -58,11 +59,15 @@ impl ModuleLint {
         }
     }
 
-    // Helper method to determine if a string matches a pattern (using regex if possible)
+    // Helper method to determine if a string matches a pattern (using regex only)
     fn string_matches_pattern(&self, string: &str, pattern: &str) -> bool {
         match Regex::new(pattern) {
             Ok(regex) => regex.is_match(string),
-            Err(_) => string == pattern, // Fall back to exact match
+            Err(_) => {
+                // Log error and return false for invalid regex
+                eprintln!("Invalid regex pattern: {}", pattern);
+                false
+            }
         }
     }
 
@@ -396,7 +401,10 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             let is_allowed =
                                 allowed.iter().any(|pattern| match Regex::new(pattern) {
                                     Ok(re) => re.is_match(&import_module),
-                                    Err(_) => import_module.starts_with(pattern),
+                                    Err(_) => {
+                                        eprintln!("Invalid regex pattern: {}", pattern);
+                                        false
+                                    }
                                 });
 
                             if !is_allowed {
@@ -422,7 +430,10 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             let is_denied =
                                 denied_list.iter().any(|pattern| match Regex::new(pattern) {
                                     Ok(re) => re.is_match(&import_module),
-                                    Err(_) => import_module.starts_with(pattern),
+                                    Err(_) => {
+                                        eprintln!("Invalid regex pattern: {}", pattern);
+                                        false
+                                    }
                                 });
 
                             if is_denied {
