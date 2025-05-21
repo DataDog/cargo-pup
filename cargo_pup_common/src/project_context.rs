@@ -6,12 +6,12 @@ use std::path::{Path, PathBuf};
 pub const PUP_DIR: &str = ".pup";
 pub const CONTEXT_FILE_SUFFIX: &str = "_context.json";
 
-/// Information about a module_lint and the lints that apply to it
+/// Information about a module and the lints that apply to it
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ModuleInfo {
-    /// Fully qualified module_lint name
+    /// Fully qualified module name
     pub name: String,
-    /// List of lint names that apply to this module_lint
+    /// List of lint names that apply to this module
     #[serde(default)]
     pub applicable_lints: Vec<String>,
 }
@@ -79,7 +79,6 @@ impl ProjectContext {
     }
     
     /// Creates a project context with provided data and default base directory (.pup)
-    /// This helps migrate code that previously used struct_lint initialization
     pub fn with_data(
         modules: Vec<String>, 
         module_root: String, 
@@ -259,7 +258,7 @@ impl ProjectContext {
 
     /// Merge another ProjectContext into this one
     fn merge(&mut self, other: &ProjectContext) {
-        // Add the module_lint root if ours is empty
+        // Add the module root if ours is empty
         if self.module_root.is_empty() {
             self.module_root = other.module_root.clone();
         }
@@ -347,7 +346,7 @@ mod tests {
         let mut context = ProjectContext::new();
         context.modules = vec![
             ModuleInfo {
-                name: "test::module_lint".to_string(),
+                name: "test::module".to_string(),
                 applicable_lints: vec![],
             }
         ];
@@ -455,7 +454,7 @@ mod tests {
             .expect("Failed to load contexts");
 
         // Validate the loaded context
-        // Should have a valid module_lint root
+        // Should have a valid module root
         assert!(!loaded_context.module_root.is_empty(), "Module root should not be empty");
         
         // Should contain all modules from both contexts

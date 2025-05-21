@@ -1,13 +1,17 @@
 use super::types::{FunctionMatch, ReturnTypePattern};
 
-// === Function Matcher DSL === //
+/// Fluent interface for creating function matchers
+/// 
+/// Used with the `matching()` method to create complex function matching criteria
 pub struct FunctionMatcher;
 
 impl FunctionMatcher {
+    /// Match a function with exactly this name
     pub fn name(&self, name: impl Into<String>) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::NameEquals(name.into()))
     }
 
+    /// Match functions whose names match this regex pattern
     pub fn name_regex(&self, pattern: impl Into<String>) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::NameRegex(pattern.into()))
     }
@@ -55,6 +59,9 @@ impl FunctionMatcher {
     }
 }
 
+/// Node in the matcher expression tree
+/// 
+/// You can combine these nodes with logical operations (.and(), .or(), .not())
 #[derive(Clone)]
 pub enum FunctionMatchNode {
     Leaf(FunctionMatch),
@@ -64,14 +71,17 @@ pub enum FunctionMatchNode {
 }
 
 impl FunctionMatchNode {
+    /// Create a logical AND operation between two matchers
     pub fn and(self, other: FunctionMatchNode) -> Self {
         FunctionMatchNode::And(Box::new(self), Box::new(other))
     }
 
+    /// Create a logical OR operation between two matchers
     pub fn or(self, other: FunctionMatchNode) -> Self {
         FunctionMatchNode::Or(Box::new(self), Box::new(other))
     }
 
+    /// Create a logical NOT operation that inverts the matcher
     #[allow(clippy::should_implement_trait)]
     pub fn not(self) -> Self {
         FunctionMatchNode::Not(Box::new(self))
@@ -99,7 +109,9 @@ impl FunctionMatchNode {
     }
 }
 
-// Factory function to create a matcher DSL
+/// Helper function that converts a matcher DSL expression to a FunctionMatch
+/// 
+/// This is used internally by the builder API and typically not called directly
 pub fn matcher<F>(f: F) -> FunctionMatch
 where
     F: FnOnce(&FunctionMatcher) -> FunctionMatchNode,

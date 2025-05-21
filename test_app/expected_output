@@ -8,7 +8,7 @@ warning: Item 'DisallowedInModRs' disallowed in mod.rs due to empty-mod-file pol
    |
    = help: Remove this item from the mod.rs file or move it to a submodule
    = note: Applied by cargo-pup rule 'must_have_empty_mod_file'.
-   = note: `#[warn(module_must_have_empty_mod_file_lint)]` on by default
+   = note: `#[warn(module_must_have_empty_mod_file)]` on by default
 
 warning: Item 'disallowed_function' disallowed in mod.rs due to empty-mod-file policy
   --> src/empty_mod_file/mod.rs:13:1
@@ -49,7 +49,7 @@ warning: module 'item_type' is not allowed in this module
   |
   = help: Consider moving this item to a different module
   = note: Applied by cargo-pup rule 'item_type_restrictions'.
-  = note: `#[warn(module_denied_items_lint)]` on by default
+  = note: `#[warn(module_denied_items)]` on by default
 
 warning: struct 'DeniedStruct' is not allowed in this module
  --> src/item_type/mod.rs:2:1
@@ -104,7 +104,7 @@ warning: Wildcard imports are not allowed
   |
   = help: Import specific items instead of using a wildcard
   = note: Applied by cargo-pup rule 'module_usage'.
-  = note: `#[warn(module_wildcard_import_lint)]` on by default
+  = note: `#[warn(module_wildcard_import)]` on by default
 
 warning: Use of module 'std::collections::HashMap' is denied
  --> src/module_usage/mod.rs:1:1
@@ -114,7 +114,7 @@ warning: Use of module 'std::collections::HashMap' is denied
   |
   = help: Remove this import
   = note: Applied by cargo-pup rule 'module_usage'.
-  = note: `#[warn(module_restrict_imports_lint)]` on by default
+  = note: `#[warn(module_restrict_imports)]` on by default
 
 warning: Item 'this_should_not_be_here' not allowed in empty module
  --> src/must_be_empty.rs:4:1
@@ -126,7 +126,7 @@ warning: Item 'this_should_not_be_here' not allowed in empty module
   |
   = help: Remove this item from the module, which must be empty
   = note: Applied by cargo-pup rule 'must_be_empty_module'.
-  = note: `#[warn(module_must_be_empty_lint)]` on by default
+  = note: `#[warn(module_must_be_empty)]` on by default
 
 warning: Item 'ALSO_NOT_ALLOWED' not allowed in empty module
  --> src/must_be_empty.rs:8:1

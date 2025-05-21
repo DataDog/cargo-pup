@@ -3,8 +3,9 @@ use super::types::{FunctionLint, FunctionMatch, FunctionRule};
 use crate::lint_builder::LintBuilder;
 use crate::{ConfiguredLint, Severity};
 
-// Fluent Builder for Function Lints
+/// Extension trait that adds function linting capabilities to LintBuilder
 pub trait FunctionLintExt {
+    /// Build a lint rule targeting functions
     fn function_lint(&mut self) -> FunctionLintBuilder<'_>;
 }
 
@@ -14,13 +15,13 @@ impl FunctionLintExt for LintBuilder {
     }
 }
 
-// First builder to establish a named lint
+/// Initial builder for creating a function lint
 pub struct FunctionLintBuilder<'a> {
     parent: &'a mut LintBuilder,
 }
 
 impl<'a> FunctionLintBuilder<'a> {
-    // Required step to name the lint
+    /// Give the lint a name
     pub fn lint_named(self, name: impl Into<String>) -> FunctionNamedBuilder<'a> {
         FunctionNamedBuilder {
             parent: self.parent,
@@ -29,14 +30,14 @@ impl<'a> FunctionLintBuilder<'a> {
     }
 }
 
-// Builder after the name is provided
+/// Builder used after naming the lint
 pub struct FunctionNamedBuilder<'a> {
     parent: &'a mut LintBuilder,
     name: String,
 }
 
 impl<'a> FunctionNamedBuilder<'a> {
-    // Original matches method now on NamedBuilder
+    /// Directly provide a function matcher
     pub fn matches(self, m: FunctionMatch) -> FunctionConstraintBuilder<'a> {
         FunctionConstraintBuilder {
             parent: self.parent,
@@ -47,7 +48,16 @@ impl<'a> FunctionNamedBuilder<'a> {
         }
     }
 
-    // New matcher method using the DSL
+    /// Define function matching using the fluent DSL
+    /// 
+    /// # Example
+    /// ```
+    /// lint_builder.function_lint()
+    ///     .lint_named("result_error_impl")
+    ///     .matching(|m| m.returns_result())
+    ///     .enforce_error_trait_implementation()
+    ///     .build();
+    /// ```
     pub fn matching<F>(self, f: F) -> FunctionConstraintBuilder<'a>
     where
         F: FnOnce(&FunctionMatcher) -> FunctionMatchNode,
@@ -57,6 +67,7 @@ impl<'a> FunctionNamedBuilder<'a> {
     }
 }
 
+/// Builder for adding rules to a function lint
 pub struct FunctionConstraintBuilder<'a> {
     parent: &'a mut LintBuilder,
     match_: FunctionMatch,
@@ -71,12 +82,13 @@ impl<'a> FunctionConstraintBuilder<'a> {
         self.rules.push(rule);
     }
 
-    // Public API method that takes and returns self
+    /// Add a custom rule to the function lint
     pub fn add_rule(mut self, rule: FunctionRule) -> Self {
         self.add_rule_internal(rule);
         self
     }
 
+    /// Finalize the function lint and return to the parent builder
     pub fn build(self) -> &'a mut LintBuilder {
         let lint = ConfiguredLint::Function(FunctionLint {
             name: self.name,
@@ -87,19 +99,19 @@ impl<'a> FunctionConstraintBuilder<'a> {
         self.parent
     }
 
-    // Set the severity level for subsequent rules
+    /// Set the severity level for all subsequently added rules
     pub fn with_severity(mut self, severity: Severity) -> Self {
         self.current_severity = severity;
         self
     }
 
-    // Helper method for function length limit
+    /// Limit function length to the specified number of lines
     pub fn max_length(mut self, length: usize) -> Self {
         self.add_rule_internal(FunctionRule::MaxLength(length, self.current_severity));
         self
     }
 
-    // Helper method for Result error type check
+    /// Require Result error types to implement the Error trait
     pub fn enforce_error_trait_implementation(mut self) -> Self {
         self.add_rule_internal(FunctionRule::ResultErrorMustImplementError(
             self.current_severity,
@@ -107,7 +119,7 @@ impl<'a> FunctionConstraintBuilder<'a> {
         self
     }
 
-    // Create a MaxLength rule that can be used in combinations
+    /// Create a new MaxLength rule with the current severity
     pub fn create_max_length_rule(&self, length: usize) -> FunctionRule {
         FunctionRule::MaxLength(length, self.current_severity)
     }

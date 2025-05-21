@@ -3,8 +3,9 @@ use super::types::{ModuleLint, ModuleMatch, ModuleRule};
 use crate::lint_builder::LintBuilder;
 use crate::{ConfiguredLint, Severity};
 
-// Fluent Builder for Module Lints
+/// Extension trait that adds module linting capabilities to LintBuilder
 pub trait ModuleLintExt {
+    /// Start building a module lint rule
     fn module_lint(&mut self) -> ModuleLintBuilder;
 }
 
@@ -14,13 +15,13 @@ impl ModuleLintExt for LintBuilder {
     }
 }
 
-// First builder to establish a named lint
+/// Initial builder for creating a module lint
 pub struct ModuleLintBuilder<'a> {
     parent: &'a mut LintBuilder,
 }
 
 impl<'a> ModuleLintBuilder<'a> {
-    // Required step to name the lint
+    /// Give the lint a name
     pub fn lint_named(self, name: impl Into<String>) -> ModuleNamedBuilder<'a> {
         ModuleNamedBuilder {
             parent: self.parent,
@@ -29,14 +30,14 @@ impl<'a> ModuleLintBuilder<'a> {
     }
 }
 
-// Builder after the name is provided
+/// Builder used after naming the lint
 pub struct ModuleNamedBuilder<'a> {
     parent: &'a mut LintBuilder,
     name: String,
 }
 
 impl<'a> ModuleNamedBuilder<'a> {
-    // Original matches method now on NamedBuilder
+    /// Directly provide a module matcher
     pub fn matches(self, m: ModuleMatch) -> ModuleConstraintBuilder<'a> {
         ModuleConstraintBuilder {
             parent: self.parent,
@@ -47,7 +48,16 @@ impl<'a> ModuleNamedBuilder<'a> {
         }
     }
 
-    // New matcher method using the DSL
+    /// Define module matching using the fluent DSL
+    /// 
+    /// # Example
+    /// ```
+    /// lint_builder.module_lint()
+    ///     .lint_named("empty_handlers")
+    ///     .matching(|m| m.module("handlers"))
+    ///     .must_be_empty()
+    ///     .build();
+    /// ```
     pub fn matching<F>(self, f: F) -> ModuleConstraintBuilder<'a>
     where
         F: FnOnce(&ModuleMatcher) -> ModuleMatchNode,
@@ -57,6 +67,7 @@ impl<'a> ModuleNamedBuilder<'a> {
     }
 }
 
+/// Builder for adding rules to a module lint
 pub struct ModuleConstraintBuilder<'a> {
     parent: &'a mut LintBuilder,
     match_: ModuleMatch,
@@ -71,12 +82,13 @@ impl<'a> ModuleConstraintBuilder<'a> {
         self.rules.push(rule);
     }
 
-    // Public API method that takes and returns self
+    /// Add a custom rule to the module lint
     pub fn add_rule(mut self, rule: ModuleRule) -> Self {
         self.add_rule_internal(rule);
         self
     }
 
+    /// Finalize the module lint and return to the parent builder
     pub fn build(self) -> &'a mut LintBuilder {
         let lint = ConfiguredLint::Module(ModuleLint {
             name: self.name,
@@ -87,37 +99,40 @@ impl<'a> ModuleConstraintBuilder<'a> {
         self.parent
     }
 
-    // Set the severity level for subsequent rules
+    /// Set the severity level for all subsequently added rules
     pub fn with_severity(mut self, severity: Severity) -> Self {
         self.current_severity = severity;
         self
     }
 
-    // Helper method for feature #10: Empty Module Detection
+    /// Add a rule requiring the module to have at least one item
     pub fn must_not_be_empty(mut self) -> Self {
         self.add_rule_internal(ModuleRule::MustNotBeEmpty(self.current_severity));
         self
     }
 
-    // Helper method for requiring a module to be empty
+    /// Add a rule requiring the module to be empty
     pub fn must_be_empty(mut self) -> Self {
         self.add_rule_internal(ModuleRule::MustBeEmpty(self.current_severity));
         self
     }
 
-    // Helper method for requiring a module.rs file to be empty (only allowed to export other modules)
+    /// Add a rule requiring the module.rs file to only re-export other modules
     pub fn must_have_empty_mod_file(mut self) -> Self {
         self.add_rule_internal(ModuleRule::MustHaveEmptyModFile(self.current_severity));
         self
     }
 
-    // Helper method for feature #5: Wildcard Imports Detection
+    /// Add a rule prohibiting wildcard imports (use path::*)
     pub fn no_wildcard_imports(mut self) -> Self {
         self.add_rule_internal(ModuleRule::NoWildcardImports(self.current_severity));
         self
     }
 
-    // Helper method for feature #4: Fine-grained Module Import Rules
+    /// Add a rule to restrict imports by specifying allowed/denied modules
+    /// 
+    /// @param allowed_only - If provided, only these imports are allowed
+    /// @param denied - If provided, these imports are explicitly prohibited
     pub fn restrict_imports(
         mut self,
         allowed_only: Option<Vec<String>>,
@@ -131,17 +146,19 @@ impl<'a> ModuleConstraintBuilder<'a> {
         self
     }
 
+    /// Add a rule requiring the module to have a specific name
     pub fn must_be_named(mut self, name: String) -> Self {
         self.add_rule_internal(ModuleRule::MustBeNamed(name, self.current_severity));
         self
     }
 
+    /// Add a rule prohibiting the module from having a specific name
     pub fn must_not_be_named(mut self, name: String) -> Self {
         self.add_rule_internal(ModuleRule::MustNotBeNamed(name, self.current_severity));
         self
     }
 
-    // Helper method for DeniedItems rule
+    /// Add a rule prohibiting specific items from being defined in the module
     pub fn denied_items(mut self, items: Vec<String>) -> Self {
         self.add_rule_internal(ModuleRule::DeniedItems {
             items,

@@ -3,11 +3,9 @@ use super::types::{StructLint, StructMatch, StructRule};
 use crate::lint_builder::LintBuilder;
 use crate::{ConfiguredLint, Severity};
 
-// === Fluent Builder for Struct Lints === //
-
-// This is the trait for struct lint operations, ideally these would be implemented
-// for LintBuilder, but for now we'll use the builder pattern approach
+/// Extension trait that adds struct linting capabilities to LintBuilder
 pub trait StructLintExt {
+    /// Start building a struct lint rule
     fn struct_lint(&mut self) -> StructLintBuilder;
 }
 
@@ -17,13 +15,13 @@ impl StructLintExt for LintBuilder {
     }
 }
 
-// First builder to establish a named lint
+/// Initial builder for creating a struct lint
 pub struct StructLintBuilder<'a> {
     parent: &'a mut LintBuilder,
 }
 
 impl<'a> StructLintBuilder<'a> {
-    // Required step to name the lint
+    /// Give the lint a name
     pub fn lint_named(self, name: impl Into<String>) -> StructNamedBuilder<'a> {
         StructNamedBuilder {
             parent: self.parent,
@@ -32,14 +30,14 @@ impl<'a> StructLintBuilder<'a> {
     }
 }
 
-// Builder after the name is provided
+/// Builder used after naming the lint
 pub struct StructNamedBuilder<'a> {
     parent: &'a mut LintBuilder,
     name: String,
 }
 
 impl<'a> StructNamedBuilder<'a> {
-    // Original matches method now on NamedBuilder
+    /// Directly provide a struct matcher
     pub fn matches(self, m: StructMatch) -> StructConstraintBuilder<'a> {
         StructConstraintBuilder {
             parent: self.parent,
@@ -50,7 +48,16 @@ impl<'a> StructNamedBuilder<'a> {
         }
     }
 
-    // New matcher method using the DSL
+    /// Define struct matching using the fluent DSL
+    /// 
+    /// # Example
+    /// ```
+    /// lint_builder.struct_lint()
+    ///     .lint_named("model_visibility")
+    ///     .matching(|m| m.name(".*Model"))
+    ///     .must_be_private()
+    ///     .build();
+    /// ```
     pub fn matching<F>(self, f: F) -> StructConstraintBuilder<'a>
     where
         F: FnOnce(&StructMatcher) -> StructMatchNode,
@@ -60,6 +67,7 @@ impl<'a> StructNamedBuilder<'a> {
     }
 }
 
+/// Builder for adding rules to a struct lint
 pub struct StructConstraintBuilder<'a> {
     parent: &'a mut LintBuilder,
     match_: StructMatch,
@@ -74,12 +82,13 @@ impl<'a> StructConstraintBuilder<'a> {
         self.rules.push(rule);
     }
 
-    // Public API method that takes and returns self
+    /// Add a custom rule to the struct lint
     pub fn add_rule(mut self, rule: StructRule) -> Self {
         self.add_rule_internal(rule);
         self
     }
 
+    /// Finalize the struct lint and return to the parent builder
     pub fn build(self) -> &'a mut LintBuilder {
         let lint = ConfiguredLint::Struct(StructLint {
             name: self.name,
@@ -90,28 +99,31 @@ impl<'a> StructConstraintBuilder<'a> {
         self.parent
     }
 
-    // Set the severity level for subsequent rules
+    /// Set the severity level for all subsequently added rules
     pub fn with_severity(mut self, severity: Severity) -> Self {
         self.current_severity = severity;
         self
     }
 
+    /// Add a rule requiring the struct to have a specific name
     pub fn must_be_named(mut self, name: String) -> Self {
         self.add_rule_internal(StructRule::MustBeNamed(name, self.current_severity));
         self
     }
 
+    /// Add a rule prohibiting the struct from having a specific name
     pub fn must_not_be_named(mut self, name: String) -> Self {
         self.add_rule_internal(StructRule::MustNotBeNamed(name, self.current_severity));
         self
     }
 
-    // Add new visibility rule methods
+    /// Add a rule requiring the struct to have private visibility
     pub fn must_be_private(mut self) -> Self {
         self.add_rule_internal(StructRule::MustBePrivate(self.current_severity));
         self
     }
 
+    /// Add a rule requiring the struct to have public visibility
     pub fn must_be_public(mut self) -> Self {
         self.add_rule_internal(StructRule::MustBePublic(self.current_severity));
         self
