@@ -6,33 +6,43 @@
 use std::process::Command;
 use std::env;
 use std::path::PathBuf;
-use cargo_pup_lint_config::{LintBuilder, ModuleLintExt, StructLintExt};
+use cargo_pup_lint_config::LintBuilder;
 
 // Helper function to get the path to the cargo-pup binary
 fn get_cargo_pup_path() -> PathBuf {
-    // First try finding it in the path - useful for development
-    if let Ok(path) = which::which("cargo-pup") {
-        return path;
-    }
-    
-    // Otherwise build it from the target directory
+    // First try the target directory from the current build
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|_| ".".to_string());
+    println!("CARGO_MANIFEST_DIR: {}", manifest_dir);
     
     let target_dir = env::var("CARGO_TARGET_DIR")
         .unwrap_or_else(|_| format!("{}/target", manifest_dir));
+    println!("Target directory: {}", target_dir);
     
     let profile = if cfg!(debug_assertions) {
         "debug"
     } else {
         "release"
     };
+    println!("Build profile: {}", profile);
     
-    PathBuf::from(target_dir)
+    let binary_path = PathBuf::from(&target_dir)
         .join(profile)
-        .join("cargo-pup")
+        .join("cargo-pup");
+    
+    println!("Binary path: {:?}", binary_path);
+    println!("Binary exists: {}", binary_path.exists());
+    
+    // If the binary exists in the current build, use it
+    if binary_path.exists() {
+        return binary_path;
+    }
+    
+    panic!("Couldn't find cargo-pup!")
 }
 
+// Big Caveat: This test relies on the current codebase to have built a cargo-pup and pup-driver binaries
+// and these being discoverable. Bit of a weird dependency so i'm noting it down here.
 #[test]
 fn test_config_generation_ron_validation() {
     // Create a temporary directory for our test
@@ -69,11 +79,25 @@ fn test_config_generation_ron_validation() {
     let cargo_pup_path = get_cargo_pup_path();
     
     // Run cargo-pup generate-config in the temp directory
+    println!("About to execute cargo-pup at path: {:?}", cargo_pup_path);
+    println!("Current directory: {:?}", temp_path);
+    
+    // Debug the directory structure before running the command
+    let generated_file_path = temp_path.join("pup.generated.ron");
+    let pup_ron_path = temp_path.join("pup.ron");
+    println!("Before command execution:");
+    println!("  Generated file path exists: {}", generated_file_path.exists());
+    println!("  pup.ron path exists: {}", pup_ron_path.exists());
+    
     let output = Command::new(&cargo_pup_path)
         .current_dir(temp_path)
         .args(["generate-config"])
         .output()
         .expect("Failed to run cargo-pup generate-config");
+    
+    // Print command output for debugging
+    println!("Command stdout: {}", String::from_utf8_lossy(&output.stdout));
+    println!("Command stderr: {}", String::from_utf8_lossy(&output.stderr));
     
     // Check if the command succeeded
     assert!(output.status.success(), "cargo-pup generate-config failed: {}", 
@@ -81,6 +105,38 @@ fn test_config_generation_ron_validation() {
     
     // The generated config file should be at pup.ron
     let pup_ron_path = temp_path.join("pup.ron");
+    
+    // List files in the temp directory
+    println!("Files in temp directory:");
+    if let Ok(entries) = std::fs::read_dir(temp_path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                println!("  {:?}", entry.path());
+            }
+        }
+    }
+    
+    // Also list files in .pup directory if it exists
+    let pup_dir = temp_path.join(".pup");
+    if pup_dir.exists() {
+        println!("Files in .pup directory:");
+        if let Ok(entries) = std::fs::read_dir(&pup_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    println!("  {:?}", entry.path());
+                    
+                    // If this is the generated RON file, print its contents
+                    if entry.path().to_string_lossy().contains("pup.generated") {
+                        if let Ok(content) = std::fs::read_to_string(&entry.path()) {
+                            println!("Content of generated file: {}", content);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        println!(".pup directory does not exist or is not accessible");
+    }
     
     // Make sure pup.ron exists
     assert!(pup_ron_path.exists(), "pup.ron file was not generated");
