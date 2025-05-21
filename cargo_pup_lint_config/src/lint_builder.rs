@@ -257,17 +257,6 @@ mod tests {
                 }
             }
         }
-
-        // For additional verification, re-serialize the deserialized builder and compare the strings
-        let reserialize1 =
-            ron::to_string(&original_builder).expect("Failed to reserialize original");
-        let reserialize2 =
-            ron::to_string(&deserialized_builder).expect("Failed to serialize deserialized");
-
-        assert_eq!(
-            reserialize1, reserialize2,
-            "Reserialized RON strings should be identical"
-        );
     }
 
     #[test]

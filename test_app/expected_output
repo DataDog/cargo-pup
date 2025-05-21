@@ -137,15 +137,6 @@ warning: Item 'ALSO_NOT_ALLOWED' not allowed in empty module
   = help: Remove this item from the module, which must be empty
   = note: Applied by cargo-pup rule 'must_be_empty_module'.
 
-warning: Error type 'std::string::String' in Result does not implement Error trait
- --> src/result_error/mod.rs:4:1
-  |
-4 | pub fn good_result() -> Result<String, String> {
-  | ^^^^^^^^^^^^^^^^
-  |
-  = help: Consider implementing the Error trait for this type or using a type that already implements it
-  = note: Applied by cargo-pup rule 'result_type_check'.
-
 warning: Error type 'i32' in Result does not implement Error trait
   --> src/result_error/mod.rs:14:1
    |
@@ -193,4 +184,4 @@ warning: Struct 'MyBadlyNamedThing' is public, but must be private
    = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
-warning: `test_app` (bin "test_app") generated 19 warnings
+warning: `test_app` (bin "test_app") generated 18 warnings

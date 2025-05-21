@@ -15,6 +15,7 @@ extern crate rustc_middle;
 extern crate rustc_session;
 extern crate rustc_span;
 extern crate rustc_trait_selection;
+extern crate rustc_type_ir;
 
 mod architecture_lint_rule;
 pub mod lints;

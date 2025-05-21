@@ -1,6 +1,7 @@
 use rustc_hir::OwnerId;
 use rustc_hir::def_id::DefId;
 use rustc_infer::infer::TyCtxtInferExt;
+use rustc_middle::ty::visit::TypeVisitableExt;
 use rustc_middle::ty::{self, ParamEnv, Ty, TyCtxt, TypingMode};
 use rustc_span::symbol::sym;
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
@@ -31,14 +32,31 @@ pub fn implements_trait<'tcx>(
     ty: Ty<'tcx>,
     trait_def_id: DefId,
 ) -> bool {
-    let infcx = tcx.infer_ctxt().build(TypingMode::Analysis {
-        defining_opaque_types: Default::default(),
-    });
-
     let cause = ObligationCause::dummy();
     let trait_ref = ty::TraitRef::new(tcx, trait_def_id, [ty]);
-
     let obligation = Obligation::new(tcx, cause, param_env, trait_ref);
+
+    let is_complex = ty.has_infer()
+        || ty.has_opaque_types()
+        || ty.walk().any(|t| {
+            if let Some(ty) = t.as_type() {
+                match ty.kind() {
+                    ty::Alias(ty::Projection, _) => true,
+                    ty::Param(_) => true,
+                    _ => false,
+                }
+            } else {
+                false
+            }
+        });
+
+    let infcx = if is_complex {
+        tcx.infer_ctxt().build(TypingMode::Analysis {
+            defining_opaque_types: Default::default(),
+        })
+    } else {
+        tcx.infer_ctxt().build(TypingMode::Coherence)
+    };
 
     infcx.predicate_may_hold(&obligation)
 }
@@ -59,38 +77,8 @@ pub fn implements_error_trait<'tcx>(
         _ => {}
     }
 
-    // Get the Error trait if it exists
+    // Try the standard approach
     if let Some(error_trait_def_id) = tcx.get_diagnostic_item(sym::Error) {
-        // Special case for associated types with explicit trait bounds (like T::Error)
-        // Check if it's a projection (associated) type
-        if ty.ty_adt_def().is_some() {
-            // For anyhow::Error, we know it implements std::error::Error
-            if ty.to_string().contains("anyhow::Error") {
-                // anyhow::Error always implements std::error::Error
-                return true;
-            }
-        }
-
-        // For associated types, check if they have explicit bounds
-        // in the param environment
-        let ty_str = ty.to_string();
-        if ty_str.contains("::Error") || ty_str.contains("<") {
-            // This could be a projection type like T::Error or a generic type
-            // Let's examine all the predicates in the param_env to see if there's
-            // an explicit bound that this type implements Error
-            for predicate in param_env.caller_bounds() {
-                // The specific variant names might differ based on rustc version
-                // so we'll use string comparison on the stringified predicate
-                let pred_str = format!("{:?}", predicate);
-
-                // If there's a predicate directly stating the type implements Error trait
-                if pred_str.contains(&ty_str) && pred_str.contains("Error") {
-                    return true;
-                }
-            }
-        }
-
-        // Try the standard trait implementation check for other types
         implements_trait(tcx, param_env, ty, error_trait_def_id)
     } else {
         // If we can't find the Error trait, be conservative and consider it might implement Error

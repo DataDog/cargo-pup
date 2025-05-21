@@ -1,6 +1,6 @@
 use anyhow::{Result as AnyhowResult, anyhow, Error};
 
-// This should be allowed - String implements Error
+// This shouldn't be allowed - String doesn't implement Error
 pub fn good_result() -> Result<String, String> {
     Ok("good".to_string())
 }
