@@ -1,6 +1,5 @@
-use std::path::{Path};
-use std::fs;
-use crate::{ArchitectureLintRule};
+use std::path::Path;
+use crate::ArchitectureLintRule;
 use anyhow::Result;
 use cargo_pup_common::project_context::ProjectContext;
 use cargo_pup_lint_config::ConfiguredLint;
@@ -10,7 +9,6 @@ use crate::lints::struct_lint::StructLint;
 use crate::lints::function_lint::FunctionLint;
 use ron;
 
-// Supercedes the old LintConfigurationFactory
 pub struct LintConfigurationFactory {
 }
 
@@ -20,60 +18,37 @@ impl LintConfigurationFactory {
         // Check if this is a file path or actual content
         let path = Path::new(&file);
         if path.exists() {
-            if let Some(ext) = path.extension() {
-                if ext == "ron" {
-                    return Self::from_ron_file(file);
-                }
-            }
+            // Use LintBuilder for file deserialization
+            let lint_builder = LintBuilder::read_from_file(file)
+                .map_err(|e| anyhow::anyhow!("Failed to read/parse lint file: {}", e))?;
             
-            // Default to existing implementation for other file types
-            let lint_builder = LintBuilder::read_from_file(file)?;
-            Ok(lint_builder.lints.iter().map(|l| {
-                match l {
-                    ConfiguredLint::Module(_) => ModuleLint::new(l),
-                    ConfiguredLint::Struct(_) => StructLint::new(l),
-                    ConfiguredLint::Function(_) => FunctionLint::new(l),
-                }
-            }).collect())
+            // Convert to architecture lint rules
+            Self::from_lint_builder(lint_builder)
         } else {
-            // Try parsing as content (assume RON first, then fall back)
-            Self::from_content(&file)
-        }
-    }
-    
-    // New method for RON files
-    fn from_ron_file(file: String) -> anyhow::Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
-        // Read file contents
-        let content = fs::read_to_string(&file)
-            .map_err(|e| anyhow::anyhow!("Failed to read RON file {}: {}", file, e))?;
-
-        Self::from_content(&content)
-    }
-    
-    // Process content regardless of source
-    fn from_content(content: &str) -> anyhow::Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
-        // Try parsing as RON first
-        match ron::from_str::<LintBuilder>(content) {
-            Ok(lint_builder) => {
-                // Successfully parsed as RON
-                Ok(lint_builder.lints.iter().map(|l| {
-                    match l {
-                        ConfiguredLint::Module(_) => ModuleLint::new(l),
-                        ConfiguredLint::Struct(_) => StructLint::new(l),
-                        ConfiguredLint::Function(_) => FunctionLint::new(l),
-                        // For now, only handle the lints we've already implemented in the new system
-                    }
-                }).collect())
-            },
-            Err(_e) => {
-                // Extract an error line preview if possible
-                let error_preview = match content.lines().enumerate().take(10).map(|(i, line)| format!("{}: {}", i+1, line)).collect::<Vec<_>>() {
-                    lines if !lines.is_empty() => format!("\nFirst few lines of the file:\n{}", lines.join("\n")),
-                    _ => String::new()
-                };
-                Result::Err(anyhow::anyhow!("Failed to parse RON file: {}", error_preview))
+            // Try parsing as direct content
+            match ron::from_str::<LintBuilder>(&file) {
+                Ok(lint_builder) => Self::from_lint_builder(lint_builder),
+                Err(e) => {
+                    // Extract an error line preview
+                    let error_preview = match file.lines().enumerate().take(10).map(|(i, line)| format!("{}: {}", i+1, line)).collect::<Vec<_>>() {
+                        lines if !lines.is_empty() => format!("\nFirst few lines of the content:\n{}", lines.join("\n")),
+                        _ => String::new()
+                    };
+                    Err(anyhow::anyhow!("Failed to parse RON content: {}{}", e, error_preview))
+                }
             }
         }
+    }
+    
+    // Converts a LintBuilder to a collection of ArchitectureLintRules
+    fn from_lint_builder(lint_builder: LintBuilder) -> Result<Vec<Box<dyn ArchitectureLintRule + Send>>> {
+        Ok(lint_builder.lints.iter().map(|l| {
+            match l {
+                ConfiguredLint::Module(_) => ModuleLint::new(l),
+                ConfiguredLint::Struct(_) => StructLint::new(l),
+                ConfiguredLint::Function(_) => FunctionLint::new(l),
+            }
+        }).collect())
     }
 
     pub fn generate_file(_context: &ProjectContext) -> Result<String> {

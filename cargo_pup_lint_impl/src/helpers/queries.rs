@@ -8,8 +8,8 @@ use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
 use rustc_trait_selection::traits::{Obligation, ObligationCause};
 
 ///
-/// Returns the name for a module_lint. If the module_lint is the root module_lint, returns just the crate name.
-/// For submodules, includes the crate name with module_lint path.
+/// Returns the name for a module. If the module is the root module, returns just the crate name.
+/// For submodules, includes the crate name with module path.
 ///
 pub fn get_full_module_name(tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> String {
     let krate_name = tcx
@@ -17,7 +17,7 @@ pub fn get_full_module_name(tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> String
         .to_ident_string();
     let module_name = tcx.def_path_str(module_def_id.to_def_id());
 
-    // If the module_name is empty, this is the root module_lint
+    // If the module_name is empty, this is the root module
     // In that case, return just the crate name without "::"
     if module_name.is_empty() {
         krate_name
@@ -36,6 +36,9 @@ pub fn implements_trait<'tcx>(
     let trait_ref = ty::TraitRef::new(tcx, trait_def_id, [ty]);
     let obligation = Obligation::new(tcx, cause, param_env, trait_ref);
 
+    // If we have certain complex types, we can't use TypingMode::Coherence
+    // at this point, so fall back to TypingMode::Analysis.
+    // The ui-test test projection_type_reproduce.rs covers this.
     let is_complex = ty.has_infer()
         || ty.has_opaque_types()
         || ty.walk().any(|t| {
