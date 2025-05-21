@@ -1,0 +1,29 @@
+error: Module must not match pattern 'bad_*'
+  --> tests/ui/module_lint_new/must_not_be_named.rs:18:1
+   |
+LL | / pub mod bad_module {
+LL | |     pub fn invalid_function() {
+LL | |         println!("This module has a forbidden name pattern");
+LL | |     }
+LL | | }
+   | |_^
+   |
+   = help: Choose a name that doesn't match this pattern
+   = note: Applied by cargo-pup rule 'must_not_be_named_test'.
+   = note: `#[deny(module_must_not_be_named)]` on by default
+
+error: Module must not match pattern 'bad_*'
+  --> tests/ui/module_lint_new/must_not_be_named.rs:24:1
+   |
+LL | / pub mod bad_name_module {
+LL | |     pub fn another_invalid_function() {
+LL | |         println!("This module also has a forbidden name pattern");
+LL | |     }
+LL | | } 
+   | |_^
+   |
+   = help: Choose a name that doesn't match this pattern
+   = note: Applied by cargo-pup rule 'must_not_be_named_test'.
+
+error: aborting due to 2 previous errors
+

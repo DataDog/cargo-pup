@@ -1,0 +1,112 @@
+(
+    lints: [
+        // Test MustBeNamed rule - only apply to test_must_be_named crate
+        Struct(
+            (
+                name: "must_be_named_test",
+                matches: Name("test_must_be_named"), // Match based on crate name
+                rules: [
+                    MustBeNamed(
+                        "Good*",  // Pattern that struct names must match
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test MustNotBeNamed rule - only apply to test_must_not_be_named crate
+        Struct(
+            (
+                name: "must_not_be_named_test",
+                matches: Name("test_must_not_be_named"), // Match based on crate name
+                rules: [
+                    MustNotBeNamed(
+                        "Bad*",  // Pattern that struct names must not match
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test combination of both rules - only apply to test_combined_rules crate
+        // We need to match both on crate name and struct name pattern here
+        Struct(
+            (
+                name: "combined_naming_test",
+                matches: AndMatches(
+                    Name("test_combined_rules"), // Match based on crate name 
+                    Name("TestStruct.*"), // Only apply to structs starting with TestStruct
+                ),
+                rules: [
+                    MustBeNamed(
+                        "TestStruct[A-Z].*",  // Must start with TestStruct followed by capital letter
+                        Error,
+                    ),
+                    MustNotBeNamed(
+                        ".*Forbidden.*",  // Must not contain the word "Forbidden"
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test ImplementsTrait matcher - only apply to test_implements_trait crate
+        Struct(
+            (
+                name: "implements_trait_test",
+                matches: AndMatches(
+                    Name("test_implements_trait"), // Match based on crate name
+                    ImplementsTrait("test_implements_trait::TestTrait"), // Match structs implementing TestTrait
+                ),
+                rules: [
+                    MustBeNamed(
+                        "Compliant*",  // Pattern that struct names must match
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test MustBePrivate rule - only apply to test_visibility_rules crate
+        Struct(
+            (
+                name: "must_be_private_test",
+                matches: AndMatches(
+                    Name("test_visibility_rules"), // Match based on crate name
+                    Name("InternalData"), // Exact match on struct name
+                ),
+                rules: [
+                    MustBePrivate(Error), // Struct must be private
+                ]
+            )
+        ),
+        
+        // Test MustBePublic rule - only apply to test_visibility_rules crate
+        Struct(
+            (
+                name: "must_be_public_test",
+                matches: AndMatches(
+                    Name("test_visibility_rules"), // Match based on crate name
+                    Name("HiddenApi"), // Exact match on struct name
+                ),
+                rules: [
+                    MustBePublic(Warn), // Struct must be public
+                ]
+            )
+        ),
+        
+        // Test name pattern + visibility rule combination
+        Struct(
+            (
+                name: "name_and_visibility_test",
+                matches: AndMatches(
+                    Name("test_visibility_rules"), // Match based on crate name
+                    Name(".*InternalModel"), // Match any struct ending with InternalModel
+                ),
+                rules: [
+                    MustBePrivate(Error), // All InternalModel structs must be private
+                ]
+            )
+        )
+    ]
+) 

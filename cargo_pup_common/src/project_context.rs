@@ -79,7 +79,6 @@ impl ProjectContext {
     }
     
     /// Creates a project context with provided data and default base directory (.pup)
-    /// This helps migrate code that previously used struct initialization
     pub fn with_data(
         modules: Vec<String>, 
         module_root: String, 

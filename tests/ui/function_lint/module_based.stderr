@@ -1,0 +1,21 @@
+error: Function exceeds maximum length of 2 lines with 3 lines
+  --> tests/ui/function_lint/module_based.rs:23:5
+   |
+LL |     pub fn tiny_but_too_long() {
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'module_based_function_length_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function exceeds maximum length of 2 lines with 3 lines
+  --> tests/ui/function_lint/module_based.rs:33:9
+   |
+LL |         pub fn nested_too_long() {
+   |         ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'module_based_function_length_test'.
+
+error: aborting due to 2 previous errors
+

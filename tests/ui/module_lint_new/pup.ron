@@ -1,0 +1,144 @@
+(
+    lints: [
+        // Test MustBeNamed rule - requires modules to follow a naming pattern
+        Module(
+            (
+                name: "must_be_named_test",
+                matches: Module("^test_must_be_named$"),
+                rules: [
+                    MustBeNamed(
+                        "good_*", 
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test MustNotBeNamed rule - prevents modules from having certain names
+        Module(
+            (
+                name: "must_not_be_named_test",
+                matches: Module("^test_must_not_be_named$"),
+                rules: [
+                    MustNotBeNamed(
+                        "bad_*", 
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test MustNotBeEmpty rule - modules must have content
+        Module(
+            (
+                name: "must_not_be_empty_test",
+                matches: Module("^test_must_not_be_empty$"),
+                rules: [
+                    MustNotBeEmpty(Error)
+                ]
+            )
+        ),
+        
+        // Test MustBeEmpty rule - modules must be empty
+        Module(
+            (
+                name: "must_be_empty_test",
+                matches: Module("^test_must_be_empty$"),
+                rules: [
+                    MustBeEmpty(Error)
+                ]
+            )
+        ),
+        
+        // Test MustBeEmpty rule with nested modules - only target specific nested module
+        Module(
+            (
+                name: "must_be_empty_nested_test",
+                matches: Module("test_must_be_empty_nested::parent_module::nested_target"),
+                rules: [
+                    MustBeEmpty(Error)
+                ]
+            )
+        ),
+        
+        // Test RestrictImports rule - control which modules can be imported
+        Module(
+            (
+                name: "restrict_imports_allowed_test",
+                matches: Module("^test_restrict_imports$"),
+                rules: [
+                    RestrictImports(
+                        allowed_only: Some(["std::*", "core::*"]),
+                        denied: None,
+                        severity: Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test denied imports rule
+        Module(
+            (
+                name: "restrict_imports_denied_test",
+                matches: Module("^test_restrict_imports$"),
+                rules: [
+                    RestrictImports(
+                        allowed_only: None,
+                        denied: Some(["crate::dummy_*"]),
+                        severity: Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test NoWildcardImports rule
+        Module(
+            (
+                name: "no_wildcard_imports_test",
+                matches: Module("^test_no_wildcard_imports$"),
+                rules: [
+                    NoWildcardImports(Error)
+                ]
+            )
+        ),
+        
+        // Test item type restrictions with DeniedItems rule
+        Module(
+            (
+                name: "module_denied_items",
+                matches: Module("^test_module_denied_items$"),
+                rules: [
+                    DeniedItems(
+                        items: ["struct", "enum", "trait", "module"],
+                        severity: Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Test MustHaveEmptyModFile rule - mod.rs files should only contain re-exports
+        Module(
+            (
+                name: "must_have_empty_mod_file_test",
+                matches: Module("^test_must_have_empty_mod_file$"),
+                rules: [
+                    MustHaveEmptyModFile(Error)
+                ]
+            )
+        ),
+                
+        // Replace RestrictFunctions with Function lint
+        Function(
+            (
+                name: "function_length_limit_test",
+                matches: InModule("^test_restrict_functions$"),
+                rules: [
+                    MaxLength(
+                        3,   // Maximum allowed function length (3 lines)
+                        Error, // Severity
+                    )
+                ]
+            )
+        )
+    ]
+) 

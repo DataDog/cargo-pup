@@ -6,58 +6,45 @@
 use std::process::Command;
 use std::env;
 use std::path::PathBuf;
-use std::fs;
+use cargo_pup_lint_config::LintBuilder;
 
 // Helper function to get the path to the cargo-pup binary
 fn get_cargo_pup_path() -> PathBuf {
-    // First try finding it in the path - useful for development
-    if let Ok(path) = which::which("cargo-pup") {
-        return path;
-    }
-    
-    // Otherwise build it from the target directory
+    // First try the target directory from the current build
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|_| ".".to_string());
+    println!("CARGO_MANIFEST_DIR: {}", manifest_dir);
     
     let target_dir = env::var("CARGO_TARGET_DIR")
         .unwrap_or_else(|_| format!("{}/target", manifest_dir));
+    println!("Target directory: {}", target_dir);
     
     let profile = if cfg!(debug_assertions) {
         "debug"
     } else {
         "release"
     };
+    println!("Build profile: {}", profile);
     
-    PathBuf::from(target_dir)
+    let binary_path = PathBuf::from(&target_dir)
         .join(profile)
-        .join("cargo-pup")
-}
-
-#[test]
-fn test_config_generation_yaml_validation() {
-    // In CI environments, just mark the test as passed without running it
-    if env::var("CI").is_ok() {
-        println!("Running in CI environment - skipping actual config generation");
-        // Just verify our test can successfully parse a simple yaml
-        let simple_yaml = r#"
-            rule1:
-              type: test
-              value: 1
-            rule2:
-              type: test2
-              value: 2
-        "#;
-        
-        let yaml_value: serde_yaml::Value = serde_yaml::from_str(simple_yaml)
-            .expect("Failed to parse simple test YAML");
-        
-        let mapping = yaml_value.as_mapping()
-            .expect("Simple YAML is not a mapping");
-        
-        assert_eq!(mapping.len(), 2, "Simple YAML should have 2 rules");
-        return;
+        .join("cargo-pup");
+    
+    println!("Binary path: {:?}", binary_path);
+    println!("Binary exists: {}", binary_path.exists());
+    
+    // If the binary exists in the current build, use it
+    if binary_path.exists() {
+        return binary_path;
     }
     
+    panic!("Couldn't find cargo-pup!")
+}
+
+// Big Caveat: This test relies on the current codebase to have built a cargo-pup and pup-driver binaries
+// and these being discoverable. Bit of a weird dependency so i'm noting it down here.
+#[test]
+fn test_config_generation_ron_validation() {
     // Create a temporary directory for our test
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
@@ -92,48 +79,112 @@ fn test_config_generation_yaml_validation() {
     let cargo_pup_path = get_cargo_pup_path();
     
     // Run cargo-pup generate-config in the temp directory
+    println!("About to execute cargo-pup at path: {:?}", cargo_pup_path);
+    println!("Current directory: {:?}", temp_path);
+    
+    // Debug the directory structure before running the command
+    let generated_file_path = temp_path.join("pup.generated.ron");
+    let pup_ron_path = temp_path.join("pup.ron");
+    println!("Before command execution:");
+    println!("  Generated file path exists: {}", generated_file_path.exists());
+    println!("  pup.ron path exists: {}", pup_ron_path.exists());
+    
     let output = Command::new(&cargo_pup_path)
         .current_dir(temp_path)
         .args(["generate-config"])
         .output()
         .expect("Failed to run cargo-pup generate-config");
     
+    // Print command output for debugging
+    println!("Command stdout: {}", String::from_utf8_lossy(&output.stdout));
+    println!("Command stderr: {}", String::from_utf8_lossy(&output.stderr));
+    
     // Check if the command succeeded
     assert!(output.status.success(), "cargo-pup generate-config failed: {}", 
         String::from_utf8_lossy(&output.stderr));
     
-    // The generated config file should be at pup.yaml
-    let pup_yaml_path = temp_path.join("pup.yaml");
+    // The generated config file should be at pup.ron
+    let pup_ron_path = temp_path.join("pup.ron");
     
-    // Make sure pup.yaml exists
-    assert!(pup_yaml_path.exists(), "pup.yaml file was not generated");
-    
-    // Read the generated config
-    let content = fs::read_to_string(&pup_yaml_path)
-        .expect("Failed to read generated pup.yaml");
-    
-    // Parse the YAML to verify it's valid
-    let yaml_result = serde_yaml::from_str::<serde_yaml::Value>(&content);
-    
-    // Check if parsing was successful
-    if let Err(err) = &yaml_result {
-        println!("YAML parsing error: {}", err);
-        println!("Content that failed to parse: {}", content);
+    // List files in the temp directory
+    println!("Files in temp directory:");
+    if let Ok(entries) = std::fs::read_dir(temp_path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                println!("  {:?}", entry.path());
+            }
+        }
     }
     
-    let yaml_value = yaml_result.expect("Failed to parse generated YAML");
+    // Also list files in .pup directory if it exists
+    let pup_dir = temp_path.join(".pup");
+    if pup_dir.exists() {
+        println!("Files in .pup directory:");
+        if let Ok(entries) = std::fs::read_dir(&pup_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    println!("  {:?}", entry.path());
+                    
+                    // If this is the generated RON file, print its contents
+                    if entry.path().to_string_lossy().contains("pup.generated") {
+                        if let Ok(content) = std::fs::read_to_string(&entry.path()) {
+                            println!("Content of generated file: {}", content);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        println!(".pup directory does not exist or is not accessible");
+    }
     
-    // Verify it's a mapping (dictionary)
-    let mapping = yaml_value.as_mapping()
-        .expect("Generated YAML is not a mapping");
+    // Make sure pup.ron exists
+    assert!(pup_ron_path.exists(), "pup.ron file was not generated");
+    
+    // Read the raw file content first to debug
+    let raw_content = std::fs::read_to_string(&pup_ron_path)
+        .expect("Failed to read generated pup.ron file");
+    
+    println!("Generated RON content:\n{}", raw_content);
+    
+    // Process content - strip comments
+    let processed_content = raw_content.lines()
+        .filter(|line| !line.trim().starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    
+    println!("\nProcessed RON content (comments removed):\n{}", processed_content);
+    
+    // Try to parse it manually first
+    match ron::from_str::<LintBuilder>(&processed_content) {
+        Ok(_) => println!("RON content successfully parsed manually"),
+        Err(e) => println!("Manual RON parsing error: {:?}", e),
+    }
+    
+    // Parse the processed content
+    let lint_builder = ron::from_str::<LintBuilder>(&processed_content)
+        .expect("Failed to parse RON content to LintBuilder");
     
     // Count the number of lint rules
-    let lint_count = mapping.len();
+    let lint_count = lint_builder.lints.len();
     
-    // We expect at least 4 lint types
+    // We expect at least 4 lint rules
     assert!(lint_count >= 4, "Expected at least 4 lint rules, but found {}", lint_count);
     
-    println!("Successfully validated config file with {} lint rules", lint_count);
+    // Check that we have each lint type
+    let module_lints = lint_builder.lints.iter()
+        .filter(|lint| matches!(lint, cargo_pup_lint_config::ConfiguredLint::Module(_)))
+        .count();
+    let function_lints = lint_builder.lints.iter()
+        .filter(|lint| matches!(lint, cargo_pup_lint_config::ConfiguredLint::Function(_)))
+        .count();
+    
+    // Verify we have lints of each type
+    assert!(module_lints > 0, "Should have at least one module lint");
+    assert!(function_lints > 0, "Should have at least one function lint");
+    
+    println!("Successfully validated config file with {} lint rules ({} module, {} function)",
+        lint_count, module_lints, function_lints);
     
     // Clean up
     temp_dir.close().expect("Failed to clean up temp directory");

@@ -1,0 +1,112 @@
+warning: Error type 'i32' in Result does not implement Error trait
+  --> tests/ui/function_lint/returns_type.rs:13:1
+   |
+LL | fn test_result_simple() -> Result<(), i32> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_return_type_test'.
+   = note: `#[warn(function_lint)]` on by default
+
+warning: Error type 'MyError' in Result does not implement Error trait
+  --> tests/ui/function_lint/returns_type.rs:18:1
+   |
+LL | fn test_result_custom_error() -> Result<String, MyError> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'result_return_type_test'.
+
+warning: Function exceeds maximum length of 1 lines with 3 lines
+  --> tests/ui/function_lint/returns_type.rs:25:1
+   |
+LL | fn test_option_simple() -> Option<i32> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'option_return_type_test'.
+
+warning: Function exceeds maximum length of 1 lines with 3 lines
+  --> tests/ui/function_lint/returns_type.rs:30:1
+   |
+LL | fn test_option_string() -> Option<String> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'option_return_type_test'.
+
+warning: Function exceeds maximum length of 1 lines with 5 lines
+  --> tests/ui/function_lint/returns_type.rs:37:1
+   |
+LL | fn test_custom_type_function() -> CustomType {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'custom_type_return_test'.
+
+warning: Function exceeds maximum length of 1 lines with 5 lines
+  --> tests/ui/function_lint/returns_type.rs:44:1
+   |
+LL | fn test_my_error_function() -> MyError {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'my_error_return_test'.
+
+warning: Function exceeds maximum length of 1 lines with 6 lines
+  --> tests/ui/function_lint/returns_type.rs:53:1
+   |
+LL | fn test_vec_integers() -> Vec<i32> {
+   | ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'vec_return_type_test'.
+
+warning: Function exceeds maximum length of 1 lines with 6 lines
+  --> tests/ui/function_lint/returns_type.rs:61:1
+   |
+LL | fn test_vec_strings() -> Vec<String> {
+   | ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'vec_return_type_test'.
+
+error: Function exceeds maximum length of 2 lines with 5 lines
+  --> tests/ui/function_lint/returns_type.rs:72:5
+   |
+LL |     pub fn module_result_function() -> Result<(), i32> { 
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'module_based_function_length_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+warning: Error type 'i32' in Result does not implement Error trait
+  --> tests/ui/function_lint/returns_type.rs:72:5
+   |
+LL |     pub fn module_result_function() -> Result<(), i32> { 
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider implementing the Error trait for this type or using a type that already implements it
+   = note: Applied by cargo-pup rule 'module_result_test'.
+
+error: Function exceeds maximum length of 2 lines with 5 lines
+  --> tests/ui/function_lint/returns_type.rs:79:5
+   |
+LL |     pub fn module_option_function() -> Option<i32> { 
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'module_based_function_length_test'.
+
+warning: Function exceeds maximum length of 1 lines with 5 lines
+  --> tests/ui/function_lint/returns_type.rs:79:5
+   |
+LL |     pub fn module_option_function() -> Option<i32> { 
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'module_option_test'.
+
+error: aborting due to 2 previous errors; 10 warnings emitted
+

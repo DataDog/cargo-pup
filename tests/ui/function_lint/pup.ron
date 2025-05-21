@@ -1,0 +1,305 @@
+(
+    lints: [
+        // ======================================================================
+        // SECTION: Function Length Tests (for function_length.rs)
+        // ======================================================================
+        
+        // Basic function length limit that applies to functions starting with "too_long" 
+        // but NOT containing "with_prefix"
+        Function(
+            (
+                name: "function_length_test",
+                matches: AndMatches(
+                    NameRegex("^too_long.*"),
+                    NotMatch(NameRegex("with_prefix"))
+                ),
+                rules: [
+                    MaxLength(
+                        5,   // Maximum allowed function length (5 lines)
+                        Error, // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Function length test with name-based targeting (for "another_long_" functions)
+        Function(
+            (
+                name: "named_function_length_test",
+                matches: NameRegex("^another_long.*"), 
+                rules: [
+                    MaxLength(
+                        3,   // Stricter limit for functions with this pattern (3 lines)
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // Module-based function length test (for functions in inner_module)
+        Function(
+            (
+                name: "module_based_function_length_test",
+                matches: InModule("::inner_module"),
+                rules: [
+                    MaxLength(
+                        2,   // Very strict limit for functions in this module (2 lines)
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // ======================================================================
+        // SECTION: Combined Rules Tests (for combined_rules.rs)
+        // ======================================================================
+        
+        // AND rule test - functions with prefix AND in specific name pattern
+        Function(
+            (
+                name: "and_rule_test",
+                matches: AndMatches(
+                    NameRegex("with_prefix$"),
+                    NameRegex("^too_long.*")
+                ),
+                rules: [
+                    MaxLength(
+                        5,
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // OR rule test
+        Function(
+            (
+                name: "or_rule_test",
+                matches: OrMatches(
+                    NameRegex("alternative.*"),
+                    NameRegex(".*with_suffix$")
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Very strict limit for this test
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // NOT rule test - all functions except those with "exempt" in the name
+        Function(
+            (
+                name: "not_rule_test",
+                matches: NotMatch(
+                    NameRegex("exempt")
+                ),
+                rules: [
+                    MaxLength(
+                        100, // Effectively no limitation
+                        Error,
+                    )
+                ]
+            )
+        ),
+        
+        // ======================================================================
+        // SECTION: Return Type Tests (for returns_type.rs)
+        // ======================================================================
+        
+        // Rule for functions returning Result types
+        Function(
+            (
+                name: "result_return_type_test",
+                matches: AndMatches(
+                    NameRegex("^test_result_"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for functions returning Option types
+        Function(
+            (
+                name: "option_return_type_test",
+                matches: AndMatches(
+                    NameRegex("^test_option_"),
+                    ReturnsType(Option)
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Strict limit to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for functions returning CustomType (named type)
+        Function(
+            (
+                name: "custom_type_return_test",
+                matches: AndMatches(
+                    NameRegex("^test_custom_type_"),
+                    ReturnsType(Named("CustomType"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Strict limit to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for functions returning MyError (another named type)
+        Function(
+            (
+                name: "my_error_return_test",
+                matches: AndMatches(
+                    NameRegex("^test_my_error_"),
+                    ReturnsType(Named("MyError"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Strict limit to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for functions returning Vec<T> (regex type)
+        Function(
+            (
+                name: "vec_return_type_test",
+                matches: AndMatches(
+                    NameRegex("^test_vec_"),
+                    ReturnsType(Regex("Vec<.*>"))
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Strict limit to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for module functions returning Result
+        Function(
+            (
+                name: "module_result_test",
+                matches: AndMatches(
+                    NameEquals("module_result_function"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // Rule for module functions returning Option
+        Function(
+            (
+                name: "module_option_test",
+                matches: AndMatches(
+                    NameEquals("module_option_function"),
+                    ReturnsType(Option)
+                ),
+                rules: [
+                    MaxLength(
+                        1,  // Strict limit to ensure it triggers
+                        Warn,
+                    )
+                ]
+            )
+        ),
+        
+        // ======================================================================
+        // SECTION: Result Error Implementation Tests (for result_error_impl.rs)
+        // ======================================================================
+        
+        // Rule to enforce that Result error types implement the Error trait
+        Function(
+            (
+                name: "result_error_impl_test", 
+                matches: AndMatches(
+                    NameRegex("^test_result_error_"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Error,  // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Rule to enforce error trait implementation in a specific module
+        Function(
+            (
+                name: "module_result_error_impl_test",
+                matches: AndMatches(
+                    InModule("::error_module"),
+                    ReturnsType(Result)
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Error,  // Severity
+                    )
+                ]
+            )
+        ),
+        
+        // Complex rule combining NotMatch with ResultWithErrorImpl
+        Function(
+            (
+                name: "advanced_result_error_impl_test",
+                matches: AndMatches(
+                    NameRegex("^advanced_"),
+                    AndMatches(
+                        ReturnsType(Result),
+                        NotMatch(
+                            ReturnsType(ResultWithErrorImpl)
+                        )
+                    )
+                ),
+                rules: [
+                    ResultErrorMustImplementError(
+                        Error,  // Severity
+                    )
+                ]
+            )
+        ),
+
+        // ======================================================================
+        // SECTION: Projection Type Tests (for projection_type_reproduce.rs)
+        // ======================================================================
+
+        Function(
+            (
+                name: "projection_type_error_impl_test",
+                matches: NameEquals("test"),
+                rules: [
+                    ResultErrorMustImplementError(
+                    Error,
+                    ),
+                    MaxLength(
+                    1,   // Force an error. This doesn't matter, we just want to check the function
+                    Error, // Severity
+                    )
+                ]
+            )
+        )
+    ]
+) 

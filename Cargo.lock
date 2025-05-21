@@ -116,10 +116,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "base64"
+version = "0.21.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
+
+[[package]]
 name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bstr"
@@ -164,18 +173,20 @@ dependencies = [
  "anyhow",
  "cargo_metadata 0.19.1",
  "cargo_pup_common",
+ "cargo_pup_lint_config",
+ "cargo_pup_lint_impl",
  "clap",
  "ctor",
  "log",
  "md5",
  "once_cell",
  "regex",
+ "ron",
  "rust-analyzer",
  "rustc_version",
  "rustup-toolchain",
  "serde",
  "serde_json",
- "serde_yaml",
  "tempfile",
  "termize",
  "toml",
@@ -217,9 +228,35 @@ name = "cargo_pup_common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "regex",
  "serde",
  "serde_json",
- "serde_yaml",
+ "tempfile",
+]
+
+[[package]]
+name = "cargo_pup_lint_config"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cargo_pup_common",
+ "regex",
+ "ron",
+ "serde",
+ "tempfile",
+]
+
+[[package]]
+name = "cargo_pup_lint_impl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cargo_pup_common",
+ "cargo_pup_lint_config",
+ "regex",
+ "ron",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -652,6 +689,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
+name = "ron"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
+dependencies = [
+ "base64",
+ "bitflags",
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
 name = "rust-analyzer"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -760,19 +809,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "serde_yaml"
-version = "0.9.34+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
-dependencies = [
- "indexmap",
- "itoa",
- "ryu",
- "serde",
- "unsafe-libyaml",
 ]
 
 [[package]]
@@ -1021,12 +1057,6 @@ name = "unicode-width"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
-
-[[package]]
-name = "unsafe-libyaml"
-version = "0.2.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "utf8parse"

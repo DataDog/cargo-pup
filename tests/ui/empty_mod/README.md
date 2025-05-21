@@ -1,1 +1,0 @@
-It's hard to do a ui-test for a `mod.rs` because of the way the ui-test crate works - everything simply appears as the root of the project, there's no `ItemKind::Mod`. Perhaps we can think of a better way to cover this!

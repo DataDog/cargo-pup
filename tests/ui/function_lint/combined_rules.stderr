@@ -1,0 +1,30 @@
+error: Function exceeds maximum length of 5 lines with 8 lines
+  --> tests/ui/function_lint/combined_rules.rs:9:1
+   |
+LL | fn too_long_with_prefix() {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'and_rule_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function exceeds maximum length of 1 lines with 8 lines
+  --> tests/ui/function_lint/combined_rules.rs:30:1
+   |
+LL | fn alternative_long_function() {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'or_rule_test'.
+
+error: Function exceeds maximum length of 1 lines with 3 lines
+  --> tests/ui/function_lint/combined_rules.rs:40:1
+   |
+LL | fn short_function_with_suffix() {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Consider breaking this function into smaller parts
+   = note: Applied by cargo-pup rule 'or_rule_test'.
+
+error: aborting due to 3 previous errors
+

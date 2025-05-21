@@ -1,0 +1,17 @@
+[package]
+name = "cargo_pup_lint_impl"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cargo_pup_lint_config = { path = "../cargo_pup_lint_config" }
+cargo_pup_common = { path = "../cargo_pup_common" }
+anyhow.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ron.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private=true
+

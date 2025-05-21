@@ -16,9 +16,7 @@ extern crate rustc_trait_selection;
 
 use anyhow::Result;
 use cargo_pup_common::cli::{PupCli, PupCommand};
-use lints::{ArchitectureLintRunner, Mode};
 
-use crate::lints::{ArchitectureLintCollection, register_all_lints, LintConfigurationFactory, setup_lints_yaml};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{
     env,
@@ -28,11 +26,10 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-
-mod lints;
+use cargo_pup_lint_impl::{ArchitectureLintCollection, ArchitectureLintRunner, Mode};
+use cargo_pup_lint_impl::lints::configuration_factory::LintConfigurationFactory;
 
 pub fn main() -> Result<()> {
-    register_all_lints();
 
     let early_dcx = EarlyDiagCtxt::new(ErrorOutputType::default());
     rustc_driver::init_rustc_env_logger(&early_dcx);
@@ -94,37 +91,46 @@ pub fn main() -> Result<()> {
         // For generate-config mode, use an empty collection
         ArchitectureLintCollection::new(Vec::new())
     } else if is_ui_testing {
-        // For UI testing, look for a pup.yaml file in the same directory as the test file
+        // For UI testing, look for pup files in the same directory as the test file
         let source_file = find_source_file(&orig_args)?;
         let test_dir = source_file.parent().unwrap_or(Path::new("."));
-        let yaml_path = test_dir.join("pup.yaml");
-
-        if yaml_path.exists() {
-            // For UI tests, load rules from the pup.yaml in the test directory
-            match fs::read_to_string(&yaml_path) {
-                Ok(yaml_content) => {
-                    match LintConfigurationFactory::from_yaml(yaml_content) {
-                        Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
-                        Err(e) => {
-                            // TODO - improve this
-                            panic!("Failed loading lint collection: {:?}", e);
-                            //ArchitectureLintCollection::new(Vec::new())
-                        }
-                    }
-                }
+        
+        // Try loading from pup.ron
+        let ron_path = test_dir.join("pup.ron");
+        if ron_path.exists() {
+            match LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
+                Ok(lint_rules) => {
+                    ArchitectureLintCollection::new(lint_rules)
+                },
                 Err(e) => {
-                    println!("UI testing: Error reading pup.yaml: {:?}", e);
+                    // In UI tests, print detailed error messages about configuration issues
+                    panic!("UI TEST ERROR: Failed to parse pup.ron: {}", e);
+                }
+            }
+        } else {
+                eprintln!("UI TEST ERROR: No configuration file found in test directory");
+                ArchitectureLintCollection::new(Vec::new())
+            }
+    } else {
+        // For normal operation, load from pup.ron
+        let cwd = env::current_dir()?;
+        let ron_path = cwd.join("pup.ron");
+        
+        if ron_path.exists() {
+            match LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
+                Ok(lint_rules) => {
+                    ArchitectureLintCollection::new(lint_rules)
+                },
+                Err(e) => {
+                    eprintln!("Failed to parse pup.ron: {}", e);
                     ArchitectureLintCollection::new(Vec::new())
                 }
             }
         } else {
-            println!("UI testing: No pup.yaml found in test directory");
+            // No configuration found
+            eprintln!("No pup.ron configuration file found");
             ArchitectureLintCollection::new(Vec::new())
         }
-    } else {
-        // For normal operation, load rules from pup.yaml
-        let lint_rules = setup_lints_yaml()?;
-        ArchitectureLintCollection::new(lint_rules)
     };
 
     // Prepare cli_args, either from environment or empty for UI testing

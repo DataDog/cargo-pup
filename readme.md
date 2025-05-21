@@ -23,8 +23,10 @@ Check out the [Examples](#examples) to see what you can do!
 
 First up, make sure to install [rustup](https://rustup.rs/) to manage your local rust installs and provide the tooling required for Pretty Useful Pup, if you haven't already.
 
-Next, run [install.sh](https://github.com/DataDog/cargo-pup/raw/refs/heads/main/scripts/install.sh). While this repository is private, you'll have to
-download this manually!
+Next, clone this repository, and then run the following command to add `cargo-pup` to your cargo setup:
+```bash
+cargo install --path . --force  
+```
 
 If you want to make changes to the repository you can also `git clone` the whole thing, then run `install.sh` from within the clone to build and install
 the local state.
@@ -132,5 +134,5 @@ You can find examples in the `tests/ui/function_length/` directory.
 
 * **Not [clippy](https://github.com/rust-lang/rust-clippy)** - pup isn't interested in code style and common-mistake style linting. We already have a great tool for this!
 * **Simple to use** - pup should be easy to drop onto a developer's desktop or into a CI pipeline and work seamlessly as a `cargo` extension
-* **Simple to configure** - in the spirit of similar static analysis tools, pup reads from `pup.yaml` dropped into the root of a project
+* **Simple to configure** - in the spirit of similar static analysis tools, pup reads from `pup.ron` dropped into the root of a project
 * **Easy to integrate** - TODO - reference that standard for exporting linting syntax. 

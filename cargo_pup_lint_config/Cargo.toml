@@ -1,0 +1,12 @@
+[package]
+name = "cargo_pup_lint_config"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde.workspace = true
+ron.workspace = true
+tempfile.workspace = true
+anyhow.workspace = true
+regex.workspace = true 
+cargo_pup_common = { path = "../cargo_pup_common" }

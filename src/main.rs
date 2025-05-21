@@ -60,21 +60,19 @@
 #![feature(let_chains)]
 #![feature(array_windows)]
 #![feature(try_blocks)]
-
 #![warn(rust_2018_idioms, unused_lifetimes)]
-
-
 
 use cargo_pup_common::cli::{PupArgs, PupCli, PupCommand};
 
 use ansi_term::Colour::{Blue, Cyan, Green, Red, Yellow};
 use ansi_term::Style;
+use cargo_pup_common::project_context::{PUP_DIR, ProjectContext};
+use cargo_pup_lint_config::LintBuilder;
 use std::env;
 use std::error::Error;
 use std::fmt;
 use std::path::Path;
-use std::process::{exit, Command};
-use cargo_pup_common::project_context::{ProjectContext, PUP_DIR};
+use std::process::{Command, exit};
 
 #[derive(Debug, PartialEq)]
 enum ProjectType {
@@ -104,24 +102,14 @@ impl Error for CommandExitStatus {}
 
 /// Validates the current directory to determine the project type
 fn validate_project() -> ProjectType {
-    let pup_yaml_path = Path::new("./pup.yaml");
+    let pup_ron_path = Path::new("./pup.ron");
     let cargo_toml_path = Path::new("./Cargo.toml");
 
-    let has_pup_yaml = pup_yaml_path.exists();
+    let has_pup_ron = pup_ron_path.exists();
     let has_cargo_toml = cargo_toml_path.exists();
 
-    #[cfg(test)]
-    {
-        // For tests, check again to be extra sure
-        let pup_exists = std::fs::metadata("./pup.yaml").is_ok();
-        let cargo_exists = std::fs::metadata("./Cargo.toml").is_ok();
-        println!(
-            "validate_project debug - pup.yaml exists: {}/{}, Cargo.toml exists: {}/{}",
-            has_pup_yaml, pup_exists, has_cargo_toml, cargo_exists
-        );
-    }
-
-    if has_pup_yaml && has_cargo_toml {
+    // We now prefer RON files, but still check for YAML for backwards compatibility
+    if has_pup_ron && has_cargo_toml {
         ProjectType::ConfiguredPupProject
     } else if has_cargo_toml {
         ProjectType::RustProject
@@ -193,10 +181,10 @@ pub fn main() {
     // Parse command and arguments
     // Normal invocation - process args and run cargo
     let args: Vec<String> = env::args().collect();
-    
+
     // Check command type
     let command = get_command_type(&args);
-    
+
     // Get if we're running generate-config
     let is_generate_config = if args.len() <= 1 {
         false
@@ -219,9 +207,13 @@ pub fn main() {
                 // Good to go - continue with normal operation
             }
             ProjectType::RustProject => {
-                // In a Rust project but missing pup.yaml
+                // In a Rust project but missing configuration file
                 show_ascii_puppy();
-                println!("{}", Red.bold().paint("Missing pup.yaml - nothing to do!"));
+                println!(
+                    "{}",
+                    Red.bold()
+                        .paint("Missing pup.ron configuration - nothing to do!")
+                );
                 println!("Consider generating an initial configuration:");
                 println!("  {}", Green.paint("cargo pup generate-config"));
                 exit(-1)
@@ -238,7 +230,7 @@ pub fn main() {
                 println!("\nTo use cargo-pup:");
                 println!("  1. Navigate to a Rust project directory");
                 println!("  2. Run {}", Green.paint("cargo pup generate-config"));
-                println!("  3. Edit the generated pup.yaml file");
+                println!("  3. Edit the generated pup.ron file");
                 println!("  4. Run {}", Green.paint("cargo pup"));
                 exit(-1)
             }
@@ -295,20 +287,20 @@ where
 
     // Check if we're generating config and the file already exists
     if command == PupCommand::GenerateConfig {
-        // Check for existing pup.yaml and pup.generated.yaml in the project root
-        let pup_yaml_exists = Path::exists(Path::new("./pup.yaml"));
-        let pup_generated_yaml_exists = Path::exists(Path::new("./pup.generated.yaml"));
+        // Check for existing pup.ron and pup.generated.ron in the project root
+        let pup_ron_exists = Path::exists(Path::new("./pup.ron"));
+        let pup_generated_ron_exists = Path::exists(Path::new("./pup.generated.ron"));
 
-        // Determine target filename based on existence of pup.yaml
-        let target_filename = if pup_yaml_exists {
-            "pup.generated.yaml"
+        // Determine target filename based on existence of pup.ron
+        let target_filename = if pup_ron_exists {
+            "pup.generated.ron"
         } else {
-            "pup.yaml"
+            "pup.ron"
         };
 
         // If target file already exists, show error
-        if (target_filename == "pup.yaml" && pup_yaml_exists)
-            || (target_filename == "pup.generated.yaml" && pup_generated_yaml_exists)
+        if (target_filename == "pup.ron" && pup_ron_exists)
+            || (target_filename == "pup.generated.ron" && pup_generated_ron_exists)
         {
             println!(
                 "Error: {} already exists in the project root.",
@@ -368,88 +360,56 @@ where
         .wait()
         .expect("failed to wait for cargo?");
 
-    // If we just ran generate-config and it succeeded, check for generated files
+    // If we just ran generate-config and it succeeded, generate the combined config file
     if exit_status.success() && command == PupCommand::GenerateConfig {
-        // Look for generated config files in the .pup directory
+        // Load all contexts from the .pup directory
         let pup_dir = Path::new(PUP_DIR);
         if !pup_dir.exists() {
-            // No .pup directory, so there are no config files to process
+            // No .pup directory, so there are no contexts to process
             return Ok(());
         }
 
-        let entries = std::fs::read_dir(pup_dir).expect("Failed to read .pup directory");
-        let generated_configs: Vec<_> = entries
-            .filter_map(Result::ok)
-            .filter(|entry| {
-                if let Some(name) = entry.file_name().to_str() {
-                    name.starts_with("pup.generated.") && name.ends_with(".yaml")
-                } else {
-                    false
-                }
-            })
-            .collect();
 
-        // Check if we have any generated configs to process
-        if !generated_configs.is_empty() {
-            // Use the target filename previously determined during the check phase
-            // Since we've already checked for file existence, we know this is safe
-            let pup_yaml_exists = Path::exists(Path::new("./pup.yaml"));
-            let target_filename = if pup_yaml_exists {
-                "pup.generated.yaml"
-            } else {
-                "pup.yaml"
-            };
-
-            // Combine all config files into a single one
-            let mut combined_content = String::new();
-
-            // Add a header
-            combined_content.push_str("# Combined pup configuration\n");
-            combined_content.push_str("# Generated by cargo-pup\n\n");
-
-            // Collect and sort configs by name for consistent ordering
-            let mut sorted_configs: Vec<_> = generated_configs.iter().collect();
-            sorted_configs.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
-
-            // Process each config file
-            for (idx, entry) in sorted_configs.iter().enumerate() {
-                let config_path = entry.path();
-                let file_name = entry.file_name();
-                let filename = file_name.to_str().unwrap_or("unknown").to_string();
-
-                // Add file separator if not the first file
-                if idx > 0 {
-                    combined_content.push_str("\n# ===================================\n\n");
-                }
-
-                // Read the file content
-                match std::fs::read_to_string(&config_path) {
-                    Ok(content) => {
-                        combined_content.push_str(&content);
-                        // Ensure there's a trailing newline
-                        if !content.ends_with('\n') {
-                            combined_content.push('\n');
-                        }
-                    }
-                    Err(e) => {
-                        println!("Warning: Failed to read {}: {}", filename, e);
-                    }
-                }
+        // Load all contexts using ProjectContext's loading functionality
+        let (contexts, crate_names) = match ProjectContext::load_all_contexts_with_crate_names() {
+            Ok((contexts, crate_names)) => (contexts, crate_names),
+            Err(e) => {
+                println!("Warning: Failed to load project contexts: {}", e);
+                println!("Make sure that context files (with *_context.json suffix) exist in the .pup directory.");
+                println!("These files should be created by pup-driver during compilation.");
+                return Ok(());
             }
+        };
 
-            // Write the combined file to the project root
-            let target_path = Path::new(target_filename);
-            match std::fs::write(target_path, combined_content) {
-                Ok(_) => {
-                    println!(
-                        "Created {} with combined configurations from {} files",
-                        target_filename,
-                        generated_configs.len()
-                    );
-                }
-                Err(e) => {
-                    println!("Warning: Failed to write {}: {}", target_filename, e);
-                }
+        if contexts.modules.is_empty() && contexts.traits.is_empty() {
+            println!("No modules or traits found to generate configuration from.");
+            return Ok(());
+        }
+
+        println!("Loaded project contexts from {} crates.", crate_names.len());
+
+        // Determine target filename based on existence of pup.ron
+        let pup_ron_exists = Path::exists(Path::new("./pup.ron"));
+        let target_filename = if pup_ron_exists {
+            "pup.generated.ron"
+        } else {
+            "pup.ron"
+        };
+
+        // Generate the configuration from the loaded contexts using LintBuilder
+        let builder = LintBuilder::generate_from_contexts(&[contexts]);
+        
+        // Write the generated configuration to the target file
+        match builder.write_to_file(target_filename) {
+            Ok(_) => {
+                println!(
+                    "Created {} with configuration generated from {} crates' contexts",
+                    target_filename,
+                    crate_names.len()
+                );
+            }
+            Err(e) => {
+                println!("Warning: Failed to write {}: {}", target_filename, e);
             }
         }
     }
@@ -550,13 +510,13 @@ fn get_command_type(args: &[String]) -> CommandType {
 
 /// Process the print-modules command by loading contexts from disk and displaying them
 fn process_print_modules() -> anyhow::Result<()> {
-    use cargo_pup_common::project_context::{ProjectContext};
     use anyhow::Context;
+    use cargo_pup_common::project_context::ProjectContext;
 
     // Load all context data from .pup directory
     let (context, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
         .context("Failed to load project context data")?;
-    
+
     // Use the utility function to print the modules
     print_modules(&context, &crate_names)?;
     Ok(())
@@ -564,8 +524,8 @@ fn process_print_modules() -> anyhow::Result<()> {
 
 /// Process the print-traits command by loading contexts from disk and displaying them
 fn process_print_traits() -> anyhow::Result<()> {
-    use cargo_pup_common::project_context::{ProjectContext};
     use anyhow::Context;
+    use cargo_pup_common::project_context::ProjectContext;
 
     // Load all context data from .pup directory
     let (context, crate_names) = ProjectContext::load_all_contexts_with_crate_names()
@@ -606,7 +566,7 @@ pub fn help_message() -> String {
     {check}            Run architectural lints (default)
     {print_modules}    Print all modules and applicable lints
     {print_traits}     Print all traits
-    {generate_config}  Generates an initial pup.yaml for your project.
+    {generate_config}  Generates an initial pup.ron for your project.
 
 {options_label}:
     -h, --help             Print this message
@@ -631,21 +591,25 @@ Any additional arguments will be passed directly to cargo:
     )
 }
 
-
 /// Format and print the modules in the project context
 pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
     use ansi_term::Colour::{Blue, Cyan, Green};
-    use std::collections::BTreeMap;
     use cargo_pup_common::project_context::ModuleInfo;
+    use std::collections::BTreeMap;
 
     // Print a header
-    println!("{}", Cyan.paint(r#"
+    println!(
+        "{}",
+        Cyan.paint(
+            r#"
      / \__
     (    @\___
     /         O
    /   (_____/
   /_____/   U
-"#));
+"#
+        )
+    );
 
     if crate_names.len() > 1 {
         println!("Modules from multiple crates: {}", crate_names.join(", "));
@@ -662,12 +626,14 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
         if let Some(idx) = module_info.name.find("::") {
             let crate_name = &module_info.name[..idx];
 
-            modules_by_crate.entry(crate_name.to_string())
+            modules_by_crate
+                .entry(crate_name.to_string())
                 .or_default()
                 .push(module_info);
         } else {
             // Handle case where there's no :: in the path
-            modules_by_crate.entry(module_info.name.clone())
+            modules_by_crate
+                .entry(module_info.name.clone())
                 .or_default();
         }
     }
@@ -709,7 +675,11 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
                 lints_list.join(", ")
             };
 
-            println!("  ::{} [{}]", Blue.paint(&module_path), Green.paint(&combined_lints));
+            println!(
+                "  ::{} [{}]",
+                Blue.paint(&module_path),
+                Green.paint(&combined_lints)
+            );
         }
 
         println!();
@@ -720,18 +690,23 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
 
 /// Format and print the traits in the project context
 pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow::Result<()> {
-    use ansi_term::Colour::{Blue, Green, Cyan};
-    use std::collections::BTreeMap;
+    use ansi_term::Colour::{Blue, Cyan, Green};
     use cargo_pup_common::project_context::TraitInfo;
+    use std::collections::BTreeMap;
 
     // Print a header
-    println!("{}", Cyan.paint(r#"
+    println!(
+        "{}",
+        Cyan.paint(
+            r#"
      / \__
     (    @\___
     /         O
    /   (_____/
   /_____/   U
-"#));
+"#
+        )
+    );
 
     if crate_names.len() > 1 {
         println!("Traits from multiple crates: {}", crate_names.join(", "));
@@ -748,13 +723,13 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow:
         if let Some(idx) = trait_info.name.find("::") {
             let crate_name = &trait_info.name[..idx];
 
-            traits_by_crate.entry(crate_name.to_string())
+            traits_by_crate
+                .entry(crate_name.to_string())
                 .or_default()
                 .push(trait_info);
         } else {
             // Handle case where there's no :: in the path
-            traits_by_crate.entry(trait_info.name.clone())
-                .or_default();
+            traits_by_crate.entry(trait_info.name.clone()).or_default();
         }
     }
 
@@ -779,7 +754,11 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow:
             if trait_path.is_empty() {
                 println!("  :: [{}]", Green.paint(&lints_str));
             } else {
-                println!("  ::{} [{}]", Blue.paint(&trait_path), Green.paint(&lints_str));
+                println!(
+                    "  ::{} [{}]",
+                    Blue.paint(&trait_path),
+                    Green.paint(&lints_str)
+                );
             }
 
             // Print implementors with indentation
@@ -921,14 +900,14 @@ mod tests {
             let temp_dir = setup_test_directory();
             let temp_path = temp_dir.path();
 
-            // Create Cargo.toml and pup.yaml files
+            // Create Cargo.toml and pup.ron files
             fs::write(
                 temp_path.join("Cargo.toml"),
                 "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
             )
             .expect("Failed to write Cargo.toml");
-            fs::write(temp_path.join("pup.yaml"), "# Test pup.yaml\n")
-                .expect("Failed to write pup.yaml");
+            fs::write(temp_path.join("pup.ron"), "# Test pup.ron\n")
+                .expect("Failed to write pup.ron");
 
             // Change to the temporary directory
             let original_dir = env::current_dir().expect("Failed to get current dir");
@@ -1210,19 +1189,19 @@ mod tests {
             // Change to the temporary directory
             env::set_current_dir(&temp_path).expect("Failed to change directory");
 
-            // Verify pup.yaml doesn't exist yet in the temp directory
-            let pup_yaml_path = temp_path.join("pup.yaml");
+            // Verify pup.ron doesn't exist yet in the temp directory
+            let pup_ron_path = temp_path.join("pup.ron");
             assert!(
-                !pup_yaml_path.exists(),
-                "pup.yaml should not exist at start of test"
+                !pup_ron_path.exists(),
+                "pup.ron should not exist at start of test"
             );
 
             // Use absolute paths for all file operations to avoid current directory issues
-            let generated_config_path = temp_path.join("pup.generated.test.yaml");
+            let generated_config_path = temp_path.join("pup.generated.test.ron");
 
             // Create a generated config file manually
             fs::write(&generated_config_path, "# Test generated config\n")
-                .expect("Failed to write pup.generated.test.yaml");
+                .expect("Failed to write pup.generated.test.ron");
 
             // Brief delay to ensure file operations complete
             std::thread::sleep(std::time::Duration::from_millis(10));
@@ -1236,7 +1215,7 @@ mod tests {
             // We already have the destination path for pup.yaml defined above
 
             // Rename it manually for the test
-            match fs::rename(&generated_config_path, &pup_yaml_path) {
+            match fs::rename(&generated_config_path, &pup_ron_path) {
                 Ok(_) => {}
                 Err(e) => panic!("Failed to rename file: {}", e),
             }
@@ -1244,8 +1223,8 @@ mod tests {
             // Brief delay to ensure rename completes
             std::thread::sleep(std::time::Duration::from_millis(10));
 
-            // Verify pup.yaml now exists
-            assert!(pup_yaml_path.exists(), "pup.yaml should exist after rename");
+            // Verify pup.ron now exists
+            assert!(pup_ron_path.exists(), "pup.ron should exist after rename");
 
             // The guard will automatically change back to the original directory when it goes out of scope
         }

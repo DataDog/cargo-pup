@@ -1,0 +1,73 @@
+(
+    lints: [
+        Struct((
+            name: "architecture_lint_rule_checker",
+            matches: ImplementsTrait("^pup_driver::lints::architecture_lint_rule::ArchitectureLintRule"),
+            rules: [
+                MustBeNamed(".*LintProcessor$", Error),
+                MustBePrivate(Error),
+            ],
+        )),
+        Struct((
+            name: "lint_factory_checker",
+            matches: ImplementsTrait("^pup_driver::lints::configuration_factory.rs::LintFactory"),
+            rules: [
+                MustBeNamed(".*LintFactory$", Error),
+                MustBePrivate(Error),
+            ],
+        )),
+        Module((
+            name: "empty_mod_rule",
+            matches: Module(".*"),
+            rules: [
+                MustHaveEmptyModFile(Warn),
+            ],
+        )),
+        Module((
+            name: "helpers_no_structs_or_traits",
+            matches: Module("^pup_driver::lints::helpers$"),
+            rules: [
+                DeniedItems(
+                    items: [
+                        "struct",
+                        "trait",
+                    ],
+                    severity: Error,
+                ),
+            ],
+        )),
+        Module((
+            name: "utils_no_structs_or_traits",
+            matches: Module("^pup_driver::utils$"),
+            rules: [
+                DeniedItems(
+                    items: [
+                        "struct",
+                        "trait",
+                    ],
+                    severity: Error,
+                ),
+            ],
+        )),
+        Function((
+            name: "result_error_impl_rule",
+            matches: InModule(".*"),
+            rules: [
+                ResultErrorMustImplementError(Error),
+            ],
+        )),
+        Module((
+            name: "cargo_pup_no_lints_usage",
+            matches: Module("^cargo_pup::"),
+            rules: [
+                RestrictImports(
+                    allowed_only: None,
+                    denied: Some([
+                        "::lints",
+                    ]),
+                    severity: Error,
+                ),
+            ],
+        )),
+    ],
+)
