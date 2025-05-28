@@ -101,8 +101,11 @@ impl fmt::Display for CommandExitStatus {
 impl Error for CommandExitStatus {}
 
 /// Validates the current directory to determine the project type
-fn validate_project() -> ProjectType {
-    let pup_ron_path = Path::new("./pup.ron");
+fn validate_project(config_path: Option<&str>) -> ProjectType {
+    let pup_ron_path = match config_path {
+        Some(path) => Path::new(path),
+        None => Path::new("./pup.ron"),
+    };
     let cargo_toml_path = Path::new("./Cargo.toml");
 
     let has_pup_ron = pup_ron_path.exists();
@@ -182,6 +185,9 @@ pub fn main() {
     // Normal invocation - process args and run cargo
     let args: Vec<String> = env::args().collect();
 
+    // Parse arguments to get config path early for validation
+    let pup_args = PupArgs::parse(args.iter().cloned());
+
     // Check command type
     let command = get_command_type(&args);
 
@@ -202,7 +208,7 @@ pub fn main() {
         || command == CommandType::PrintTraits;
 
     if !skip_checks {
-        match validate_project() {
+        match validate_project(pup_args.config_path.as_deref()) {
             ProjectType::ConfiguredPupProject => {
                 // Good to go - continue with normal operation
             }
@@ -916,7 +922,7 @@ mod tests {
             env::set_current_dir(temp_path).expect("Failed to change directory");
 
             // Run the validation
-            let result = validate_project();
+            let result = validate_project(None);
 
             // Change back to original directory
             env::set_current_dir(original_dir)
