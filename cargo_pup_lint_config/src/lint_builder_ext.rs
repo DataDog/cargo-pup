@@ -91,11 +91,10 @@ pub trait LintBuilderExt {
 
 impl LintBuilderExt for LintBuilder {
     fn assert_lints(&self, project_path: Option<&str>) -> Result<Output> {
-        // Determine the project path to validate
+        // Determine which path to validate
         let path_to_validate = match project_path {
             Some(path) => path.to_string(),
             None => {
-                // Use current working directory when no path is provided
                 std::env::current_dir()
                     .context("Failed to get current working directory")?
                     .to_str()
@@ -104,13 +103,13 @@ impl LintBuilderExt for LintBuilder {
             }
         };
         
-        // Validate the project path (either provided or current directory)
+        // Validate the project path
         validate_project_path(&path_to_validate)
             .with_context(|| {
                 if project_path.is_some() {
-                    format!("Invalid project path: {}", path_to_validate)
+                    format!("Invalid manifest path: {}", path_to_validate)
                 } else {
-                    format!("Invalid current working directory: {}", path_to_validate)
+                    format!("Current working directory is not a valid Cargo project: {}", path_to_validate)
                 }
             })?;
         
@@ -145,26 +144,25 @@ fn run_with_args(lint_builder: &LintBuilder, args: &[&str]) -> Result<Output> {
     run_command(lint_builder, "check", args)
 }
 
-/// Validates that the given path exists and contains a Cargo.toml file
-fn validate_project_path(path: &str) -> Result<()> {
-    let project_path = Path::new(path);
-    
-    // Check if the path exists
-    if !project_path.exists() {
-        anyhow::bail!("Path does not exist: {}", path);
-    }
+/// Validates that the given path exists and contains a Cargo.toml file, returning the canonical path
+fn validate_project_path(path: &str) -> Result<std::path::PathBuf> {
+    let project_path = Path::new(path)
+        .canonicalize()
+        .with_context(|| format!("Cannot resolve path: {}", path))?;
     
     // If it's a file, check if it's a Cargo.toml and get its parent directory
     let cargo_dir = if project_path.is_file() {
         if project_path.file_name().and_then(|n| n.to_str()) == Some("Cargo.toml") {
-            project_path.parent().unwrap_or(project_path)
+            project_path.parent()
+                .context("Cargo.toml file has no parent directory")?
+                .to_path_buf()
         } else {
-            anyhow::bail!("File path must be a Cargo.toml file: {}", path);
+            anyhow::bail!("Path {} exists but is not a Cargo.toml file", path);
         }
     } else if project_path.is_dir() {
         project_path
     } else {
-        anyhow::bail!("Path is neither a file nor directory: {}", path);
+        anyhow::bail!("Path {} exists but is neither a file nor directory", path);
     };
     
     // Check if Cargo.toml exists in the directory
@@ -173,7 +171,7 @@ fn validate_project_path(path: &str) -> Result<()> {
         anyhow::bail!("No Cargo.toml found in directory: {}", cargo_dir.display());
     }
     
-    Ok(())
+    Ok(cargo_dir)
 }
 
 /// Finds the cargo-pup workspace root by looking for the actual cargo-pup project
@@ -310,7 +308,14 @@ mod tests {
         let error = result.unwrap_err();
         // Check for either the context message or the root cause
         let error_str = error.to_string();
-        assert!(error_str.contains("Invalid project path") || error_str.contains("Path does not exist"));
+        assert!(
+            error_str.contains("Cannot resolve path") || 
+            error_str.contains("Invalid manifest path") ||
+            error_str.contains("No such file or directory") ||
+            error_str.contains("cannot find the path specified"),
+            "Error message should indicate path resolution failure, got: {}",
+            error_str
+        );
     }
 
     #[test]
@@ -339,7 +344,12 @@ mod tests {
         let error = result.unwrap_err();
         // Check for either the context message or the root cause
         let error_str = error.to_string();
-        assert!(error_str.contains("Invalid project path") || error_str.contains("No Cargo.toml found"));
+        assert!(
+            error_str.contains("Invalid manifest path") || 
+            error_str.contains("No Cargo.toml found"),
+            "Error message should indicate missing Cargo.toml, got: {}",
+            error_str
+        );
     }
 
     #[test]
@@ -529,7 +539,8 @@ edition = "2021"
         let error = result.unwrap_err();
         let error_str = error.to_string();
         assert!(
-            error_str.contains("Invalid current working directory") || error_str.contains("No Cargo.toml found"),
+            error_str.contains("Current working directory is not a valid Cargo project") || 
+            error_str.contains("No Cargo.toml found"),
             "Error should indicate invalid current working directory: {}",
             error_str
         );
@@ -615,7 +626,14 @@ edition = "2021"
         // Test non-existent path
         let result = validate_project_path("/non/existent/path");
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Path does not exist"));
+        let error_str = result.unwrap_err().to_string();
+        assert!(
+            error_str.contains("Cannot resolve path") ||
+            error_str.contains("No such file or directory") ||
+            error_str.contains("cannot find the path specified"),
+            "Expected path resolution error, got: {}",
+            error_str
+        );
         
         // Test directory without Cargo.toml
         let empty_dir = temp_path.join("empty");
@@ -645,6 +663,11 @@ edition = "2021"
         fs::write(&random_file, "content").expect("Failed to write file");
         let result = validate_project_path(random_file.to_str().unwrap());
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("File path must be a Cargo.toml file"));
+        let error_str = result.unwrap_err().to_string();
+        assert!(
+            error_str.contains("is not a Cargo.toml file"),
+            "Expected error about non-Cargo.toml file, got: {}",
+            error_str
+        );
     }
 }
