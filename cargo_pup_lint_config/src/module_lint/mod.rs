@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 /// Module lint module provides tools for creating and configuring module-level lints
 /// 
 /// These lints can enforce architectural constraints like:

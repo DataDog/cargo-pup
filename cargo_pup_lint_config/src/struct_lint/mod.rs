@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 /// Struct lint module provides tools for creating and configuring struct-level lints
 /// 
 /// These lints can enforce architectural constraints like:

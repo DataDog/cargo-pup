@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 /// This module's mod.rs file should only contain re-exports
 /// Any other content should trigger the MustHaveEmptyModFile lint
 

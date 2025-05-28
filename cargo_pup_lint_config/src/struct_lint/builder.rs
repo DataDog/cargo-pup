@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use super::matcher::{StructMatchNode, StructMatcher, matcher};
 use super::types::{StructLint, StructMatch, StructRule};
 use crate::lint_builder::LintBuilder;

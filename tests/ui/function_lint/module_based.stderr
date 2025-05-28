@@ -1,5 +1,5 @@
 error: Function exceeds maximum length of 2 lines with 3 lines
-  --> tests/ui/function_lint/module_based.rs:23:5
+  --> tests/ui/function_lint/module_based.rs:25:5
    |
 LL |     pub fn tiny_but_too_long() {
    |     ^^^^^^^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL |     pub fn tiny_but_too_long() {
    = note: `#[deny(function_lint)]` on by default
 
 error: Function exceeds maximum length of 2 lines with 3 lines
-  --> tests/ui/function_lint/module_based.rs:33:9
+  --> tests/ui/function_lint/module_based.rs:35:9
    |
 LL |         pub fn nested_too_long() {
    |         ^^^^^^^^^^^^^^^^^^^^

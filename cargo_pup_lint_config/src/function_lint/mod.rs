@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 /// Function lint module provides tools for creating and configuring function-level lints
 /// 
 /// These lints can verify properties like:

@@ -1,4 +1,6 @@
 #![feature(rustc_private)]
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 #![warn(rust_2018_idioms, unused_lifetimes)]
 
 use std::env;

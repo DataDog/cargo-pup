@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use anyhow::{Result as AnyhowResult, anyhow, Error};
 
 // This shouldn't be allowed - String doesn't implement Error

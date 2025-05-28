@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use rustc_driver::Callbacks;
 use rustc_hir::ItemKind;
 use rustc_hir::def_id::LocalModDefId;

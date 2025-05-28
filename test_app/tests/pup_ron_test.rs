@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 //! Integration test for pup.ron configuration
 //!
 //! This test verifies that we can build a configuration with pup.ron

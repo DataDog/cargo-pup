@@ -1,5 +1,5 @@
 error: Wildcard imports are not allowed
-  --> tests/ui/module_lint_new/no_wildcard_imports.rs:10:1
+  --> tests/ui/module_lint_new/no_wildcard_imports.rs:12:1
    |
 LL | use std::fmt::*;
    | ^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL | use std::fmt::*;
    = note: `#[deny(module_wildcard_import)]` on by default
 
 error: Wildcard imports are not allowed
-  --> tests/ui/module_lint_new/no_wildcard_imports.rs:11:1
+  --> tests/ui/module_lint_new/no_wildcard_imports.rs:13:1
    |
 LL | use std::collections::*;
    | ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -18,7 +18,7 @@ LL | use std::collections::*;
    = note: Applied by cargo-pup rule 'no_wildcard_imports_test'.
 
 error: Wildcard imports are not allowed
-  --> tests/ui/module_lint_new/no_wildcard_imports.rs:19:5
+  --> tests/ui/module_lint_new/no_wildcard_imports.rs:21:5
    |
 LL |     use std::sync::*;
    |     ^^^^^^^^^^^^^^^^^

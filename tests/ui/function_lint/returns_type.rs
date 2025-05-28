@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 //@compile-flags: --crate-name test_returns_type
 //@compile-flags: --crate-type lib
 

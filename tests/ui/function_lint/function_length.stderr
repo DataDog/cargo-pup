@@ -1,5 +1,5 @@
 error: Function exceeds maximum length of 5 lines with 6 lines
-  --> tests/ui/function_lint/function_length.rs:9:1
+  --> tests/ui/function_lint/function_length.rs:11:1
    |
 LL | fn too_long_function() {
    | ^^^^^^^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL | fn too_long_function() {
    = note: `#[deny(function_lint)]` on by default
 
 error: Function exceeds maximum length of 3 lines with 5 lines
-  --> tests/ui/function_lint/function_length.rs:26:1
+  --> tests/ui/function_lint/function_length.rs:28:1
    |
 LL | fn another_long_function() {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -18,7 +18,7 @@ LL | fn another_long_function() {
    = note: Applied by cargo-pup rule 'named_function_length_test'.
 
 error: Function exceeds maximum length of 5 lines with 6 lines
-  --> tests/ui/function_lint/function_length.rs:43:5
+  --> tests/ui/function_lint/function_length.rs:45:5
    |
 LL |     fn too_long_method(&self) {
    |     ^^^^^^^^^^^^^^^^^^^^
@@ -27,7 +27,7 @@ LL |     fn too_long_method(&self) {
    = note: Applied by cargo-pup rule 'function_length_test'.
 
 error: Function exceeds maximum length of 3 lines with 5 lines
-  --> tests/ui/function_lint/function_length.rs:51:5
+  --> tests/ui/function_lint/function_length.rs:53:5
    |
 LL |     fn another_long_method(&self) {
    |     ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -36,7 +36,7 @@ LL |     fn another_long_method(&self) {
    = note: Applied by cargo-pup rule 'named_function_length_test'.
 
 error: Function exceeds maximum length of 2 lines with 3 lines
-  --> tests/ui/function_lint/function_length.rs:67:5
+  --> tests/ui/function_lint/function_length.rs:69:5
    |
 LL |     pub fn tiny_but_too_long() {
    |     ^^^^^^^^^^^^^^^^^^^^^^
@@ -45,7 +45,7 @@ LL |     pub fn tiny_but_too_long() {
    = note: Applied by cargo-pup rule 'module_based_function_length_test'.
 
 error: Function exceeds maximum length of 2 lines with 3 lines
-  --> tests/ui/function_lint/function_length.rs:77:9
+  --> tests/ui/function_lint/function_length.rs:79:9
    |
 LL |         pub fn nested_too_long() {
    |         ^^^^^^^^^^^^^^^^^^^^

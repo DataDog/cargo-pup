@@ -1,5 +1,5 @@
 error: Item 'invalid_function' not allowed in empty module
-  --> tests/ui/module_lint_new/must_be_empty.rs:16:5
+  --> tests/ui/module_lint_new/must_be_empty.rs:18:5
    |
 LL | /     pub fn invalid_function() {
 LL | |         println!("This module should be empty");
@@ -11,7 +11,7 @@ LL | |     }
    = note: `#[deny(module_must_be_empty)]` on by default
 
 error: Item 'INVALID_CONST' not allowed in empty module
-  --> tests/ui/module_lint_new/must_be_empty.rs:25:5
+  --> tests/ui/module_lint_new/must_be_empty.rs:27:5
    |
 LL |     pub const INVALID_CONST: &str = "Content not allowed";
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

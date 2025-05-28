@@ -1,0 +1,4 @@
+[overrides]
+# These crates do not specify a homepage in their metadata.
+
+"rust-analyzer" = { origin = "https://github.com/rust-lang/rust-analyzer" }

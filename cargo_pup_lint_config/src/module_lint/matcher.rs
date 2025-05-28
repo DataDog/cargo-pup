@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use super::types::ModuleMatch;
 
 /// Fluent interface for creating module matchers

@@ -1,5 +1,5 @@
 error: Use of module 'crate::dummy_denied::anything' is not allowed; only ["std::*", "core::*"] are permitted
-  --> tests/ui/module_lint_new/restrict_imports.rs:15:1
+  --> tests/ui/module_lint_new/restrict_imports.rs:17:1
    |
 LL | use crate::dummy_denied::anything;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL | use crate::dummy_denied::anything;
    = note: `#[deny(module_restrict_imports)]` on by default
 
 error: Use of module 'crate::dummy_denied::anything' is denied
-  --> tests/ui/module_lint_new/restrict_imports.rs:15:1
+  --> tests/ui/module_lint_new/restrict_imports.rs:17:1
    |
 LL | use crate::dummy_denied::anything;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

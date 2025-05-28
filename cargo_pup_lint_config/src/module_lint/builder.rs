@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use super::matcher::{ModuleMatchNode, ModuleMatcher, matcher};
 use super::types::{ModuleLint, ModuleMatch, ModuleRule};
 use crate::lint_builder::LintBuilder;

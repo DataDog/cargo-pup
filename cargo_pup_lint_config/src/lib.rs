@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 pub mod function_lint;
 pub mod lint_builder;
 pub mod lint_builder_ext;
