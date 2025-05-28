@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 /// Lets us create two lints in the fashion of declare_lint!,
 /// but with a variant for Deny and a variant for Warn, using
 /// the same lint name. We also emit a struct that wraps these lints

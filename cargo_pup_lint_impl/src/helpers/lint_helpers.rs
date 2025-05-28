@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 //! Cargo-pup wrappers around rustc's diagnostic functions.
 //!
 //! This module contains code derived from rust-clippy, which is dual-licensed under

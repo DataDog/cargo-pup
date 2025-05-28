@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use std::process::{Command, Output};
 use anyhow::{Context, Result};
 use tempfile::NamedTempFile;

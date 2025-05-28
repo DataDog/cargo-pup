@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 //!
 //! cargo-pup
 //! This is the entry point for our cargo extension, and what is ultimately run

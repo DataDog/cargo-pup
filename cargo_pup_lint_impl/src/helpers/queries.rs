@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use rustc_hir::OwnerId;
 use rustc_hir::def_id::DefId;
 use rustc_infer::infer::TyCtxtInferExt;

@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use cargo_pup_common::project_context::ProjectContext;
 use crate::function_lint::FunctionLint;
 use crate::{ConfiguredLint, FunctionMatch, FunctionRule, GenerateFromContext, LintBuilder, ReturnTypePattern, Severity};

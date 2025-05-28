@@ -1,4 +1,6 @@
 #![allow(unused_imports)]
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 #![allow(dead_code)]
 
 mod empty_mod;

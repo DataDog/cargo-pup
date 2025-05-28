@@ -1,3 +1,5 @@
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
+
 use ron::de::from_reader;
 use ron::ser::{PrettyConfig, to_writer_pretty};
 use std::fs::File;
