@@ -1,6 +1,6 @@
 use crate::ArchitectureLintRule;
 use crate::declare_variable_severity_lint;
-use crate::helpers::clippy_utils::span_lint_and_help;
+use crate::helpers::lint_helpers::span_lint_and_help;
 use cargo_pup_lint_config::{ConfiguredLint, StructMatch, StructRule};
 use regex::Regex;
 use rustc_hir::{Item, ItemKind, def_id::DefId};

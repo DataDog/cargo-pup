@@ -1,6 +1,6 @@
 use crate::ArchitectureLintRule;
 use crate::declare_variable_severity_lint;
-use crate::helpers::clippy_utils::span_lint_and_help;
+use crate::helpers::lint_helpers::span_lint_and_help;
 use crate::helpers::queries::{get_full_module_name, implements_error_trait};
 use cargo_pup_lint_config::{
     ConfiguredLint, FunctionMatch, FunctionRule, ReturnTypePattern};
