@@ -175,7 +175,10 @@ fn validate_project_path(path: &str) -> Result<std::path::PathBuf> {
 }
 
 /// Finds the cargo-pup workspace root by looking for the actual cargo-pup project
-#[cfg(test)]
+/// If we are running within a subdirectory of cargo-pup itself, we'll use
+/// `cargo run` to invoke our own copy of cargo-pup, rather than relying on the
+/// cargo system installed copy. This makes unit and integration tests behave
+/// the way you'd expect them to.
 fn find_workspace_root() -> Result<std::path::PathBuf> {
     // Start from the current executable's directory (which should be in target/debug/deps)
     // and work our way up to find the cargo-pup workspace
@@ -231,30 +234,30 @@ fn run_command(lint_builder: &LintBuilder, command: &str, args: &[&str]) -> Resu
         .context("Failed to write configuration to temporary file")?;
 
     // Prepare the cargo-pup command
-    // Use development mode when running tests
-    #[cfg(test)]
-    let mut cmd = {
-        let mut dev_cmd = Command::new("cargo");
-        dev_cmd.arg("run");
-        
-        // Find and use the workspace manifest
-        if let Ok(workspace_root) = find_workspace_root() {
-            let manifest_path = workspace_root.join("Cargo.toml");
-            if manifest_path.exists() {
-                dev_cmd.arg("--manifest-path").arg(manifest_path);
-            }
+    // Try to use development mode if we can find the workspace, otherwise use system cargo pup
+    let mut cmd = if let Ok(workspace_root) = find_workspace_root() {
+        let manifest_path = workspace_root.join("Cargo.toml");
+        if manifest_path.exists() {
+            // Development mode: use cargo run
+            let mut dev_cmd = Command::new("cargo");
+            dev_cmd.arg("run");
+            dev_cmd.arg("--manifest-path").arg(&manifest_path);
+            dev_cmd.arg("--bin").arg("cargo-pup").arg("--");
+            dev_cmd.arg(command);
+            dev_cmd.arg("--pup-config");
+            dev_cmd.arg(config_path.to_str().unwrap());
+            dev_cmd
+        } else {
+            // System mode: use installed cargo pup
+            let mut system_cmd = Command::new("cargo");
+            system_cmd.arg("pup");
+            system_cmd.arg(command);
+            system_cmd.arg("--pup-config");
+            system_cmd.arg(config_path.to_str().unwrap());
+            system_cmd
         }
-        
-        dev_cmd.arg("--bin").arg("cargo-pup").arg("--");
-        dev_cmd.arg(command);
-        dev_cmd.arg("--pup-config");
-        dev_cmd.arg(config_path.to_str().unwrap());
-        
-        dev_cmd
-    };
-    
-    #[cfg(not(test))]
-    let mut cmd = {
+    } else {
+        // System mode: use installed cargo pup
         let mut system_cmd = Command::new("cargo");
         system_cmd.arg("pup");
         system_cmd.arg(command);
