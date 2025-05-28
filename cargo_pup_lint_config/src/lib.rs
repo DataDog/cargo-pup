@@ -1,9 +1,11 @@
 pub mod function_lint;
 pub mod lint_builder;
+pub mod lint_builder_ext;
 pub mod module_lint;
 pub mod struct_lint;
 
 pub use lint_builder::LintBuilder;
+pub use lint_builder_ext::LintBuilderExt;
 
 // Make sure our extensions are visible
 pub use function_lint::{

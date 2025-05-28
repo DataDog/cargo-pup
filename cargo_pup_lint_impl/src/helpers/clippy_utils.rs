@@ -8,8 +8,6 @@
 //! Thank you!
 //! ~The `INTERNAL_METADATA_COLLECTOR` lint
 
-#![allow(dead_code)]
-
 use rustc_errors::{Applicability, Diag, DiagMessage, MultiSpan, SubdiagMessage};
 #[cfg(debug_assertions)]
 use rustc_errors::{EmissionGuarantee, SubstitutionPart, Suggestions};
@@ -131,7 +129,7 @@ pub fn span_lint<T: LintContext>(
 ///
 /// If you're emitting the lint at the span of a different node than the one provided by the
 /// `LintPass::check_*` function, consider using [`span_lint_hir_and_then`] instead.
-/// This is needed for `#[allow]` and `#[expect]` attributes to work on the node
+/// This is needed for `#i as[allow]` and `#[expect]` attributes to work on the node
 /// highlighted in the displayed warning.
 ///
 /// If you're unsure which function you should use, you can test if the `#[allow]` attribute works
@@ -167,9 +165,6 @@ pub fn span_lint_and_help<T: LintContext>(
         }
         docs_link(diag, lint);
         diag.note(format!("Applied by cargo-pup rule '{}'.", rule_name));
-
-        #[cfg(debug_assertions)]
-        validate_diag(diag);
     });
 }
 

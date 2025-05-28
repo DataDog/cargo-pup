@@ -12,12 +12,14 @@ pub enum PupCommand {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PupCli {
     pub command: PupCommand,
+    pub config_path: Option<String>,
 }
 
 impl Default for PupCli {
     fn default() -> Self {
         Self {
             command: PupCommand::Check,
+            config_path: None,
         }
     }
 }
@@ -36,6 +38,7 @@ impl PupCli {
 #[allow(dead_code)]
 pub struct PupArgs {
     pub command: PupCommand,
+    pub config_path: Option<String>,
     pub cargo_args: Vec<String>,
 }
 
@@ -46,7 +49,7 @@ impl PupArgs {
         I: Iterator<Item = String>,
     {
         let mut command = PupCommand::Check; // Default command
-        let mut cargo_args = Vec::new();
+        let mut config_path = None;
 
         // Convert args to a vector for easier processing
         let args: Vec<String> = args.collect();
@@ -83,14 +86,31 @@ impl PupArgs {
             }
         }
 
-        // Collect remaining args as cargo args
-        if start_idx < args.len() {
-            cargo_args = args[start_idx..].to_vec();
+        // Look for --pup-config argument
+        let mut filtered_cargo_args = Vec::new();
+        let mut i = start_idx;
+        while i < args.len() {
+            if args[i] == "--pup-config" {
+                // Check if there's a value after --pup-config
+                if i + 1 < args.len() {
+                    config_path = Some(args[i + 1].clone());
+                    i += 2; // Skip both the flag and its value
+                } else {
+                    // Missing value for --pup-config
+                    eprintln!("Warning: --pup-config flag requires a path argument");
+                    i += 1;
+                }
+            } else {
+                // Not a special flag, add to cargo args
+                filtered_cargo_args.push(args[i].clone());
+                i += 1;
+            }
         }
 
         Self {
             command,
-            cargo_args,
+            config_path,
+            cargo_args: filtered_cargo_args,
         }
     }
 }
@@ -164,6 +184,27 @@ mod tests {
         let args = parse_args(&["cargo", "pup", "print-modules", "--features=foo"]);
         assert_eq!(args.command, PupCommand::PrintModules);
         assert_eq!(args.cargo_args, vec!["--features=foo"]);
+    }
+    
+    #[test]
+    fn test_pup_config_argument() {
+        // Test with --pup-config argument
+        let args = parse_args(&["cargo-pup", "check", "--pup-config", "/tmp/pup.ron"]);
+        assert_eq!(args.command, PupCommand::Check);
+        assert_eq!(args.config_path, Some("/tmp/pup.ron".to_string()));
+        assert!(args.cargo_args.is_empty());
+        
+        // Test with cargo args along with --pup-config
+        let args = parse_args(&["cargo-pup", "check", "--pup-config", "/tmp/pup.ron", "--features=foo"]);
+        assert_eq!(args.command, PupCommand::Check);
+        assert_eq!(args.config_path, Some("/tmp/pup.ron".to_string()));
+        assert_eq!(args.cargo_args, vec!["--features=foo"]);
+        
+        // Test via cargo pup
+        let args = parse_args(&["cargo", "pup", "check", "--pup-config", "/tmp/pup.ron"]);
+        assert_eq!(args.command, PupCommand::Check);
+        assert_eq!(args.config_path, Some("/tmp/pup.ron".to_string()));
+        assert!(args.cargo_args.is_empty());
     }
 
     #[test]
