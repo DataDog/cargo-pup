@@ -50,7 +50,6 @@ impl PupArgs {
     {
         let mut command = PupCommand::Check; // Default command
         let mut config_path = None;
-        let mut cargo_args = Vec::new();
 
         // Convert args to a vector for easier processing
         let args: Vec<String> = args.collect();
@@ -108,13 +107,10 @@ impl PupArgs {
             }
         }
 
-        // Use the filtered cargo args
-        cargo_args = filtered_cargo_args;
-
         Self {
             command,
             config_path,
-            cargo_args,
+            cargo_args: filtered_cargo_args,
         }
     }
 }
