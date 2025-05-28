@@ -1,0 +1,11 @@
+cargo-pup
+Copyright 2024-Present Datadog, Inc.
+
+This product includes software developed at Datadog (https://www.datadoghq.com/).
+This product includes software developed by The Rust Project (https://www.rust-lang.org/).
+
+This software contains code derived from rust-clippy:
+- Copyright (c) 2014 The Rust Project Developers
+- Licensed under Apache License 2.0 and MIT License
+- Source: https://github.com/rust-lang/rust-clippy
+- Files: cargo_pup_lint_impl/src/helpers/lint_helpers.rs
