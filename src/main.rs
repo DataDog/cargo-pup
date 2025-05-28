@@ -313,7 +313,8 @@ where
 
     // Create configuration to pass through to pup-driver
     let pup_cli = PupCli {
-        command: pup_args.command,
+        command: pup_args.command.clone(),
+        config_path: pup_args.config_path.clone(),
     };
 
     // Convert args to string for environment
@@ -571,6 +572,7 @@ pub fn help_message() -> String {
 {options_label}:
     -h, --help             Print this message
     -V, --version          Print version info and exit
+    --pup-config=PATH      Specify an alternative configuration file path
 
 Any additional arguments will be passed directly to cargo:
     --features=FEATURES    Cargo features to enable
@@ -1447,6 +1449,7 @@ mod tests {
             // Test that PupCli can be serialized and deserialized correctly
             // Create a PupCli with a test command
             let pup_cli = PupCli {
+                config_path: None,
                 command: PupCommand::PrintModules,
             };
 
@@ -1461,6 +1464,7 @@ mod tests {
 
             // Test with a different command
             let pup_cli = PupCli {
+                config_path: None,
                 command: PupCommand::GenerateConfig,
             };
 

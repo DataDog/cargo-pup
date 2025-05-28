@@ -112,23 +112,38 @@ pub fn main() -> Result<()> {
                 ArchitectureLintCollection::new(Vec::new())
             }
     } else {
-        // For normal operation, load from pup.ron
-        let cwd = env::current_dir()?;
-        let ron_path = cwd.join("pup.ron");
+        // For normal operation, load from specified config file or default to pup.ron
+        // Get config path from CLI args if provided
+        let binding = std::env::var("PUP_CLI_ARGS").unwrap_or_default();
+        let cli_args = binding.as_str();
+        let cli_config = if cli_args.is_empty() {
+            PupCli::default()
+        } else {
+            PupCli::from_env_str(cli_args)
+        };
         
-        if ron_path.exists() {
-            match LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
+        let cwd = env::current_dir()?;
+        let config_path = if let Some(path) = cli_config.config_path {
+            // Use provided config path
+            PathBuf::from(path)
+        } else {
+            // Default to pup.ron in current directory
+            cwd.join("pup.ron")
+        };
+        
+        if config_path.exists() {
+            match LintConfigurationFactory::from_file(config_path.to_str().unwrap().to_string()) {
                 Ok(lint_rules) => {
                     ArchitectureLintCollection::new(lint_rules)
                 },
                 Err(e) => {
-                    eprintln!("Failed to parse pup.ron: {}", e);
+                    eprintln!("Failed to parse {}: {}", config_path.display(), e);
                     ArchitectureLintCollection::new(Vec::new())
                 }
             }
         } else {
             // No configuration found
-            eprintln!("No pup.ron configuration file found");
+            eprintln!("Configuration file not found: {}", config_path.display());
             ArchitectureLintCollection::new(Vec::new())
         }
     };
