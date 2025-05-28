@@ -1,5 +1,5 @@
 error: Module must not match pattern 'bad_*'
-  --> tests/ui/module_lint_new/must_not_be_named.rs:18:1
+  --> tests/ui/module_lint_new/must_not_be_named.rs:20:1
    |
 LL | / pub mod bad_module {
 LL | |     pub fn invalid_function() {
@@ -13,7 +13,7 @@ LL | | }
    = note: `#[deny(module_must_not_be_named)]` on by default
 
 error: Module must not match pattern 'bad_*'
-  --> tests/ui/module_lint_new/must_not_be_named.rs:24:1
+  --> tests/ui/module_lint_new/must_not_be_named.rs:26:1
    |
 LL | / pub mod bad_name_module {
 LL | |     pub fn another_invalid_function() {

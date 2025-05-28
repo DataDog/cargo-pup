@@ -1,5 +1,5 @@
 error: Struct 'InternalData' is public, but must be private
-  --> tests/ui/struct_lint_new/visibility_rules.rs:7:1
+  --> tests/ui/struct_lint_new/visibility_rules.rs:9:1
    |
 LL | pub struct InternalData {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL | pub struct InternalData {
    = note: `#[deny(struct_lint_must_be_private)]` on by default
 
 warning: Struct 'HiddenApi' is private, but must be public
-  --> tests/ui/struct_lint_new/visibility_rules.rs:17:1
+  --> tests/ui/struct_lint_new/visibility_rules.rs:19:1
    |
 LL | struct HiddenApi {
    | ^^^^^^^^^^^^^^^^^^
@@ -19,7 +19,7 @@ LL | struct HiddenApi {
    = note: `#[warn(struct_lint_must_be_public)]` on by default
 
 error: Struct 'InternalModel' is public, but must be private
-  --> tests/ui/struct_lint_new/visibility_rules.rs:27:1
+  --> tests/ui/struct_lint_new/visibility_rules.rs:29:1
    |
 LL | pub struct InternalModel {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^

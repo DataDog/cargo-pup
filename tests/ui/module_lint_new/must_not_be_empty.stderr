@@ -1,5 +1,5 @@
 error: Module must not be empty
-  --> tests/ui/module_lint_new/must_not_be_empty.rs:14:1
+  --> tests/ui/module_lint_new/must_not_be_empty.rs:16:1
    |
 LL | / pub mod empty_module {
 LL | | }
@@ -10,7 +10,7 @@ LL | | }
    = note: `#[deny(module_must_not_be_empty)]` on by default
 
 error: Module must not be empty
-  --> tests/ui/module_lint_new/must_not_be_empty.rs:18:1
+  --> tests/ui/module_lint_new/must_not_be_empty.rs:20:1
    |
 LL | / pub mod another_empty_module {
 LL | | } 

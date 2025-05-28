@@ -1,5 +1,5 @@
 error: Item 'invalid_function' not allowed in empty module
-  --> tests/ui/module_lint_new/must_be_empty_nested.rs:13:9
+  --> tests/ui/module_lint_new/must_be_empty_nested.rs:15:9
    |
 LL | /         pub fn invalid_function() {
 LL | |             println!("This shouldn't be here");
@@ -11,7 +11,7 @@ LL | |         }
    = note: `#[deny(module_must_be_empty)]` on by default
 
 error: Item 'InvalidStruct' not allowed in empty module
-  --> tests/ui/module_lint_new/must_be_empty_nested.rs:17:9
+  --> tests/ui/module_lint_new/must_be_empty_nested.rs:19:9
    |
 LL |         pub struct InvalidStruct;
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^

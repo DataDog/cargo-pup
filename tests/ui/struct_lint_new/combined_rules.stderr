@@ -1,5 +1,5 @@
 error: Struct must match pattern 'TestStruct[A-Z].*', found 'TestStructlowercase'
-  --> tests/ui/struct_lint_new/combined_rules.rs:10:1
+  --> tests/ui/struct_lint_new/combined_rules.rs:12:1
    |
 LL | pub struct TestStructlowercase {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL | pub struct TestStructlowercase {
    = note: `#[deny(struct_lint_must_be_named)]` on by default
 
 error: Struct must not match pattern '.*Forbidden.*'
-  --> tests/ui/struct_lint_new/combined_rules.rs:15:1
+  --> tests/ui/struct_lint_new/combined_rules.rs:17:1
    |
 LL | pub struct TestStructAForbiddenName {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

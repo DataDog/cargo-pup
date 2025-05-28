@@ -1,5 +1,5 @@
 error: Struct must match pattern 'Good*', found 'IncorrectName'
-  --> tests/ui/struct_lint_new/must_be_named.rs:8:1
+  --> tests/ui/struct_lint_new/must_be_named.rs:10:1
    |
 LL | pub struct IncorrectName {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL | pub struct IncorrectName {
    = note: `#[deny(struct_lint_must_be_named)]` on by default
 
 error: Struct must match pattern 'Good*', found 'AnotherBadName'
-  --> tests/ui/struct_lint_new/must_be_named.rs:12:1
+  --> tests/ui/struct_lint_new/must_be_named.rs:14:1
    |
 LL | pub struct AnotherBadName {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
