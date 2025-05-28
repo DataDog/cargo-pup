@@ -176,6 +176,52 @@ fn validate_project_path(path: &str) -> Result<()> {
     Ok(())
 }
 
+/// Finds the cargo-pup workspace root by looking for the actual cargo-pup project
+#[cfg(test)]
+fn find_workspace_root() -> Result<std::path::PathBuf> {
+    // Start from the current executable's directory (which should be in target/debug/deps)
+    // and work our way up to find the cargo-pup workspace
+    let current_exe = std::env::current_exe()
+        .context("Failed to get current executable path")?;
+    
+    let mut check_dir = current_exe.parent();
+    
+    while let Some(dir) = check_dir {
+        let cargo_toml = dir.join("Cargo.toml");
+        if cargo_toml.exists() {
+            if let Ok(contents) = std::fs::read_to_string(&cargo_toml) {
+                // Look specifically for cargo-pup project or workspace with cargo-pup
+                if contents.contains("name = \"cargo-pup\"") || 
+                   (contents.contains("[workspace]") && contents.contains("cargo_pup")) {
+                    return Ok(dir.to_path_buf());
+                }
+            }
+        }
+        
+        // Also check if this directory has the specific cargo-pup source structure
+        if dir.join("src").join("pup_driver.rs").exists() {
+            return Ok(dir.to_path_buf());
+        }
+        
+        check_dir = dir.parent();
+    }
+    
+    // Fallback: try from current working directory
+    let current_dir = std::env::current_dir()
+        .context("Failed to get current directory")?;
+    
+    check_dir = Some(current_dir.as_path());
+    while let Some(dir) = check_dir {
+        if dir.join("src").join("pup_driver.rs").exists() {
+            return Ok(dir.to_path_buf());
+        }
+        check_dir = dir.parent();
+    }
+    
+    // If we can't find workspace root, return current directory
+    Ok(current_dir)
+}
+
 fn run_command(lint_builder: &LintBuilder, command: &str, args: &[&str]) -> Result<Output> {
     // Create a temporary file to store the configuration
     let temp_file = NamedTempFile::new()
@@ -187,11 +233,37 @@ fn run_command(lint_builder: &LintBuilder, command: &str, args: &[&str]) -> Resu
         .context("Failed to write configuration to temporary file")?;
 
     // Prepare the cargo-pup command
-    let mut cmd = Command::new("cargo");
-    cmd.arg("pup");
-    cmd.arg(command);
-    cmd.arg("--pup-config");
-    cmd.arg(config_path.to_str().unwrap());
+    // Use development mode when running tests
+    #[cfg(test)]
+    let mut cmd = {
+        let mut dev_cmd = Command::new("cargo");
+        dev_cmd.arg("run");
+        
+        // Find and use the workspace manifest
+        if let Ok(workspace_root) = find_workspace_root() {
+            let manifest_path = workspace_root.join("Cargo.toml");
+            if manifest_path.exists() {
+                dev_cmd.arg("--manifest-path").arg(manifest_path);
+            }
+        }
+        
+        dev_cmd.arg("--bin").arg("cargo-pup").arg("--");
+        dev_cmd.arg(command);
+        dev_cmd.arg("--pup-config");
+        dev_cmd.arg(config_path.to_str().unwrap());
+        
+        dev_cmd
+    };
+    
+    #[cfg(not(test))]
+    let mut cmd = {
+        let mut system_cmd = Command::new("cargo");
+        system_cmd.arg("pup");
+        system_cmd.arg(command);
+        system_cmd.arg("--pup-config");
+        system_cmd.arg(config_path.to_str().unwrap());
+        system_cmd
+    };
 
     // Add any additional arguments
     for arg in args {
