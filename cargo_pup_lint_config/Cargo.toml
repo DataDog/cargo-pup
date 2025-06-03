@@ -2,10 +2,15 @@
 name = "cargo_pup_lint_config"
 version = "0.1.0"
 edition = "2024"
+description = "Configuration and rule builder utilities for cargo-pup architectural linting"
+license = "Apache-2.0"
+repository = "https://github.com/datadog/cargo-pup"
+homepage = "https://github.com/datadog/cargo-pup"
+readme = "README.md"
 
 [dependencies]
 serde.workspace = true
 ron.workspace = true
 tempfile.workspace = true
 anyhow.workspace = true
-cargo_pup_common = { path = "../cargo_pup_common" }
+cargo_pup_common = { path = "../cargo_pup_common", version = "0.1.0" }
