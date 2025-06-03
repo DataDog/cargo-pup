@@ -76,9 +76,6 @@ builder.write_to_file("pup.ron").expect("Failed to write config");
 ## How It Works 
 cargo-pup uses `rustc`'s interface to bolt custom, dynamically defined lints into the compilation lifecycle. To do this, much like clippy and other tools that extend the compiler in this fashion, it has to compile your code using rust nightly. The output of this build is discrete from your regular build, and gets hidden in `.pup` within the project directory.
 
-### Working With the Code Base
-TODO 
-
 ### UI Tests
 
 Cargo Pup includes UI tests to validate lint behavior. These tests follow the pattern used by Clippy and other Rust compiler components.
@@ -104,7 +101,6 @@ UI tests consist of:
 Tests use special comments:
 - `//@` comments configure test behavior
 - `//~` comments mark expected diagnostic locations
-- `//@ pup-config: |` comments define lint configurations for the test
 
 You can find examples in the `tests/ui/function_length/` directory.
 
@@ -113,4 +109,3 @@ You can find examples in the `tests/ui/function_length/` directory.
 * **Not [clippy](https://github.com/rust-lang/rust-clippy)** - pup isn't interested in code style and common-mistake style linting. We already have a great tool for this!
 * **Simple to use** - pup should be easy to drop onto a developer's desktop or into a CI pipeline and work seamlessly as a `cargo` extension
 * **Simple to configure** - in the spirit of similar static analysis tools, pup can read from `pup.ron` or be configured programmatically using the builder interface
-* **Easy to integrate** - TODO - reference that standard for exporting linting syntax. 
