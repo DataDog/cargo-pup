@@ -1,5 +1,11 @@
 # `cargo pup`
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/pup_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/pup_light.png">
+  <img alt="cargo-pup logo" src="docs/pup_light.png" width="250">
+</picture>
+
 **Pretty Useful Pup** (_pup_) lets you write assertions about your Rust project's architecture, letting you continuously
 validate consistency both locally and in your CI pipelines. As projects grow and new contributors come on board inconsistency
 begins to creep in, increasing the cognitive load for everyone working on the system.
@@ -9,97 +15,69 @@ introduces an exciting, fresh naming convention for architectural linting tools.
 
 Check out the [Examples](#examples) to see what you can do!
 
-## PR TODO
+## Installation
 
-* **denied_items** - add deny for impl blocks
+First, make sure to install [rustup](https://rustup.rs/) to manage your local rust installs and provide the tooling required for Pretty Useful Pup, if you haven't already.
 
-## Usage
-
-> [!NOTE]
-> Long term, this should work as one of those classic `curl https://sh.cargopup.sh | sh` deployments. For now while we're private,
-> this will have to do.
-
-**Pretty Useful Pup** is installed as a [cargo](TODO) subcommand. This simply means that it needs to be in your `$PATH`, or optimally, in your `~/.cargo/bin` directory.
-
-First up, make sure to install [rustup](https://rustup.rs/) to manage your local rust installs and provide the tooling required for Pretty Useful Pup, if you haven't already.
-
-Next, clone this repository, and then run the following command to add `cargo-pup` to your cargo setup:
+Then install cargo-pup:
 ```bash
-cargo install --path . --force  
+cargo install cargo-pup
 ```
 
-If you want to make changes to the repository you can also `git clone` the whole thing, then run `install.sh` from within the clone to build and install
-the local state.
+## Getting Started
+
+Cargo-pup can be run directly on your project like clippy with `cargo pup`, and reads a configuration file `pup.ron`. You have two options to generate this configuration:
+
+1. **Generate a sample**: Run `cargo pup generate-config` to create an example config. This is not going to be tailored to capture the architecture rules of your project, but shows what the config looks like!
+2. **Programmatic builder** (recommended): Using the builder interface in the `cargo-pup-lint-config` crate to either generate a `pup.ron`, or run the assertions directly, integration-test style
+
+We encourage using the builder style as it provides better IDE support, type safety, and enables integration testing of your architectural rules.
 
 ## Examples
 
-Cargo-pup uses cargo-pup to enforce it's own architecture.
+Here's how to enforce that your API layer doesn't directly access database types:
 
-### Enforce naming of structs implementing a trait
+```rust
+use cargo_pup_lint_config::{LintBuilder, LintBuilderExt, ModuleLintExt, Severity};
 
-For particular traits you may want the implementors to follow a consistent naming scheme; here we ensure that all of cargo-pup's lint processors are named the same way, and marked `private`:
-
-```yaml
-architecture_lint_rules:
-  type: trait_impl
-  source_name: "lints::architecture_lint_rule::ArchitectureLintRule"
-  name_must_match: ".*LintProcessor$"
-  enforce_visibility: "Private"
-  severity: Error
-
+#[test]
+fn test_api_layer_isolation() {
+    let mut builder = LintBuilder::new();
+    
+    // Ensure API controllers don't directly depend on database drivers
+    builder.module_lint()
+        .lint_named("api_no_direct_db_access")
+        .matching(|m| m.module(".*::api::.*"))
+        .with_severity(Severity::Error)
+        .restrict_imports(
+            None, 
+            Some(vec![".*::database::*".to_string(), "sqlx::*".to_string()])
+        )
+        .build();
+    
+    // Test against current project - will panic if the rules are violated and print
+    // the lint results to stderr.
+    builder.assert_lints(None).expect("API isolation rules should pass");
+}
 ```
 
-### Constrain module usage:
+You can also use the builder interface to generate a `pup.ron` configuration file and then run `cargo pup` on your project:
 
-We can ensure that particular modules are not used in certain places. This is a useful strategy to enforce layering and avoiding mixing concerns - for instance, if we have a REST API, we probably don't want to use Database clients directly, prefering to go through an intermediate layer:
+```rust
+let mut builder = LintBuilder::new();
+// ... configure your rules ...
 
-```yaml
-deny_std_collections:
-  type: module_usage
-  name: "test_me_namespace_rule_new"
-  modules:
-    - "^test_app::public_rest_api$"
-  rules:
-    - type: Deny
-      denied_modules:
-        - "sqlx::*"
-        - "diesel::*"
-      severity: Warn
+// Write configuration to file
+builder.write_to_file("pup.ron").expect("Failed to write config");
 
-    # We can also block wildcard imports
-    - type: DenyWildcard
-      severity: Warn
+// Then run: cargo pup 
 ```
 
-### Enforce empty mod.rs files
+## How It Works 
+cargo-pup uses `rustc`'s interface to bolt custom, dynamically defined lints into the compilation lifecycle. To do this, much like clippy and other tools that extend the compiler in this fashion, it has to compile your code using rust nightly. The output of this build is discrete from your regular build, and gets hidden in `.pup` within the project directory.
 
-This ensures that a `mod.rs` can contain only references to other modules and re-exports:
-
-```yaml
-empty_mods:
-  type: empty_mod
-  modules:
-    - "lints"
-    - "utils"
-  severity: Warn
-```
-
-### Constraint language items allowed
-
-Sometimes we may want to ensure that particular modules can only contain certain items, for instance, here we want to ensure our helpers module can only contain basic functions, enums, and so on:
-
-```yaml
-helpers_no_structs_or_traits:
-  type: item_type
-  modules:
-    - "^pup_driver::lints::helpers$"
-  denied_items:
-    - struct  
-    - trait 
-  severity: Error
-```
-
-## Testing
+### Working With the Code Base
+TODO 
 
 ### UI Tests
 
@@ -134,5 +112,5 @@ You can find examples in the `tests/ui/function_length/` directory.
 
 * **Not [clippy](https://github.com/rust-lang/rust-clippy)** - pup isn't interested in code style and common-mistake style linting. We already have a great tool for this!
 * **Simple to use** - pup should be easy to drop onto a developer's desktop or into a CI pipeline and work seamlessly as a `cargo` extension
-* **Simple to configure** - in the spirit of similar static analysis tools, pup reads from `pup.ron` dropped into the root of a project
+* **Simple to configure** - in the spirit of similar static analysis tools, pup can read from `pup.ron` or be configured programmatically using the builder interface
 * **Easy to integrate** - TODO - reference that standard for exporting linting syntax. 
