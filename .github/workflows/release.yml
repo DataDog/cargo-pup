@@ -1,0 +1,23 @@
+name: Release
+
+permissions:
+  contents: read
+
+on:
+  release:
+    types: [created]
+
+env:
+  # Faster from-scratch builds
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest-dd
+    steps:
+      - uses: actions/checkout@v4
+      - run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - run: . $HOME/.cargo/env && rustup update
+      - run: . $HOME/.cargo/env && scripts/publish.sh
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
