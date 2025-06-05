@@ -19,9 +19,9 @@ Check out the [Examples](#examples) to see what you can do!
 
 First, make sure to install [rustup](https://rustup.rs/) to manage your local rust installs and provide the tooling required for Pretty Useful Pup, if you haven't already.
 
-Then install pup:
+Then install pup; **you must use this nightly toolchain, as pup depends on compiler internals that are otherwise unavailable!**
 ```bash
-cargo install cargo_pup
+cargo +nightly-2025-02-27 install cargo_pup
 ```
 
 ## Getting Started
