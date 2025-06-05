@@ -39,7 +39,7 @@ To use the programmatic builder interface, add the following to your `Cargo.toml
 
 ```toml
 [dev-dependencies]
-cargo_pup_lint_config = "0.1.0"
+cargo_pup_lint_config = "0.1.1"
 ```
 
 This provides the builder API that you can use in integration tests or build scripts to define and validate your architectural rules.

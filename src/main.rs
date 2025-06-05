@@ -913,7 +913,7 @@ mod tests {
             // Create Cargo.toml and pup.ron files
             fs::write(
                 temp_path.join("Cargo.toml"),
-                "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+                "[package]\nname = \"test\"\nversion = \"0.1.1\"\n",
             )
             .expect("Failed to write Cargo.toml");
             fs::write(temp_path.join("pup.ron"), "# Test pup.ron\n")
@@ -1040,7 +1040,7 @@ mod tests {
             // Create basic Cargo.toml for a rust project
             fs::write(
                 temp_path.join("Cargo.toml"),
-                "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+                "[package]\nname = \"test\"\nversion = \"0.1.1\"\n",
             )
             .expect("Failed to write Cargo.toml");
 
@@ -1113,7 +1113,7 @@ mod tests {
             // Create a Cargo.toml file
             fs::write(
                 temp_path.join("Cargo.toml"),
-                "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+                "[package]\nname = \"test\"\nversion = \"0.1.1\"\n",
             )
             .expect("Failed to write Cargo.toml");
 
@@ -1174,7 +1174,7 @@ mod tests {
             // Create a Cargo.toml file but no pup.yaml
             fs::write(
                 temp_path.join("Cargo.toml"),
-                "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+                "[package]\nname = \"test\"\nversion = \"0.1.1\"\n",
             )
             .expect("Failed to write Cargo.toml");
 
