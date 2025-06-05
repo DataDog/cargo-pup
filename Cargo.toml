@@ -9,7 +9,7 @@ exclude = ["test_app"]
 
 [package]
 name = "cargo_pup"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A Rust architectural linting tool that integrates with rustc to enforce architectural patterns and boundaries"
 license = "Apache-2.0"
@@ -32,9 +32,9 @@ ansi_term = "0.12.1"
 anyhow = { workspace = true }
 tempfile = { workspace = true }
 ron = { workspace = true }
-cargo_pup_common = { path = "cargo_pup_common", version = "0.1.0" }
-cargo_pup_lint_impl = { path = "cargo_pup_lint_impl", version = "0.1.0" }
-cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "0.1.0" }
+cargo_pup_common = { path = "cargo_pup_common", version = "0.1.1" }
+cargo_pup_lint_impl = { path = "cargo_pup_lint_impl", version = "0.1.1" }
+cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "0.1.1" }
 
 #
 # These bits are just to keep rust rover happy.
@@ -56,7 +56,6 @@ rustup-toolchain = "0.1.8"
 [dev-dependencies]
 rustc_version = "0.4"
 ui_test = "0.29.2"
-cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "0.1.0" }
 ron = { workspace = true }
 
 [[test]]

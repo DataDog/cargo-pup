@@ -57,7 +57,7 @@ fn test_config_generation_ron_validation() {
         r#"
             [package]
             name = "test_app"
-            version = "0.1.0"
+            version = "0.1.1"
             edition = "2021"
         "#,
     ).expect("Failed to write Cargo.toml");

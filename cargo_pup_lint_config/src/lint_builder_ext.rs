@@ -376,7 +376,7 @@ mod tests {
             cargo_project_dir.join("Cargo.toml"),
             r#"[package]
 name = "test"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 "#,
         ).expect("Failed to write Cargo.toml");
@@ -436,7 +436,7 @@ edition = "2021"
             &cargo_toml_path,
             r#"[package]
 name = "test"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 "#,
         ).expect("Failed to write Cargo.toml");
@@ -571,7 +571,7 @@ edition = "2021"
             valid_project_dir.join("Cargo.toml"),
             r#"[package]
 name = "test"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 "#,
         ).expect("Failed to write Cargo.toml");
@@ -652,7 +652,7 @@ edition = "2021"
         fs::create_dir_all(&cargo_dir).expect("Failed to create directory");
         fs::write(
             cargo_dir.join("Cargo.toml"),
-            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+            "[package]\nname = \"test\"\nversion = \"0.1.1\"\n",
         ).expect("Failed to write Cargo.toml");
         
         let result = validate_project_path(cargo_dir.to_str().unwrap());
