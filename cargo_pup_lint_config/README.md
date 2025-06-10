@@ -1,6 +1,12 @@
 # cargo_pup_lint_config
 
-Configuration and rule builder utilities for cargo-pup architectural linting.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_light.png">
+  <img alt="cargo_pup logo" src="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_light.png" width="250">
+</picture>
+
+Configuration and rule builder utilities for [cargo-pup architectural linting](https://github.com/datadog/cargo-pup).
 
 This crate provides the programmatic builder interface for defining architectural lint rules. It offers type-safe, IDE-friendly APIs for creating complex architectural assertions about your Rust codebase.
 

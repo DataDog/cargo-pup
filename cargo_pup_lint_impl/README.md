@@ -1,6 +1,12 @@
 # cargo_pup_lint_impl
 
-Core lint implementations and rustc integration for cargo-pup architectural linting.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_light.png">
+  <img alt="cargo_pup logo" src="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_light.png" width="250">
+</picture>
+
+Core lint implementations and rustc integration for [cargo-pup architectural linting](https://github.com/datadog/cargo-pup).
 
 This crate contains the actual lint rule implementations and provides the rustc compiler integration that powers cargo-pup's architectural validation capabilities.
 
