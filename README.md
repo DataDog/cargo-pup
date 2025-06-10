@@ -1,8 +1,8 @@
 # cargo pup
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/pup_dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="docs/pup_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_light.png">
   <img alt="cargo_pup logo" src="docs/pup_light.png" width="250">
 </picture>
 
@@ -26,27 +26,106 @@ cargo +nightly-2025-02-27 install cargo_pup
 
 ## Getting Started
 
-Cargo_pup can be run directly on your project like clippy with `cargo pup`, and reads a configuration file `pup.ron`. You have two options to generate this configuration:
+Now that we've installed pup, let's walk through using it on one of your projects. 
 
-1. **Generate a sample**: Run `cargo pup generate-config` to create an example config. This is not going to be tailored to capture the architecture rules of your project, but shows what the config looks like!
-2. **Programmatic builder** (recommended): Using the builder interface in the `cargo_pup_lint_config` crate to either generate a `pup.ron`, or run the assertions directly, integration-test style
+### Step 1: Explore Your Project Structure
 
-We encourage using the builder style as it provides better IDE support, type safety, and enables integration testing of your architectural rules.
+Start by seeing what modules cargo pup can find in your project. 
 
-### Setting up the Builder Interface
+```bash
+cargo pup print-modules
+```
 
-To use the programmatic builder interface, add the following to your `Cargo.toml`:
+The tree is grouped up by workspace module name and binary name, and the full path given is the path we can match on when we write our architecture rules. If we have rules targeting modules already, we can see them to the right of each - e.g. in the output of running `cargo pup` on pup itself, we see `empty_module_rule` targets all of our modules:
+
+```bash
+...
+
+     / \__
+    (    @\___
+    /         O
+   /   (_____/
+  /_____/   U
+
+Modules from multiple crates: cargo_pup_lint_config, cargo_pup_common, cargo_pup_lint_impl
+
+cargo_pup_common
+  ::cli [empty_mod_rule]
+  ::project_context [empty_mod_rule]
+
+cargo_pup_lint_config
+  ::function_lint [empty_mod_rule]
+  ::function_lint::builder [empty_mod_rule]
+  ::function_lint::generate_config [empty_mod_rule]
+
+...
+```
+
+### Step 2: Discover Available Traits
+
+Similarly, we can see what traits our project contains, as well as `struct`s that implement them. 
+
+```bash
+cargo pup print-traits
+```
+
+For instance, running against pup itself we see the core lints as implementors of `ArchitectureLintRule`:
+
+```bash
+...
+
+cargo_pup_lint_impl
+  ::architecture_lint_rule::ArchitectureLintRule []
+    → lints::struct_lint::struct_lint::StructLint
+    → lints::module_lint::module_lint::ModuleLint
+    → lints::function_lint::function_lint::FunctionLint
+
+...
+```
+
+Constraining the implementations of traits can be useful - pup's own lints ensure that all `ArchitectureLintRule` implementors are marked `private` and must be named `.*LintProcessor`. 
+
+### Step 3: Generate a Sample Configuration
+
+To see how the architecture linting itself works, let's create a basic configuration to get started:
+
+```bash
+cargo pup generate-config
+```
+
+This creates a `pup.ron` file with example rules that you can examine and modify containing two basic rules:
+
+* All `mod.rs` files must be empty of anything other than sub-module definitions and use statements
+* Functions shouldn't be longer than 50 lines of code
+
+These are just example rules that are likely to generate some lints for your project, and not at all _prescriptive guidance_! 
+
+### Step 4: Run Your First Lint
+
+With the configuration in place, run cargo pup:
+
+```bash
+cargo pup
+```
+
+You'll see pup analyze your code and report any violations based on the sample rules.
+
+### Step 5: Create Custom Rules with the Builder
+
+Now that you've seen how it works, you probably want to create serious, project-specific rules. Although you could go and edit the `pup.ron` directly, you'd have to do this with reference to pup's own internals and probably won't have a great time. 
+
+Instead, you can use the builder interface, provided in the `cargo_pup_lint_config` package to write architectural assertions in Rust itself.
+
+First, add the following to your `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
 cargo_pup_lint_config = "0.1.1"
 ```
 
-This provides the builder API that you can use in integration tests or build scripts to define and validate your architectural rules.
-
 ## Examples
 
-Here's how to enforce that your API layer doesn't directly access database types:
+Here's how to ensure that your API layer doesn't directly access database types:
 
 ```rust
 use cargo_pup_lint_config::{LintBuilder, LintBuilderExt, ModuleLintExt, Severity};
@@ -85,6 +164,8 @@ builder.write_to_file("pup.ron").expect("Failed to write config");
 
 // Then run: cargo pup 
 ```
+
+To see this in action, check out [test_app](test_app) which uses this style of configuration, and throws a heap of linting errors!
 
 ## How It Works 
 cargo_pup uses `rustc`'s interface to bolt custom, dynamically defined lints into the compilation lifecycle. To do this, much like clippy and other tools that extend the compiler in this fashion, it has to compile your code using rust nightly. The output of this build is discrete from your regular build, and gets hidden in `.pup` within the project directory.
