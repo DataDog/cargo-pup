@@ -1,6 +1,6 @@
 [package]
 name = "cargo_pup_lint_config"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Configuration and rule builder utilities for cargo-pup architectural linting"
 license = "Apache-2.0"
@@ -13,4 +13,4 @@ serde.workspace = true
 ron.workspace = true
 tempfile.workspace = true
 anyhow.workspace = true
-cargo_pup_common = { path = "../cargo_pup_common", version = "0.1.1" }
+cargo_pup_common = { path = "../cargo_pup_common", version = "=0.1.2" }

@@ -24,7 +24,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-cargo_pup_lint_config = "0.1.1"
+cargo_pup_lint_config = "0.1.2"
 ```
 
 ## Example
