@@ -83,7 +83,7 @@ impl ModuleLint {
         for &item_id in module.item_ids.iter() {
             let def_id = item_id.owner_id.to_def_id();
             if let Some(local_def_id) = def_id.as_local() {
-                let item = ctx.tcx.hir().expect_item(local_def_id);
+                let item = ctx.tcx.hir_node_by_def_id(local_def_id).expect_item();
 
                 // If this is a wildcard import, report it
                 if let ItemKind::Use(_, UseKind::Glob) = &item.kind {
@@ -148,8 +148,13 @@ impl ModuleLint {
             }
 
             // Get item name from HIR for error messages
-            let hir = ctx.tcx.hir();
-            let item_name = hir.name(nested_item.hir_id()).to_ident_string();
+            let def_id = nested_item.owner_id.to_def_id();
+            let item_name = if let Some(name) = ctx.tcx.opt_item_name(def_id) {
+                name.to_ident_string()
+            } else {
+                // Fallback for items without names (like impl blocks)
+                format!("<unnamed item at {:?}>", nested_item.span)
+            };
 
             // Check if this is in a mod.rs file (pass to callback so it can decide what to do)
             let is_mod_rs = self.is_mod_rs_file(ctx, &nested_item.span);
@@ -270,7 +275,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
         // Check if the parent module matches our patterns
         if !self.matches_module(&parent_module_path) {
             // Get the full path of the current item for module-specific rules
-            if let ItemKind::Mod(_) = item.kind {
+            if let ItemKind::Mod(_, _) = item.kind {
                 let full_item_path = get_full_module_name(&ctx.tcx, &item.owner_id);
                 // If neither the parent nor the full item path match, return
                 if !self.matches_module(&full_item_path) {
@@ -285,7 +290,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
         for rule in &self.config.rules {
             match rule {
                 ModuleRule::MustBeNamed(pattern, severity) => {
-                    if let ItemKind::Mod(_) = item.kind {
+                    if let ItemKind::Mod(_, _) = item.kind {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         let item_name_str = item_name.to_string();
 
@@ -309,7 +314,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::MustNotBeNamed(pattern, severity) => {
-                    if let ItemKind::Mod(_) = item.kind {
+                    if let ItemKind::Mod(_, _) = item.kind {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
                         let item_name_str = item_name.to_string();
 
@@ -331,7 +336,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::MustNotBeEmpty(severity) => {
-                    if let ItemKind::Mod(module_data) = item.kind {
+                    if let ItemKind::Mod(_, module_data) = item.kind {
                         if module_data.item_ids.is_empty() {
                             span_lint_and_help(
                                 ctx,
@@ -346,7 +351,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::MustBeEmpty(severity) => {
-                    if let ItemKind::Mod(module_data) = item.kind {
+                    if let ItemKind::Mod(_, module_data) = item.kind {
                         let sev = severity; // Use severity in closure
                         self.check_for_disallowed_items(
                             ctx,
@@ -367,7 +372,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::MustHaveEmptyModFile(severity) => {
-                    if let ItemKind::Mod(module_data) = item.kind {
+                    if let ItemKind::Mod(_, module_data) = item.kind {
                         let sev = severity; // Use severity in closure
                         self.check_for_disallowed_items(
                             ctx,
@@ -470,7 +475,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
 
                     // Also check nested modules for wildcard imports
-                    if let ItemKind::Mod(module) = &item.kind {
+                    if let ItemKind::Mod(_, module) = &item.kind {
                         self.check_for_wildcard_imports(ctx, module, *severity);
                     }
                 }
