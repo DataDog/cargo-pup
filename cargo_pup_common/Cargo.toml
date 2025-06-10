@@ -1,6 +1,6 @@
 [package]
 name = "cargo_pup_common"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Common utilities and shared components for cargo-pup architectural linting tool"
 license = "Apache-2.0"
