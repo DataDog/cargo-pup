@@ -116,6 +116,23 @@
             )
         ),
         
+        // Test declarative macro restrictions with DeniedItems rule
+        Module(
+            (
+                name: "no_declarative_macros_allowed",
+                matches: Module("^test_macro_restrictions$"),
+                rules: [
+                    DeniedItems(
+                        items: ["declarative_macro"],
+                        severity: Error,
+                    )
+                ]
+            )
+        ),
+        
+        
+        
+        
         // Test MustHaveEmptyModFile rule - mod.rs files should only contain re-exports
         Module(
             (

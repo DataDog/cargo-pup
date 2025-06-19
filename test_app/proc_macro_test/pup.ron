@@ -1,0 +1,14 @@
+(
+    lints: [
+        Module((
+            name: "proc_macro_restriction_test",
+            matches: Module("^proc_macro_test$"),
+            rules: [
+                DeniedItems(
+                    items: ["proc_macro", "proc_macro_attribute", "proc_macro_derive"],
+                    severity: Warn,
+                ),
+            ],
+        )),
+    ],
+)

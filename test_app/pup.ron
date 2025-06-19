@@ -79,5 +79,15 @@
                 ResultErrorMustImplementError(Warn),
             ],
         )),
+        Module((
+            name: "macro_restriction_test",
+            matches: Module("^test_app::macro_restriction$"),
+            rules: [
+                DeniedItems(
+                    items: ["declarative_macro"],
+                    severity: Warn,
+                ),
+            ],
+        )),
     ],
 )

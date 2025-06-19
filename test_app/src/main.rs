@@ -7,6 +7,7 @@ mod empty_mod;
 mod empty_mod_file;
 mod function_length;
 mod item_type;
+mod macro_restriction;
 mod module_usage;
 mod must_be_empty;
 mod result_error;

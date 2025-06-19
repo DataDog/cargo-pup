@@ -130,6 +130,26 @@ impl ModuleLint {
         }
     }
 
+    fn get_proc_macro_type(&self, ctx: &LateContext<'_>, item: &rustc_hir::Item<'_>) -> Option<&'static str> {
+        if !matches!(item.kind, rustc_hir::ItemKind::Fn { .. }) {
+            return None;
+        }
+
+        let attrs = ctx.tcx.hir_attrs(item.hir_id());
+
+        for attr in attrs {
+            if attr.has_name(rustc_span::sym::proc_macro) {
+                return Some("proc_macro");
+            } else if attr.has_name(rustc_span::sym::proc_macro_attribute) {
+                return Some("proc_macro_attribute");
+            } else if attr.has_name(rustc_span::sym::proc_macro_derive) {
+                return Some("proc_macro_derive");
+            }
+        }
+
+        None
+    }
+
     // Helper function to check for disallowed items in a module and call the callback when found
     fn check_for_disallowed_items<C>(
         &self,
@@ -480,23 +500,35 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::DeniedItems { items, severity } => {
-                    // Get the item type as a string
                     let item_type = match &item.kind {
                         ItemKind::Enum(..) => "enum",
                         ItemKind::Struct(..) => "struct",
                         ItemKind::Trait(..) => "trait",
                         ItemKind::Impl(..) => "impl",
-                        ItemKind::Fn { .. } => "function",
+                        ItemKind::Fn { .. } => {
+                            if let Some(proc_macro_type) = self.get_proc_macro_type(ctx, item) {
+                                proc_macro_type
+                            } else {
+                                "function"
+                            }
+                        },
                         ItemKind::Mod(..) => "module",
                         ItemKind::Static(..) => "static",
                         ItemKind::Const(..) => "const",
                         ItemKind::Union(..) => "union",
+                        ItemKind::Macro(..) => "declarative_macro",
                         _ => "",
                     };
 
-                    // Check if the current item type is in the denied list
                     if !item_type.is_empty() && items.contains(&item_type.to_string()) {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
+                        let display_type = match item_type {
+                            "declarative_macro" => "declarative macro",
+                            "proc_macro" => "proc macro",
+                            "proc_macro_attribute" => "proc macro attribute",
+                            "proc_macro_derive" => "proc macro derive",
+                            other => other,
+                        };
                         span_lint_and_help(
                             ctx,
                             MODULE_DENIED_ITEMS::get_by_severity(*severity),
@@ -504,7 +536,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             item.span,
                             format!(
                                 "{} '{}' is not allowed in this module",
-                                item_type, item_name
+                                display_type, item_name
                             ),
                             None,
                             "Consider moving this item to a different module",

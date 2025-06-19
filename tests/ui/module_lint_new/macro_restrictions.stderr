@@ -1,0 +1,29 @@
+error: declarative macro 'forbidden_declarative_macro' is not allowed in this module
+  --> tests/ui/module_lint_new/macro_restrictions.rs:15:1
+   |
+LL | / macro_rules! forbidden_declarative_macro {
+LL | |     () => {
+LL | |         println!("This declarative macro is forbidden!");
+LL | |     };
+LL | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'no_declarative_macros_allowed'.
+   = note: `#[deny(module_denied_items)]` on by default
+
+error: declarative macro 'another_forbidden_macro' is not allowed in this module
+  --> tests/ui/module_lint_new/macro_restrictions.rs:22:1
+   |
+LL | / macro_rules! another_forbidden_macro {
+LL | |     ($x:expr) => {
+LL | |         println!("Another forbidden macro: {}", $x);
+LL | |     };
+LL | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'no_declarative_macros_allowed'.
+
+error: aborting due to 2 previous errors
+
