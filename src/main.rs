@@ -69,11 +69,12 @@ use cargo_pup_common::cli::{PupArgs, PupCli, PupCommand};
 use ansi_term::Colour::{Blue, Cyan, Green, Red, Yellow};
 use ansi_term::Style;
 use cargo_pup_common::project_context::{PUP_DIR, ProjectContext};
+use cargo_pup_common::workspace::find_workspace_pup_ron;
 use cargo_pup_lint_config::LintBuilder;
 use std::env;
 use std::error::Error;
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, exit};
 
 #[derive(Debug, PartialEq)]
@@ -105,8 +106,11 @@ impl Error for CommandExitStatus {}
 /// Validates the current directory to determine the project type
 fn validate_project(config_path: Option<&str>) -> ProjectType {
     let pup_ron_path = match config_path {
-        Some(path) => Path::new(path),
-        None => Path::new("./pup.ron"),
+        Some(path) => PathBuf::from(path),
+        None => {
+            // Prioritize workspace root pup.ron, fallback to local only if not in workspace
+            find_workspace_pup_ron().unwrap_or_else(|| PathBuf::from("./pup.ron"))
+        }
     };
     let cargo_toml_path = Path::new("./Cargo.toml");
 
@@ -122,6 +126,7 @@ fn validate_project(config_path: Option<&str>) -> ProjectType {
         ProjectType::OtherDirectory
     }
 }
+
 
 fn show_ascii_puppy() {
     println!(
@@ -352,9 +357,11 @@ where
     cmd.arg("run").arg(&toolchain).arg("cargo");
 
     // Set up environment variables
+    let current_dir = env::current_dir().map_err(|_| CommandExitStatus(1))?;
     cmd.env("RUSTC_WORKSPACE_WRAPPER", get_pup_path())
         .env("PUP_CLI_ARGS", cli_args)
         .env("PUP_CARGO_ARGS", cargo_args_str)
+        .env("PUP_ORIGINAL_DIR", current_dir.to_str().unwrap())
         .arg("check")
         .arg("--target-dir")
         .arg(".pup");

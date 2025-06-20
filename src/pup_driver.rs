@@ -18,6 +18,7 @@ extern crate rustc_trait_selection;
 
 use anyhow::Result;
 use cargo_pup_common::cli::{PupCli, PupCommand};
+use cargo_pup_common::workspace::find_workspace_pup_ron;
 
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{
@@ -30,6 +31,7 @@ use std::{
 };
 use cargo_pup_lint_impl::{ArchitectureLintCollection, ArchitectureLintRunner, Mode};
 use cargo_pup_lint_impl::lints::configuration_factory::LintConfigurationFactory;
+
 
 pub fn main() -> Result<()> {
 
@@ -124,13 +126,22 @@ pub fn main() -> Result<()> {
             PupCli::from_env_str(cli_args)
         };
         
-        let cwd = env::current_dir()?;
-        let config_path = if let Some(path) = cli_config.config_path {
-            // Use provided config path
-            PathBuf::from(path)
+        let original_dir = if let Ok(original_dir) = env::var("PUP_ORIGINAL_DIR") {
+            PathBuf::from(original_dir)
         } else {
-            // Default to pup.ron in current directory
-            cwd.join("pup.ron")
+            env::current_dir()?
+        };
+        
+        let config_path = if let Some(path) = cli_config.config_path {
+            // Use provided config path, resolve relative to original directory
+            if Path::new(&path).is_absolute() {
+                PathBuf::from(path)
+            } else {
+                original_dir.join(path)
+            }
+        } else {
+            // Default to workspace root pup.ron, fallback to local only if not in workspace
+            find_workspace_pup_ron().unwrap_or_else(|| original_dir.join("pup.ron"))
         };
         
         if config_path.exists() {

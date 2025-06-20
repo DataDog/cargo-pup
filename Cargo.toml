@@ -26,12 +26,14 @@ anyhow = "1.0.95"
 regex = "1.11.1"
 tempfile = "3.14.0"
 ron = "0.8.1"
+cargo_metadata = "0.18"
 
 [dependencies]
 ansi_term = "0.12.1"
 anyhow = { workspace = true }
 tempfile = { workspace = true }
 ron = { workspace = true }
+cargo_metadata = { workspace = true }
 cargo_pup_common = { path = "cargo_pup_common", version = "0.1.1" }
 cargo_pup_lint_impl = { path = "cargo_pup_lint_impl", version = "0.1.1" }
 cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "0.1.1" }
