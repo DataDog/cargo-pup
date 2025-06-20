@@ -1,6 +1,12 @@
 # cargo_pup_common
 
-Common utilities and shared components for the cargo-pup architectural linting tool.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_light.png">
+  <img alt="cargo_pup logo" src="https://raw.githubusercontent.com/DataDog/cargo-pup/main/docs/pup_light.png" width="250">
+</picture>
+
+Common utilities and shared components for the [cargo-pup architectural linting](https://github.com/datadog/cargo-pup) tool.
 
 This crate provides foundational types, CLI utilities, and project context management that are shared across the cargo-pup ecosystem.
 
