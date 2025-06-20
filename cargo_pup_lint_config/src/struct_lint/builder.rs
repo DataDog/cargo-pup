@@ -51,7 +51,7 @@ impl<'a> StructNamedBuilder<'a> {
     }
 
     /// Define struct matching using the fluent DSL
-    /// 
+    ///
     /// # Example
     /// ```
     /// use cargo_pup_lint_config::{LintBuilder, StructLintExt};

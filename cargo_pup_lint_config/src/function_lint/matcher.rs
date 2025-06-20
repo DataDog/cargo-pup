@@ -3,7 +3,7 @@
 use super::types::{FunctionMatch, ReturnTypePattern};
 
 /// Fluent interface for creating function matchers
-/// 
+///
 /// Used with the `matching()` method to create complex function matching criteria
 pub struct FunctionMatcher;
 
@@ -63,7 +63,7 @@ impl FunctionMatcher {
 }
 
 /// Node in the matcher expression tree
-/// 
+///
 /// You can combine these nodes with logical operations (.and(), .or(), .not())
 #[derive(Clone)]
 pub enum FunctionMatchNode {
@@ -113,7 +113,7 @@ impl FunctionMatchNode {
 }
 
 /// Helper function that converts a matcher DSL expression to a FunctionMatch
-/// 
+///
 /// This is used internally by the builder API and typically not called directly
 pub fn matcher<F>(f: F) -> FunctionMatch
 where

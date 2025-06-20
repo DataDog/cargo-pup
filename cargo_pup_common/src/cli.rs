@@ -147,7 +147,7 @@ mod tests {
         let args = parse_args(&["cargo-pup", "check"]);
         assert_eq!(args.command, PupCommand::Check);
         assert!(args.cargo_args.is_empty());
-        
+
         // Test generate-config command
         let args = parse_args(&["cargo-pup", "generate-config"]);
         assert_eq!(args.command, PupCommand::GenerateConfig);
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(args.command, PupCommand::PrintModules);
         assert_eq!(args.cargo_args, vec!["--features=foo"]);
     }
-    
+
     #[test]
     fn test_pup_config_argument() {
         // Test with --pup-config argument
@@ -195,13 +195,19 @@ mod tests {
         assert_eq!(args.command, PupCommand::Check);
         assert_eq!(args.config_path, Some("/tmp/pup.ron".to_string()));
         assert!(args.cargo_args.is_empty());
-        
+
         // Test with cargo args along with --pup-config
-        let args = parse_args(&["cargo-pup", "check", "--pup-config", "/tmp/pup.ron", "--features=foo"]);
+        let args = parse_args(&[
+            "cargo-pup",
+            "check",
+            "--pup-config",
+            "/tmp/pup.ron",
+            "--features=foo",
+        ]);
         assert_eq!(args.command, PupCommand::Check);
         assert_eq!(args.config_path, Some("/tmp/pup.ron".to_string()));
         assert_eq!(args.cargo_args, vec!["--features=foo"]);
-        
+
         // Test via cargo pup
         let args = parse_args(&["cargo", "pup", "check", "--pup-config", "/tmp/pup.ron"]);
         assert_eq!(args.command, PupCommand::Check);

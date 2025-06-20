@@ -85,13 +85,13 @@ impl LintBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
+    use crate::function_lint::FunctionLintExt;
     use crate::module_lint::ModuleLintExt;
     use crate::struct_lint::StructLintExt;
-    use crate::function_lint::FunctionLintExt;
+    use crate::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
     use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo};
     use tempfile::NamedTempFile;
-    
+
     // Helper function that creates a standard module matcher for tests
     fn create_standard_module_matcher() -> LintBuilder {
         let mut builder = LintBuilder::new();
@@ -109,7 +109,7 @@ mod tests {
             .build();
         builder
     }
-    
+
     // Helper function to verify default severity
     fn assert_default_severity(severity: &Severity) {
         assert_eq!(severity, &Severity::Warn, "Default severity should be Warn");
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn test_write_to_file() {
         let builder = create_standard_module_matcher();
-        
+
         let temp_file = NamedTempFile::new().unwrap();
         let temp_path = temp_file.path();
 
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_read_from_file() {
         let builder = create_standard_module_matcher();
-        
+
         let temp_file = NamedTempFile::new().unwrap();
         let temp_path = temp_file.path();
 
@@ -327,11 +327,16 @@ mod tests {
             .count();
 
         // Verify we have at least some lints
-        assert!(!builder.lints.is_empty(), "Builder should contain at least some lints");
-        
+        assert!(
+            !builder.lints.is_empty(),
+            "Builder should contain at least some lints"
+        );
+
         // Log the lint types for debugging
-        println!("Found {} module lints, {} struct lints, {} function lints", 
-                 module_lints, struct_lints, function_lints);
+        println!(
+            "Found {} module lints, {} struct lints, {} function lints",
+            module_lints, struct_lints, function_lints
+        );
     }
 
     #[test]

@@ -142,6 +142,7 @@ version = "0.1.2"
 dependencies = [
  "ansi_term",
  "anyhow",
+ "cargo_metadata",
  "cargo_pup_common",
  "cargo_pup_lint_config",
  "cargo_pup_lint_impl",
@@ -159,6 +160,7 @@ name = "cargo_pup_common"
 version = "0.1.2"
 dependencies = [
  "anyhow",
+ "cargo_metadata",
  "serde",
  "serde_json",
  "tempfile",

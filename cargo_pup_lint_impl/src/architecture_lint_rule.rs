@@ -28,7 +28,7 @@ pub trait ArchitectureLintRule: Sync + Send {
     /// This is used to annotate the diagnostic tree of `cargo pup print-namespaces` to indicate
     /// which rules applies to a particular
     fn applies_to_module(&self, namespace: &str) -> bool;
-    
+
     ///
     /// Returns true if the given lint applies to the particular trait, false
     /// otherwise. A lint only applies to a trait if it is directly constraining
@@ -41,6 +41,6 @@ pub trait ArchitectureLintRule: Sync + Send {
         // Default implementation: no lints apply to traits by default
         false
     }
-    
+
     fn register_late_pass(&self, _lint_store: &mut LintStore) {}
 }

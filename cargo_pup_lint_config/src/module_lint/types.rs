@@ -1,7 +1,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
-use serde::{Deserialize, Serialize};
 use crate::Severity;
+use serde::{Deserialize, Serialize};
 
 /// Specifies how to match modules for linting
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -57,4 +57,3 @@ pub enum ModuleRule {
     /// Logical NOT - inverts the rule check
     Not(Box<ModuleRule>),
 }
-

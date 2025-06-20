@@ -36,7 +36,7 @@ macro_rules! declare_variable_severity_lint {
         // underscores between segments
         #[allow(non_camel_case_types)]
         $vis struct $NAME;
-        
+
         impl $NAME {
             /// Get the appropriate lint based on severity
             pub fn get_by_severity(severity: cargo_pup_lint_config::Severity) -> &'static rustc_session::lint::Lint {

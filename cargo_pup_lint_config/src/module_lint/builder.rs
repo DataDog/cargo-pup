@@ -51,7 +51,7 @@ impl<'a> ModuleNamedBuilder<'a> {
     }
 
     /// Define module matching using the fluent DSL
-    /// 
+    ///
     /// # Example
     /// ```
     /// use cargo_pup_lint_config::{LintBuilder, ModuleLintExt};
@@ -134,7 +134,7 @@ impl<'a> ModuleConstraintBuilder<'a> {
     }
 
     /// Add a rule to restrict imports by specifying allowed/denied modules
-    /// 
+    ///
     /// @param allowed_only - If provided, only these imports are allowed
     /// @param denied - If provided, these imports are explicitly prohibited
     pub fn restrict_imports(

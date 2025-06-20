@@ -4,8 +4,8 @@ use crate::ArchitectureLintRule;
 use crate::declare_variable_severity_lint;
 use crate::helpers::lint_helpers::span_lint_and_help;
 use crate::helpers::queries::get_full_module_name;
-use cargo_pup_lint_config::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
 use cargo_pup_lint_config::module_lint::ModuleLint as ConfigModuleLint;
+use cargo_pup_lint_config::{ConfiguredLint, ModuleMatch, ModuleRule, Severity};
 use regex::Regex;
 use rustc_hir::{Item, ItemKind, UseKind};
 use rustc_lint::{LateContext, LateLintPass, LintContext, LintStore};
@@ -128,6 +128,30 @@ impl ModuleLint {
         } else {
             false
         }
+    }
+
+    fn get_proc_macro_type(
+        &self,
+        ctx: &LateContext<'_>,
+        item: &rustc_hir::Item<'_>,
+    ) -> Option<&'static str> {
+        if !matches!(item.kind, rustc_hir::ItemKind::Fn { .. }) {
+            return None;
+        }
+
+        let attrs = ctx.tcx.hir_attrs(item.hir_id());
+
+        for attr in attrs {
+            if attr.has_name(rustc_span::sym::proc_macro) {
+                return Some("proc_macro");
+            } else if attr.has_name(rustc_span::sym::proc_macro_attribute) {
+                return Some("proc_macro_attribute");
+            } else if attr.has_name(rustc_span::sym::proc_macro_derive) {
+                return Some("proc_macro_derive");
+            }
+        }
+
+        None
     }
 
     // Helper function to check for disallowed items in a module and call the callback when found
@@ -261,7 +285,7 @@ impl ArchitectureLintRule for ModuleLint {
         lint_store.register_late_pass(move |_| {
             // Create a new instance of ModuleLint to be used as LateLintPass
             Box::new(ModuleLint {
-                config: config_clone.clone()
+                config: config_clone.clone(),
             })
         });
     }
@@ -320,8 +344,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                         // Check if module name matches the pattern (which it shouldn't)
                         if self.string_matches_pattern(&item_name_str, pattern) {
-                            let message =
-                                format!("Module must not match pattern '{}'", pattern);
+                            let message = format!("Module must not match pattern '{}'", pattern);
 
                             span_lint_and_help(
                                 ctx,
@@ -394,7 +417,11 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         );
                     }
                 }
-                ModuleRule::RestrictImports { allowed_only, denied, severity } => {
+                ModuleRule::RestrictImports {
+                    allowed_only,
+                    denied,
+                    severity,
+                } => {
                     if let ItemKind::Use(path, _) = &item.kind {
                         let import_path: Vec<_> = path
                             .segments
@@ -480,23 +507,35 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::DeniedItems { items, severity } => {
-                    // Get the item type as a string
                     let item_type = match &item.kind {
                         ItemKind::Enum(..) => "enum",
                         ItemKind::Struct(..) => "struct",
                         ItemKind::Trait(..) => "trait",
                         ItemKind::Impl(..) => "impl",
-                        ItemKind::Fn { .. } => "function",
+                        ItemKind::Fn { .. } => {
+                            if let Some(proc_macro_type) = self.get_proc_macro_type(ctx, item) {
+                                proc_macro_type
+                            } else {
+                                "function"
+                            }
+                        }
                         ItemKind::Mod(..) => "module",
                         ItemKind::Static(..) => "static",
                         ItemKind::Const(..) => "const",
                         ItemKind::Union(..) => "union",
+                        ItemKind::Macro(..) => "declarative_macro",
                         _ => "",
                     };
 
-                    // Check if the current item type is in the denied list
                     if !item_type.is_empty() && items.contains(&item_type.to_string()) {
                         let item_name = ctx.tcx.item_name(item.owner_id.def_id.to_def_id());
+                        let display_type = match item_type {
+                            "declarative_macro" => "declarative macro",
+                            "proc_macro" => "proc macro",
+                            "proc_macro_attribute" => "proc macro attribute",
+                            "proc_macro_derive" => "proc macro derive",
+                            other => other,
+                        };
                         span_lint_and_help(
                             ctx,
                             MODULE_DENIED_ITEMS::get_by_severity(*severity),
@@ -504,7 +543,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             item.span,
                             format!(
                                 "{} '{}' is not allowed in this module",
-                                item_type, item_name
+                                display_type, item_name
                             ),
                             None,
                             "Consider moving this item to a different module",

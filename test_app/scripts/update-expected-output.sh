@@ -7,5 +7,5 @@ PATHS=""
 export PATH="${PATHS}$PATH"
 
 pushd "$(dirname "$0")/../" > /dev/null
-cargo pup 2>&1 | grep -v 'Finished' | grep -vE '^\s*Checking .* \(\/Users\/.*\)' > expected_output
+cargo pup 2>&1 | grep -v 'Finished' | grep -vE '^\s*Checking .* \(\/.*\)' | grep -vE '^\s*Compiling .* \(\/.*\)' > expected_output
 popd > /dev/null

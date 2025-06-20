@@ -1,5 +1,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
+use crate::ArchitectureLintCollection;
+use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo};
 use rustc_driver::Callbacks;
 use rustc_hir::ItemKind;
 use rustc_hir::def_id::LocalModDefId;
@@ -7,8 +9,6 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 use std::sync::Arc;
 use std::{collections::BTreeSet, path::Path};
-use cargo_pup_common::project_context::{ModuleInfo, ProjectContext, TraitInfo};
-use crate::ArchitectureLintCollection;
 
 ///
 /// The mode our lint runner should operate in
@@ -114,7 +114,10 @@ impl ArchitectureLintRunner {
                 }
 
                 // Set a simple success message
-                self.result_text = format!("Project context successfully generated for crate {}", context.module_root);
+                self.result_text = format!(
+                    "Project context successfully generated for crate {}",
+                    context.module_root
+                );
                 Ok(())
             }
         }
@@ -243,7 +246,6 @@ impl ArchitectureLintRunner {
 
         Ok(context)
     }
-
 }
 
 ///

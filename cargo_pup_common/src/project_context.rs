@@ -69,7 +69,7 @@ impl ProjectContext {
             base_dir: PathBuf::from(PUP_DIR),
         }
     }
-    
+
     /// Creates a new empty project context with a custom base directory
     pub fn with_base_dir(dir_path: impl AsRef<Path>) -> Self {
         Self {
@@ -79,21 +79,18 @@ impl ProjectContext {
             base_dir: dir_path.as_ref().to_path_buf(),
         }
     }
-    
+
     /// Creates a project context with provided data and default base directory (.pup)
-    pub fn with_data(
-        modules: Vec<String>, 
-        module_root: String, 
-        traits: Vec<TraitInfo>
-    ) -> Self {
+    pub fn with_data(modules: Vec<String>, module_root: String, traits: Vec<TraitInfo>) -> Self {
         // Convert string modules to ModuleInfo
-        let module_infos = modules.into_iter()
-            .map(|name| ModuleInfo { 
-                name, 
-                applicable_lints: Vec::new() 
+        let module_infos = modules
+            .into_iter()
+            .map(|name| ModuleInfo {
+                name,
+                applicable_lints: Vec::new(),
             })
             .collect();
-            
+
         Self {
             modules: module_infos,
             module_root,
@@ -101,22 +98,23 @@ impl ProjectContext {
             base_dir: PathBuf::from(PUP_DIR),
         }
     }
-    
+
     /// Creates a project context with provided data and a custom base directory
     pub fn with_data_and_base_dir(
-        modules: Vec<String>, 
-        module_root: String, 
+        modules: Vec<String>,
+        module_root: String,
         traits: Vec<TraitInfo>,
-        dir_path: impl AsRef<Path>
+        dir_path: impl AsRef<Path>,
     ) -> Self {
         // Convert string modules to ModuleInfo
-        let module_infos = modules.into_iter()
-            .map(|name| ModuleInfo { 
-                name, 
-                applicable_lints: Vec::new() 
+        let module_infos = modules
+            .into_iter()
+            .map(|name| ModuleInfo {
+                name,
+                applicable_lints: Vec::new(),
             })
             .collect();
-            
+
         Self {
             modules: module_infos,
             module_root,
@@ -135,8 +133,10 @@ impl ProjectContext {
         }
 
         // Ensure the base directory exists
-        fs::create_dir_all(&self.base_dir)
-            .context(format!("Failed to create directory: {}", self.base_dir.display()))?;
+        fs::create_dir_all(&self.base_dir).context(format!(
+            "Failed to create directory: {}",
+            self.base_dir.display()
+        ))?;
 
         // Create a predictable filename using just the crate name
         let filename = format!("{}{}", self.module_root, CONTEXT_FILE_SUFFIX);
@@ -176,7 +176,10 @@ impl ProjectContext {
     /// along with a list of all crate names that were found
     pub fn load_all_contexts_from_dir(dir_path: &Path) -> Result<(ProjectContext, Vec<String>)> {
         if !dir_path.exists() {
-            return Err(anyhow::anyhow!("Directory not found: {}", dir_path.display()));
+            return Err(anyhow::anyhow!(
+                "Directory not found: {}",
+                dir_path.display()
+            ));
         }
 
         // Create aggregated context with the specified base directory
@@ -235,8 +238,10 @@ impl ProjectContext {
             return Ok(()); // Nothing to clean if directory doesn't exist
         }
 
-        let entries = fs::read_dir(&self.base_dir)
-            .context(format!("Failed to read directory: {}", self.base_dir.display()))?;
+        let entries = fs::read_dir(&self.base_dir).context(format!(
+            "Failed to read directory: {}",
+            self.base_dir.display()
+        ))?;
 
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
@@ -334,7 +339,7 @@ mod tests {
         assert_eq!(deserialized.modules[0].applicable_lints.len(), 2);
         assert_eq!(deserialized.modules[1].name, "test_crate::module2");
         assert_eq!(deserialized.modules[1].applicable_lints.len(), 1);
-        
+
         assert_eq!(deserialized.traits.len(), 1);
         assert_eq!(deserialized.traits[0].name, "test_crate::Trait1");
         assert_eq!(deserialized.traits[0].implementors.len(), 2);
@@ -346,12 +351,10 @@ mod tests {
     fn test_serialize_empty_module_root_error() {
         // Create a context with empty module_root
         let mut context = ProjectContext::new();
-        context.modules = vec![
-            ModuleInfo {
-                name: "test::module".to_string(),
-                applicable_lints: vec![],
-            }
-        ];
+        context.modules = vec![ModuleInfo {
+            name: "test::module".to_string(),
+            applicable_lints: vec![],
+        }];
 
         // This doesn't actually try to write to a file, just checks the validation logic
         let result = context.serialize_to_file();
@@ -367,25 +370,16 @@ mod tests {
     #[test]
     fn test_with_data_conversion() {
         // Test that the with_data method properly converts strings to ModuleInfo
-        let modules = vec![
-            "crate1::module1".to_string(),
-            "crate1::module2".to_string(),
-        ];
-        
-        let traits = vec![
-            TraitInfo {
-                name: "crate1::Trait1".to_string(),
-                implementors: vec!["Type1".to_string()],
-                applicable_lints: vec![],
-            }
-        ];
-        
-        let context = ProjectContext::with_data(
-            modules.clone(),
-            "crate1".to_string(),
-            traits
-        );
-        
+        let modules = vec!["crate1::module1".to_string(), "crate1::module2".to_string()];
+
+        let traits = vec![TraitInfo {
+            name: "crate1::Trait1".to_string(),
+            implementors: vec!["Type1".to_string()],
+            applicable_lints: vec![],
+        }];
+
+        let context = ProjectContext::with_data(modules.clone(), "crate1".to_string(), traits);
+
         assert_eq!(context.modules.len(), 2);
         assert_eq!(context.modules[0].name, modules[0]);
         assert_eq!(context.modules[1].name, modules[1]);
@@ -396,11 +390,11 @@ mod tests {
     #[test]
     fn roundtrip_through_files() {
         use tempfile::TempDir;
-        
+
         // Create a test-specific temp directory
         let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let test_dir_path = temp_dir.path();
-        
+
         // Create first context with custom base directory
         let mut context1 = ProjectContext::with_base_dir(test_dir_path);
         context1.module_root = "crate1".to_string();
@@ -414,17 +408,15 @@ mod tests {
                 applicable_lints: vec!["lint2".to_string()],
             },
         ];
-        context1.traits = vec![
-            TraitInfo {
-                name: "crate1::Trait1".to_string(),
-                implementors: vec!["crate1::Type1".to_string()],
-                applicable_lints: vec!["lint3".to_string()],
-            }
-        ];
+        context1.traits = vec![TraitInfo {
+            name: "crate1::Trait1".to_string(),
+            implementors: vec!["crate1::Type1".to_string()],
+            applicable_lints: vec!["lint3".to_string()],
+        }];
 
         // Create second context with same custom base directory
         let mut context2 = ProjectContext::with_base_dir(test_dir_path);
-        context2.module_root = "crate2".to_string(); 
+        context2.module_root = "crate2".to_string();
         context2.modules = vec![
             ModuleInfo {
                 name: "crate2::moduleA".to_string(),
@@ -435,68 +427,80 @@ mod tests {
                 applicable_lints: vec!["lintB".to_string()],
             },
         ];
-        context2.traits = vec![
-            TraitInfo {
-                name: "crate2::TraitX".to_string(),
-                implementors: vec!["crate2::TypeX".to_string()],
-                applicable_lints: vec!["lintX".to_string()],
-            }
-        ];
-        
+        context2.traits = vec![TraitInfo {
+            name: "crate2::TraitX".to_string(),
+            implementors: vec!["crate2::TypeX".to_string()],
+            applicable_lints: vec!["lintX".to_string()],
+        }];
+
         // Serialize both contexts to the temp directory
-        let file1 = context1.serialize_to_file().expect("Failed to serialize context1");
-        let file2 = context2.serialize_to_file().expect("Failed to serialize context2");
+        let file1 = context1
+            .serialize_to_file()
+            .expect("Failed to serialize context1");
+        let file2 = context2
+            .serialize_to_file()
+            .expect("Failed to serialize context2");
 
         // Verify files exist
         assert!(file1.exists(), "Context file 1 should exist");
         assert!(file2.exists(), "Context file 2 should exist");
 
         // Load all contexts back from our test directory
-        let (loaded_context, crate_names) = ProjectContext::load_all_contexts_from_dir(test_dir_path)
-            .expect("Failed to load contexts");
+        let (loaded_context, crate_names) =
+            ProjectContext::load_all_contexts_from_dir(test_dir_path)
+                .expect("Failed to load contexts");
 
         // Validate the loaded context
         // Should have a valid module root
-        assert!(!loaded_context.module_root.is_empty(), "Module root should not be empty");
-        
+        assert!(
+            !loaded_context.module_root.is_empty(),
+            "Module root should not be empty"
+        );
+
         // Should contain all modules from both contexts
         assert_eq!(loaded_context.modules.len(), 4, "Should have all 4 modules");
-        
+
         // Check modules by name
-        let module_names: Vec<String> = loaded_context.modules.iter()
+        let module_names: Vec<String> = loaded_context
+            .modules
+            .iter()
             .map(|m| m.name.clone())
             .collect();
         assert!(module_names.contains(&"crate1::module1".to_string()));
         assert!(module_names.contains(&"crate1::module2".to_string()));
         assert!(module_names.contains(&"crate2::moduleA".to_string()));
         assert!(module_names.contains(&"crate2::moduleB".to_string()));
-        
+
         // Should have both traits
         assert_eq!(loaded_context.traits.len(), 2, "Should have both traits");
-        
+
         // Verify first trait exists
-        let trait1 = loaded_context.traits.iter()
+        let trait1 = loaded_context
+            .traits
+            .iter()
             .find(|t| t.name == "crate1::Trait1")
             .expect("Should find first trait");
         assert_eq!(trait1.implementors.len(), 1);
         assert_eq!(trait1.implementors[0], "crate1::Type1");
         assert_eq!(trait1.applicable_lints.len(), 1);
         assert_eq!(trait1.applicable_lints[0], "lint3");
-        
+
         // Verify second trait exists
-        let trait2 = loaded_context.traits.iter()
+        let trait2 = loaded_context
+            .traits
+            .iter()
             .find(|t| t.name == "crate2::TraitX")
             .expect("Should find second trait");
         assert_eq!(trait2.implementors.len(), 1);
         assert_eq!(trait2.implementors[0], "crate2::TypeX");
         assert_eq!(trait2.applicable_lints.len(), 1);
         assert_eq!(trait2.applicable_lints[0], "lintX");
-        
+
         // Verify both crate names were detected
         assert_eq!(crate_names.len(), 2, "Should have found 2 crate names");
         assert!(crate_names.contains(&"crate1".to_string()));
         assert!(crate_names.contains(&"crate2".to_string()));
-        
+
         // temp_dir will be automatically cleaned up when it goes out of scope
     }
 }
