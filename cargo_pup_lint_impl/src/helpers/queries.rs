@@ -3,7 +3,7 @@
 use rustc_hir::OwnerId;
 use rustc_hir::def_id::DefId;
 use rustc_infer::infer::TyCtxtInferExt;
-use rustc_middle::ty::visit::TypeVisitableExt;
+use rustc_type_ir::TypeVisitableExt;
 use rustc_middle::ty::{self, ParamEnv, Ty, TyCtxt, TypingMode};
 use rustc_span::symbol::sym;
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
@@ -41,7 +41,7 @@ pub fn implements_trait<'tcx>(
     // If we have certain complex types, we can't use TypingMode::Coherence
     // at this point, so fall back to TypingMode::Analysis.
     // The ui-test test projection_type_reproduce.rs covers this.
-    let is_complex = ty.has_infer()
+    let is_complex = ty.has_infer_types()
         || ty.has_opaque_types()
         || ty.walk().any(|t| {
             if let Some(ty) = t.as_type() {
@@ -57,7 +57,7 @@ pub fn implements_trait<'tcx>(
 
     let infcx = if is_complex {
         tcx.infer_ctxt().build(TypingMode::Analysis {
-            defining_opaque_types: Default::default(),
+            defining_opaque_types_and_generators: Default::default(),
         })
     } else {
         tcx.infer_ctxt().build(TypingMode::Coherence)
