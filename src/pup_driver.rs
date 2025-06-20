@@ -103,7 +103,7 @@ pub fn main() -> Result<()> {
                 Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
                 Err(e) => {
                     // In UI tests, print detailed error messages about configuration issues
-                    panic!("UI TEST ERROR: Failed to parse pup.ron: {}", e);
+                    panic!("UI TEST ERROR: Failed to parse pup.ron: {e}");
                 }
             }
         } else {
@@ -170,7 +170,7 @@ pub fn main() -> Result<()> {
     if mode != Mode::GenerateConfig {
         let results_text = runner.lint_results_text();
         if !results_text.is_empty() {
-            eprintln!("{0}", results_text);
+            eprintln!("{results_text}");
         }
     }
 
@@ -192,16 +192,16 @@ fn find_sysroot() -> String {
         return sysroot;
     }
 
-    if let Ok(rustup_home) = env::var("RUSTUP_HOME") {
-        if let Ok(toolchain) = env::var("RUSTUP_TOOLCHAIN") {
-            return format!("{rustup_home}/toolchains/{toolchain}");
-        }
+    if let Ok(rustup_home) = env::var("RUSTUP_HOME")
+        && let Ok(toolchain) = env::var("RUSTUP_TOOLCHAIN")
+    {
+        return format!("{rustup_home}/toolchains/{toolchain}");
     }
 
-    if let Ok(output) = Command::new("rustc").arg("--print").arg("sysroot").output() {
-        if output.status.success() {
-            return String::from_utf8(output.stdout).expect("Invalid UTF-8 in sysroot output");
-        }
+    if let Ok(output) = Command::new("rustc").arg("--print").arg("sysroot").output()
+        && output.status.success()
+    {
+        return String::from_utf8(output.stdout).expect("Invalid UTF-8 in sysroot output");
     }
 
     panic!("Could not determine sysroot.");
@@ -233,7 +233,7 @@ fn log_invocation(orig_args: &[String]) -> std::io::Result<()> {
         .append(true)
         .open(&log_path)?;
 
-    writeln!(file, "[{}] {}", timestamp, args_str)?;
+    writeln!(file, "[{timestamp}] {args_str}")?;
 
     Ok(())
 }

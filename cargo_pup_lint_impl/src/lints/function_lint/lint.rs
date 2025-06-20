@@ -116,21 +116,21 @@ fn evaluate_function_match(
                         let path = ctx.tcx.def_path_str(adt_def.did());
 
                         // Try to match the simple name at the end of the path
-                        if path.ends_with(&format!("::{}", name)) || path == *name {
+                        if path.ends_with(&name.to_string()) || path == *name {
                             return true;
                         }
 
                         // Extract the type name without module path
-                        if let Some(last_segment) = path.split("::").last() {
-                            if last_segment == *name {
-                                return true;
-                            }
+                        if let Some(last_segment) = path.split("::").last()
+                            && last_segment == *name
+                        {
+                            return true;
                         }
                     }
 
                     // Fallback: use the string representation
                     let type_string = return_ty.to_string();
-                    type_string == *name || type_string.ends_with(&format!("::{}", name))
+                    type_string == *name || type_string.ends_with(&name.to_string())
                 }
                 ReturnTypePattern::Regex(regex_pattern) => {
                     // Try to compile and use the regex pattern
@@ -223,27 +223,27 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                         let body = ctx.tcx.hir_body(body);
                         let source_map = ctx.tcx.sess.source_map();
 
-                        if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
-                            if file_lines.lines.len() > *max_lines {
-                                // Create a span that only covers the function signature
-                                let sig_span = item.span.with_hi(
-                                    item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
-                                );
+                        if let Ok(file_lines) = source_map.span_to_lines(body.value.span)
+                            && file_lines.lines.len() > *max_lines
+                        {
+                            // Create a span that only covers the function signature
+                            let sig_span = item.span.with_hi(
+                                item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
+                            );
 
-                                span_lint_and_help(
-                                    ctx,
-                                    FUNCTION_LINT::get_by_severity(*severity),
-                                    self.name().as_str(),
-                                    sig_span,
-                                    format!(
-                                        "Function exceeds maximum length of {} lines with {} lines",
-                                        max_lines,
-                                        file_lines.lines.len()
-                                    ),
-                                    None,
-                                    "Consider breaking this function into smaller parts",
-                                );
-                            }
+                            span_lint_and_help(
+                                ctx,
+                                FUNCTION_LINT::get_by_severity(*severity),
+                                self.name().as_str(),
+                                sig_span,
+                                format!(
+                                    "Function exceeds maximum length of {} lines with {} lines",
+                                    max_lines,
+                                    file_lines.lines.len()
+                                ),
+                                None,
+                                "Consider breaking this function into smaller parts",
+                            );
                         }
                     }
                     FunctionRule::ResultErrorMustImplementError(severity) => {
@@ -275,8 +275,7 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                                         self.name().as_str(),
                                         sig_span,
                                         format!(
-                                            "Error type '{}' in Result does not implement Error trait",
-                                            error_type_name
+                                            "Error type '{error_type_name}' in Result does not implement Error trait"
                                         ),
                                         None,
                                         "Consider implementing the Error trait for this type or using a type that already implements it",
@@ -312,27 +311,27 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                         let body = ctx.tcx.hir_body(*body_id);
                         let source_map = ctx.tcx.sess.source_map();
 
-                        if let Ok(file_lines) = source_map.span_to_lines(body.value.span) {
-                            if file_lines.lines.len() > *max_lines {
-                                // Create a span that only covers the method signature
-                                let sig_span = impl_item.span.with_hi(
-                                    impl_item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
-                                );
+                        if let Ok(file_lines) = source_map.span_to_lines(body.value.span)
+                            && file_lines.lines.len() > *max_lines
+                        {
+                            // Create a span that only covers the method signature
+                            let sig_span = impl_item.span.with_hi(
+                                impl_item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
+                            );
 
-                                span_lint_and_help(
-                                    ctx,
-                                    FUNCTION_LINT::get_by_severity(*severity),
-                                    self.name().as_str(),
-                                    sig_span,
-                                    format!(
-                                        "Function exceeds maximum length of {} lines with {} lines",
-                                        max_lines,
-                                        file_lines.lines.len()
-                                    ),
-                                    None,
-                                    "Consider breaking this function into smaller parts",
-                                );
-                            }
+                            span_lint_and_help(
+                                ctx,
+                                FUNCTION_LINT::get_by_severity(*severity),
+                                self.name().as_str(),
+                                sig_span,
+                                format!(
+                                    "Function exceeds maximum length of {} lines with {} lines",
+                                    max_lines,
+                                    file_lines.lines.len()
+                                ),
+                                None,
+                                "Consider breaking this function into smaller parts",
+                            );
                         }
                     }
                     FunctionRule::ResultErrorMustImplementError(severity) => {
@@ -364,8 +363,7 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                                         self.name().as_str(),
                                         sig_span,
                                         format!(
-                                            "Error type '{}' in Result does not implement Error trait",
-                                            error_type_name
+                                            "Error type '{error_type_name}' in Result does not implement Error trait"
                                         ),
                                         None,
                                         "Consider implementing the Error trait for this type or using a type that already implements it",

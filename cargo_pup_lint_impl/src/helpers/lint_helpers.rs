@@ -32,6 +32,6 @@ pub fn span_lint_and_help<T: LintContext>(
         } else {
             diag.help(help.into());
         }
-        diag.note(format!("Applied by cargo-pup rule '{}'.", rule_name));
+        diag.note(format!("Applied by cargo-pup rule '{rule_name}'."));
     });
 }

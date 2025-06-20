@@ -262,7 +262,7 @@ pub fn main() {
 
             // Then load and display the generated data
             if let Err(e) = process_print_modules() {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
                 exit(1);
             }
         }
@@ -274,7 +274,7 @@ pub fn main() {
 
             // Then load and display the generated data
             if let Err(e) = process_print_traits() {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
                 exit(1);
             }
         }
@@ -314,10 +314,7 @@ where
         if (target_filename == "pup.ron" && pup_ron_exists)
             || (target_filename == "pup.generated.ron" && pup_generated_ron_exists)
         {
-            println!(
-                "Error: {} already exists in the project root.",
-                target_filename
-            );
+            println!("Error: {target_filename} already exists in the project root.");
             println!("Remove this file if you want to regenerate the configuration.");
             return Err(CommandExitStatus(1));
         }
@@ -347,7 +344,7 @@ where
 
     // Install the toolchain if needed
     if let Err(e) = rustup_toolchain::install(&toolchain) {
-        eprintln!("Failed to install toolchain: {}", e);
+        eprintln!("Failed to install toolchain: {e}");
         return Err(CommandExitStatus(-1));
     }
 
@@ -388,7 +385,7 @@ where
         let (contexts, crate_names) = match ProjectContext::load_all_contexts_with_crate_names() {
             Ok((contexts, crate_names)) => (contexts, crate_names),
             Err(e) => {
-                println!("Warning: Failed to load project contexts: {}", e);
+                println!("Warning: Failed to load project contexts: {e}");
                 println!(
                     "Make sure that context files (with *_context.json suffix) exist in the .pup directory."
                 );
@@ -425,7 +422,7 @@ where
                 );
             }
             Err(e) => {
-                println!("Warning: Failed to write {}: {}", target_filename, e);
+                println!("Warning: Failed to write {target_filename}: {e}");
             }
         }
     }
@@ -472,7 +469,7 @@ fn run_pup_driver(toolchain: &str) -> Result<(), CommandExitStatus> {
 
     // Install the toolchain if needed
     if let Err(e) = rustup_toolchain::install(toolchain) {
-        eprintln!("Failed to install toolchain: {}", e);
+        eprintln!("Failed to install toolchain: {e}");
         return Err(CommandExitStatus(-1));
     }
 
@@ -664,7 +661,7 @@ pub fn print_modules(context: &ProjectContext, crate_names: &[String]) -> anyhow
 
         for module_info in modules {
             // Get the crate-relative module path (everything after crate_name::)
-            let module_path = if module_info.name.starts_with(&format!("{}::", crate_name)) {
+            let module_path = if module_info.name.starts_with(&format!("{crate_name}::")) {
                 // For modules from this crate, remove the crate name prefix
                 module_info.name[crate_name.len() + 2..].to_string()
             } else {
@@ -756,7 +753,7 @@ pub fn print_traits(context: &ProjectContext, crate_names: &[String]) -> anyhow:
 
         for trait_info in traits {
             // Get the crate-relative trait path (everything after crate_name::)
-            let trait_path = if trait_info.name.starts_with(&format!("{}::", crate_name)) {
+            let trait_path = if trait_info.name.starts_with(&format!("{crate_name}::")) {
                 // For traits from this crate, remove the crate name prefix
                 trait_info.name[crate_name.len() + 2..].to_string()
             } else {
@@ -927,7 +924,7 @@ mod tests {
                 .expect("Failed to write pup.ron");
 
             // Change to the temporary directory
-            let original_dir = env::current_dir().expect("Failed to get current dir");
+            let _original_dir = env::current_dir().expect("Failed to get current dir");
             env::set_current_dir(temp_path).expect("Failed to change directory");
 
             // Run the validation
@@ -984,7 +981,7 @@ mod tests {
             let status = CommandExitStatus(42);
 
             // Test the Display implementation
-            let display_string = format!("{}", status);
+            let display_string = format!("{status}");
             assert_eq!(display_string, "Command failed with exit code: 42");
 
             // Verify it implements the Error trait
@@ -1229,7 +1226,7 @@ mod tests {
             // Rename it manually for the test
             match fs::rename(&generated_config_path, &pup_ron_path) {
                 Ok(_) => {}
-                Err(e) => panic!("Failed to rename file: {}", e),
+                Err(e) => panic!("Failed to rename file: {e}"),
             }
 
             // Brief delay to ensure rename completes

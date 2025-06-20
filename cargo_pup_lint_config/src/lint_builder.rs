@@ -65,18 +65,16 @@ impl LintBuilder {
 
     // Method to write the LintBuilder to a file
     pub fn write_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> io::Result<()> {
-        let file = File::create(path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        to_writer_pretty(file, &self, PrettyConfig::default())
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let file = File::create(path).map_err(io::Error::other)?;
+        to_writer_pretty(file, &self, PrettyConfig::default()).map_err(io::Error::other)?;
         Ok(())
     }
 
     // Method to read the LintBuilder from a file
     pub fn read_from_file<P: AsRef<std::path::Path>>(path: P) -> io::Result<Self> {
-        let file = File::open(path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map any io::Error
+        let file = File::open(path).map_err(io::Error::other)?; // Map any io::Error
 
-        let lint_builder: LintBuilder =
-            from_reader(file).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?; // Map ron::de::SpannedError to io::Error
+        let lint_builder: LintBuilder = from_reader(file).map_err(io::Error::other)?; // Map ron::de::SpannedError to io::Error
 
         Ok(lint_builder)
     }

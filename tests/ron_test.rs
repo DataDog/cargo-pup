@@ -131,14 +131,12 @@ fn test_lint_harness_detects_violations() {
     if let Some(panic_msg) = panic_payload.downcast_ref::<String>() {
         assert!(
             panic_msg.contains("cargo pup checks failed"),
-            "Panic message should indicate cargo pup checks failed, got: {}",
-            panic_msg
+            "Panic message should indicate cargo pup checks failed, got: {panic_msg}"
         );
     } else if let Some(panic_msg) = panic_payload.downcast_ref::<&str>() {
         assert!(
             panic_msg.contains("cargo pup checks failed"),
-            "Panic message should indicate cargo pup checks failed, got: {}",
-            panic_msg
+            "Panic message should indicate cargo pup checks failed, got: {panic_msg}"
         );
     } else {
         // If we can't extract the message, just verify that a panic occurred
