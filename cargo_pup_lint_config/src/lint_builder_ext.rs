@@ -106,11 +106,10 @@ impl LintBuilderExt for LintBuilder {
         // Validate the project path
         validate_project_path(&path_to_validate).with_context(|| {
             if project_path.is_some() {
-                format!("Invalid manifest path: {}", path_to_validate)
+                format!("Invalid manifest path: {path_to_validate}")
             } else {
                 format!(
-                    "Current working directory is not a valid Cargo project: {}",
-                    path_to_validate
+                    "Current working directory is not a valid Cargo project: {path_to_validate}"
                 )
             }
         })?;
@@ -121,7 +120,7 @@ impl LintBuilderExt for LintBuilder {
             vec![]
         };
 
-        let output = run_with_args(self, &args.iter().map(|s| *s).collect::<Vec<&str>>())?;
+        let output = run_with_args(self, &args.to_vec())?;
 
         // Check if the command failed (non-zero exit status)
         if !output.status.success() {
@@ -150,7 +149,7 @@ fn run_with_args(lint_builder: &LintBuilder, args: &[&str]) -> Result<Output> {
 fn validate_project_path(path: &str) -> Result<std::path::PathBuf> {
     let project_path = Path::new(path)
         .canonicalize()
-        .with_context(|| format!("Cannot resolve path: {}", path))?;
+        .with_context(|| format!("Cannot resolve path: {path}"))?;
 
     // If it's a file, check if it's a Cargo.toml and get its parent directory
     let cargo_dir = if project_path.is_file() {
@@ -191,8 +190,8 @@ fn find_workspace_root() -> Result<std::path::PathBuf> {
 
     while let Some(dir) = check_dir {
         let cargo_toml = dir.join("Cargo.toml");
-        if cargo_toml.exists() {
-            if let Ok(contents) = std::fs::read_to_string(&cargo_toml) {
+        if cargo_toml.exists()
+            && let Ok(contents) = std::fs::read_to_string(&cargo_toml) {
                 // Look specifically for cargo-pup project or workspace with cargo-pup
                 if contents.contains("name = \"cargo-pup\"")
                     || (contents.contains("[workspace]") && contents.contains("cargo_pup"))
@@ -200,7 +199,6 @@ fn find_workspace_root() -> Result<std::path::PathBuf> {
                     return Ok(dir.to_path_buf());
                 }
             }
-        }
 
         // Also check if this directory has the specific cargo-pup source structure
         if dir.join("src").join("pup_driver.rs").exists() {

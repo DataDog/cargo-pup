@@ -44,7 +44,7 @@ impl ModuleLint {
                     Ok(regex) => regex.is_match(module_path),
                     Err(_) => {
                         // Log error and return false for invalid regex
-                        eprintln!("Invalid regex pattern: {}", pattern);
+                        eprintln!("Invalid regex pattern: {pattern}");
                         false
                     }
                 }
@@ -67,7 +67,7 @@ impl ModuleLint {
             Ok(regex) => regex.is_match(string),
             Err(_) => {
                 // Log error and return false for invalid regex
-                eprintln!("Invalid regex pattern: {}", pattern);
+                eprintln!("Invalid regex pattern: {pattern}");
                 false
             }
         }
@@ -319,10 +319,9 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         let item_name_str = item_name.to_string();
 
                         // Check if module name matches the pattern
-                        if !self.string_matches_pattern(&item_name_str, &pattern) {
+                        if !self.string_matches_pattern(&item_name_str, pattern) {
                             let message = format!(
-                                "Module must match pattern '{}', found '{}'",
-                                pattern, item_name_str
+                                "Module must match pattern '{pattern}', found '{item_name_str}'"
                             );
 
                             span_lint_and_help(
@@ -332,7 +331,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 item.span,
                                 message,
                                 None,
-                                format!("Rename this module to match the pattern '{}'", pattern),
+                                format!("Rename this module to match the pattern '{pattern}'"),
                             );
                         }
                     }
@@ -344,7 +343,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
                         // Check if module name matches the pattern (which it shouldn't)
                         if self.string_matches_pattern(&item_name_str, pattern) {
-                            let message = format!("Module must not match pattern '{}'", pattern);
+                            let message = format!("Module must not match pattern '{pattern}'");
 
                             span_lint_and_help(
                                 ctx,
@@ -359,8 +358,8 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::MustNotBeEmpty(severity) => {
-                    if let ItemKind::Mod(_, module_data) = item.kind {
-                        if module_data.item_ids.is_empty() {
+                    if let ItemKind::Mod(_, module_data) = item.kind
+                        && module_data.item_ids.is_empty() {
                             span_lint_and_help(
                                 ctx,
                                 MODULE_MUST_NOT_BE_EMPTY::get_by_severity(*severity),
@@ -371,7 +370,6 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 "Add content to this module or remove it",
                             );
                         }
-                    }
                 }
                 ModuleRule::MustBeEmpty(severity) => {
                     if let ItemKind::Mod(_, module_data) = item.kind {
@@ -386,7 +384,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                     MODULE_MUST_BE_EMPTY::get_by_severity(*sev),
                                     slf.name().as_str(),
                                     item.span,
-                                    format!("Item '{}' not allowed in empty module", item_name),
+                                    format!("Item '{item_name}' not allowed in empty module"),
                                     None,
                                     "Remove this item from the module, which must be empty",
                                 );
@@ -408,7 +406,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                         MODULE_MUST_HAVE_EMPTY_MOD_FILE::get_by_severity(*sev),
                                         slf.name().as_str(),
                                         item.span,
-                                        format!("Item '{}' disallowed in mod.rs due to empty-mod-file policy", item_name),
+                                        format!("Item '{item_name}' disallowed in mod.rs due to empty-mod-file policy"),
                                         None,
                                         "Remove this item from the mod.rs file or move it to a submodule"
                                     );
@@ -436,15 +434,14 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 allowed.iter().any(|pattern| match Regex::new(pattern) {
                                     Ok(re) => re.is_match(&import_module),
                                     Err(_) => {
-                                        eprintln!("Invalid regex pattern: {}", pattern);
+                                        eprintln!("Invalid regex pattern: {pattern}");
                                         false
                                     }
                                 });
 
                             if !is_allowed {
                                 let message = format!(
-                                    "Use of module '{}' is not allowed; only {:?} are permitted",
-                                    import_module, allowed
+                                    "Use of module '{import_module}' is not allowed; only {allowed:?} are permitted"
                                 );
 
                                 span_lint_and_help(
@@ -465,14 +462,14 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 denied_list.iter().any(|pattern| match Regex::new(pattern) {
                                     Ok(re) => re.is_match(&import_module),
                                     Err(_) => {
-                                        eprintln!("Invalid regex pattern: {}", pattern);
+                                        eprintln!("Invalid regex pattern: {pattern}");
                                         false
                                     }
                                 });
 
                             if is_denied {
                                 let message =
-                                    format!("Use of module '{}' is denied", import_module);
+                                    format!("Use of module '{import_module}' is denied");
 
                                 span_lint_and_help(
                                     ctx,
@@ -513,11 +510,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         ItemKind::Trait(..) => "trait",
                         ItemKind::Impl(..) => "impl",
                         ItemKind::Fn { .. } => {
-                            if let Some(proc_macro_type) = self.get_proc_macro_type(ctx, item) {
-                                proc_macro_type
-                            } else {
-                                "function"
-                            }
+                            self.get_proc_macro_type(ctx, item).unwrap_or("function")
                         }
                         ItemKind::Mod(..) => "module",
                         ItemKind::Static(..) => "static",
@@ -542,8 +535,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             self.name().as_str(),
                             item.span,
                             format!(
-                                "{} '{}' is not allowed in this module",
-                                display_type, item_name
+                                "{display_type} '{item_name}' is not allowed in this module"
                             ),
                             None,
                             "Consider moving this item to a different module",

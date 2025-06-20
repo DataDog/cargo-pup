@@ -58,6 +58,12 @@ pub struct TraitInfo {
     pub applicable_lints: Vec<String>,
 }
 
+impl Default for ProjectContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[allow(dead_code)]
 impl ProjectContext {
     /// Creates a new empty project context with default base directory (.pup)
@@ -139,7 +145,7 @@ impl ProjectContext {
         ))?;
 
         // Create a predictable filename using just the crate name
-        let filename = format!("{}{}", self.module_root, CONTEXT_FILE_SUFFIX);
+        let filename = format!("{}{CONTEXT_FILE_SUFFIX}", self.module_root);
         let file_path = self.base_dir.join(&filename);
 
         let file = OpenOptions::new()
@@ -245,11 +251,10 @@ impl ProjectContext {
 
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
-            if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
-                if filename.ends_with(CONTEXT_FILE_SUFFIX) {
+            if let Some(filename) = path.file_name().and_then(|f| f.to_str())
+                && filename.ends_with(CONTEXT_FILE_SUFFIX) {
                     let _ = fs::remove_file(&path); // Ignore errors on deletion
                 }
-            }
         }
 
         Ok(())

@@ -95,7 +95,7 @@ impl ArchitectureLintRunner {
 
                 // Serialize the context to a file
                 if let Err(e) = context.serialize_to_file() {
-                    eprintln!("Warning: Failed to serialize project context: {}", e);
+                    eprintln!("Warning: Failed to serialize project context: {e}");
                 }
 
                 Ok(())
@@ -110,7 +110,7 @@ impl ArchitectureLintRunner {
 
                 // Serialize the context to a file
                 if let Err(e) = context.serialize_to_file() {
-                    eprintln!("Warning: Failed to serialize project context: {}", e);
+                    eprintln!("Warning: Failed to serialize project context: {e}");
                 }
 
                 // Set a simple success message
@@ -146,7 +146,7 @@ impl ArchitectureLintRunner {
         let lints = self.lint_collection.lints();
 
         for (module, path) in &namespace_set {
-            let full_module_path = format!("{}::{}", module, path);
+            let full_module_path = format!("{module}::{path}");
 
             // Find lints that apply to this module
             let applicable_lints: Vec<String> = lints
@@ -187,8 +187,8 @@ impl ArchitectureLintRunner {
         // Find implementations
         for item_id in module_items.free_items() {
             let item = tcx.hir_item(item_id);
-            if let ItemKind::Impl(impl_data) = &item.kind {
-                if let Some(trait_ref) = impl_data.of_trait {
+            if let ItemKind::Impl(impl_data) = &item.kind
+                && let Some(trait_ref) = impl_data.of_trait {
                     // This is a trait implementation
                     // Get the canonical trait name using the centralized helper
                     let trait_def_id = trait_ref.path.res.def_id();
@@ -200,20 +200,18 @@ impl ArchitectureLintRunner {
 
                     // Get the implementing type and clean up the display
                     let self_ty = tcx.type_of(item.owner_id).skip_binder();
-                    let impl_type_raw = format!("{}", self_ty);
+                    let impl_type_raw = format!("{self_ty}");
 
                     // Clean up implementation type by removing generic parameters using the centralized helper
                     let impl_type =
                         crate::helpers::queries::get_canonical_type_name(&impl_type_raw);
 
                     // Add implementor to trait if it's not already in the list
-                    if let Some((implementors, _)) = trait_map.get_mut(&canonical_full_name) {
-                        if !implementors.contains(&impl_type) {
+                    if let Some((implementors, _)) = trait_map.get_mut(&canonical_full_name)
+                        && !implementors.contains(&impl_type) {
                             implementors.push(impl_type);
                         }
-                    }
                 }
-            }
         }
 
         // Find lints that apply to each trait
@@ -308,7 +306,7 @@ impl Callbacks for ArchitectureLintRunner {
     ) -> rustc_driver::Compilation {
         if let Err(e) = self.handle_mode(tcx) {
             // For fatal errors, print the error and exit
-            eprintln!("Error: {:#}", e);
+            eprintln!("Error: {e:#}");
             std::process::exit(1);
         };
         rustc_driver::Compilation::Continue

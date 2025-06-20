@@ -14,22 +14,22 @@ use std::process::Command;
 fn get_cargo_pup_path() -> PathBuf {
     // First try the target directory from the current build
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-    println!("CARGO_MANIFEST_DIR: {}", manifest_dir);
+    println!("CARGO_MANIFEST_DIR: {manifest_dir}");
 
     let target_dir =
-        env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| format!("{}/target", manifest_dir));
-    println!("Target directory: {}", target_dir);
+        env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| format!("{manifest_dir}/target"));
+    println!("Target directory: {target_dir}");
 
     let profile = if cfg!(debug_assertions) {
         "debug"
     } else {
         "release"
     };
-    println!("Build profile: {}", profile);
+    println!("Build profile: {profile}");
 
     let binary_path = PathBuf::from(&target_dir).join(profile).join("cargo-pup");
 
-    println!("Binary path: {:?}", binary_path);
+    println!("Binary path: {binary_path:?}");
     println!("Binary exists: {}", binary_path.exists());
 
     // If the binary exists in the current build, use it
@@ -80,8 +80,8 @@ fn test_config_generation_ron_validation() {
     let cargo_pup_path = get_cargo_pup_path();
 
     // Run cargo-pup generate-config in the temp directory
-    println!("About to execute cargo-pup at path: {:?}", cargo_pup_path);
-    println!("Current directory: {:?}", temp_path);
+    println!("About to execute cargo-pup at path: {cargo_pup_path:?}");
+    println!("Current directory: {temp_path:?}");
 
     // Debug the directory structure before running the command
     let generated_file_path = temp_path.join("pup.generated.ron");
@@ -122,10 +122,8 @@ fn test_config_generation_ron_validation() {
     // List files in the temp directory
     println!("Files in temp directory:");
     if let Ok(entries) = std::fs::read_dir(temp_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                println!("  {:?}", entry.path());
-            }
+        for entry in entries.flatten() {
+            println!("  {:?}", entry.path());
         }
     }
 
@@ -134,17 +132,14 @@ fn test_config_generation_ron_validation() {
     if pup_dir.exists() {
         println!("Files in .pup directory:");
         if let Ok(entries) = std::fs::read_dir(&pup_dir) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    println!("  {:?}", entry.path());
+            for entry in entries.flatten() {
+                println!("  {:?}", entry.path());
 
-                    // If this is the generated RON file, print its contents
-                    if entry.path().to_string_lossy().contains("pup.generated") {
-                        if let Ok(content) = std::fs::read_to_string(&entry.path()) {
-                            println!("Content of generated file: {}", content);
-                        }
+                // If this is the generated RON file, print its contents
+                if entry.path().to_string_lossy().contains("pup.generated")
+                    && let Ok(content) = std::fs::read_to_string(entry.path()) {
+                        println!("Content of generated file: {content}");
                     }
-                }
             }
         }
     } else {
@@ -158,7 +153,7 @@ fn test_config_generation_ron_validation() {
     let raw_content =
         std::fs::read_to_string(&pup_ron_path).expect("Failed to read generated pup.ron file");
 
-    println!("Generated RON content:\n{}", raw_content);
+    println!("Generated RON content:\n{raw_content}");
 
     // Process content - strip comments
     let processed_content = raw_content
@@ -168,14 +163,13 @@ fn test_config_generation_ron_validation() {
         .join("\n");
 
     println!(
-        "\nProcessed RON content (comments removed):\n{}",
-        processed_content
+        "\nProcessed RON content (comments removed):\n{processed_content}"
     );
 
     // Try to parse it manually first
     match ron::from_str::<LintBuilder>(&processed_content) {
         Ok(_) => println!("RON content successfully parsed manually"),
-        Err(e) => println!("Manual RON parsing error: {:?}", e),
+        Err(e) => println!("Manual RON parsing error: {e:?}"),
     }
 
     // Parse the processed content
@@ -188,8 +182,7 @@ fn test_config_generation_ron_validation() {
     // We expect at least 4 lint rules
     assert!(
         lint_count >= 4,
-        "Expected at least 4 lint rules, but found {}",
-        lint_count
+        "Expected at least 4 lint rules, but found {lint_count}"
     );
 
     // Check that we have each lint type
@@ -209,8 +202,7 @@ fn test_config_generation_ron_validation() {
     assert!(function_lints > 0, "Should have at least one function lint");
 
     println!(
-        "Successfully validated config file with {} lint rules ({} module, {} function)",
-        lint_count, module_lints, function_lints
+        "Successfully validated config file with {lint_count} lint rules ({module_lints} module, {function_lints} function)"
     );
 
     // Clean up

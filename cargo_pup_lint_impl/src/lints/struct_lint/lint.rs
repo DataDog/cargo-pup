@@ -273,14 +273,13 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                         if !self.string_matches_pattern(&item_name, pattern) {
                             let pattern_type = self.describe_pattern(pattern);
                             let message = format!(
-                                "Struct must match {} '{}', found '{}'",
-                                pattern_type, pattern, item_name
+                                "Struct must match {pattern_type} '{pattern}', found '{item_name}'"
                             );
 
                             let help = if pattern_type == "pattern" {
-                                format!("Rename this struct to match the pattern '{}'", pattern)
+                                format!("Rename this struct to match the pattern '{pattern}'")
                             } else {
-                                format!("Rename this struct to '{}'", pattern)
+                                format!("Rename this struct to '{pattern}'")
                             };
 
                             span_lint_and_help(
@@ -298,7 +297,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                         if self.string_matches_pattern(&item_name, pattern) {
                             let pattern_type = self.describe_pattern(pattern);
                             let message =
-                                format!("Struct must not match {} '{}'", pattern_type, pattern);
+                                format!("Struct must not match {pattern_type} '{pattern}'");
 
                             let help = if pattern_type == "pattern" {
                                 "Choose a name that doesn't match this pattern"
@@ -324,7 +323,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                                 STRUCT_LINT_MUST_BE_PRIVATE::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
-                                format!("Struct '{}' is public, but must be private", item_name),
+                                format!("Struct '{item_name}' is public, but must be private"),
                                 None,
                                 "Remove the 'pub' visibility modifier",
                             );
@@ -337,7 +336,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                                 STRUCT_LINT_MUST_BE_PUBLIC::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
-                                format!("Struct '{}' is private, but must be public", item_name),
+                                format!("Struct '{item_name}' is private, but must be public"),
                                 None,
                                 "Add the 'pub' visibility modifier",
                             );

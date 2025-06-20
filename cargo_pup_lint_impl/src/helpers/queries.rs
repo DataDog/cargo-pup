@@ -24,7 +24,7 @@ pub fn get_full_module_name(tcx: &TyCtxt<'_>, module_def_id: &OwnerId) -> String
     if module_name.is_empty() {
         krate_name
     } else {
-        format!("{}::{}", krate_name, module_name)
+        format!("{krate_name}::{module_name}")
     }
 }
 
@@ -45,11 +45,7 @@ pub fn implements_trait<'tcx>(
         || ty.has_opaque_types()
         || ty.walk().any(|t| {
             if let Some(ty) = t.as_type() {
-                match ty.kind() {
-                    ty::Alias(ty::Projection, _) => true,
-                    ty::Param(_) => true,
-                    _ => false,
-                }
+                matches!(ty.kind(), ty::Alias(ty::Projection, _) | ty::Param(_))
             } else {
                 false
             }
@@ -112,7 +108,7 @@ pub fn get_canonical_trait_name(trait_name: &str) -> String {
 /// returns "std::Iterator"
 pub fn get_full_canonical_trait_name(crate_name: &str, trait_name: &str) -> String {
     let canonical_name = get_canonical_trait_name(trait_name);
-    format!("{}::{}", crate_name, canonical_name)
+    format!("{crate_name}::{canonical_name}")
 }
 
 /// Gets the canonical trait name from TyCtxt and DefId.
