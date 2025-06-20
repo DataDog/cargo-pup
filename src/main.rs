@@ -932,11 +932,6 @@ mod tests {
 
             // Run the validation
             let result = validate_project(None);
-
-            // Change back to original directory
-            env::set_current_dir(original_dir)
-                .expect("Failed to change back to original directory");
-
             assert_eq!(result, ProjectType::ConfiguredPupProject);
         }
     }
