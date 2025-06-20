@@ -19,4 +19,8 @@ jobs:
       - run: . $HOME/.cargo/env && rustup update
       - run: . $HOME/.cargo/env && cargo build --release --all
       - run: . $HOME/.cargo/env && cargo test
+      - name: Check formatting
+        run: . $HOME/.cargo/env && cargo fmt --all -- --check
+      - name: Check clippy lints
+        run: . $HOME/.cargo/env && cargo clippy --all-targets --all-features -- -D warnings
       - run: test_app/scripts/validate-against-expected.sh
