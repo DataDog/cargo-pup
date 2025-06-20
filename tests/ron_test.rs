@@ -1,8 +1,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
-use cargo_pup_lint_config::{FunctionLintExt, LintBuilder, LintBuilderExt, ModuleLintExt, Severity, StructLintExt};
-
-
+use cargo_pup_lint_config::{
+    FunctionLintExt, LintBuilder, LintBuilderExt, ModuleLintExt, Severity, StructLintExt,
+};
 
 ///
 /// Uses cargo-pup to validate cargo-pup.
@@ -18,9 +18,11 @@ fn validate_cargo_pup_structure() {
 
     // Add TraitImpl rule for architecture_lint_rules
     builder
-        .struct_lint() 
+        .struct_lint()
         .lint_named("architecture_lint_rule_checker")
-        .matching(|m| m.implements_trait("^pup_driver::lints::architecture_lint_rule::ArchitectureLintRule"))
+        .matching(|m| {
+            m.implements_trait("^pup_driver::lints::architecture_lint_rule::ArchitectureLintRule")
+        })
         .with_severity(Severity::Error)
         .must_be_named(".*LintProcessor$".into())
         .must_be_private()
@@ -30,7 +32,9 @@ fn validate_cargo_pup_structure() {
     builder
         .struct_lint()
         .lint_named("lint_factory_checker")
-        .matching(|m| m.implements_trait("^pup_driver::lints::configuration_factory.rs::LintFactory"))
+        .matching(|m| {
+            m.implements_trait("^pup_driver::lints::configuration_factory.rs::LintFactory")
+        })
         .with_severity(Severity::Error)
         .must_be_named(".*LintFactory$".into())
         .must_be_private()
@@ -51,10 +55,7 @@ fn validate_cargo_pup_structure() {
         .lint_named("helpers_no_structs_or_traits")
         .matching(|m| m.module("^pup_driver::lints::helpers$"))
         .with_severity(Severity::Error)
-        .denied_items(vec![
-            "struct".to_string(),
-            "trait".to_string(),
-        ])
+        .denied_items(vec!["struct".to_string(), "trait".to_string()])
         .build();
 
     // Utils shouldn't contain structs or traits
@@ -63,10 +64,7 @@ fn validate_cargo_pup_structure() {
         .lint_named("utils_no_structs_or_traits")
         .matching(|m| m.module("^pup_driver::utils$"))
         .with_severity(Severity::Error)
-        .denied_items(vec![
-            "struct".to_string(),
-            "trait".to_string(),
-        ])
+        .denied_items(vec!["struct".to_string(), "trait".to_string()])
         .build();
 
     // All Result<_,T> must return something implementing the error trait
@@ -99,7 +97,7 @@ fn validate_cargo_pup_structure() {
 }
 
 /// Test that validates our lint harness correctly detects rule violations.
-/// 
+///
 /// This test creates a rule that we know will fail when run against cargo-pup itself,
 /// then verifies that assert_lints properly panics when violations are detected.
 #[test]
@@ -148,4 +146,4 @@ fn test_lint_harness_detects_violations() {
     }
 
     println!("Successfully verified that lint harness detects violations and panics appropriately");
-} 
+}

@@ -4,13 +4,13 @@
 mod tests {
     use crate::ConfiguredLint;
     use crate::lint_builder::LintBuilder;
-    use crate::{Severity, StructLintExt, StructRule, StructMatch};
+    use crate::{Severity, StructLintExt, StructMatch, StructRule};
 
     // Helper function to verify default severity
     fn assert_default_severity(severity: &Severity) {
         assert_eq!(severity, &Severity::Warn, "Default severity should be Warn");
     }
-    
+
     #[test]
     fn test_regex_struct_matcher() {
         let mut builder = LintBuilder::new();
@@ -58,7 +58,7 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_struct_lint_builder() {
         let mut builder = LintBuilder::new();
@@ -103,7 +103,7 @@ mod tests {
             panic!("Unexpected lint type");
         }
     }
-    
+
     #[test]
     fn test_complex_struct_matcher() {
         let mut builder = LintBuilder::new();
@@ -121,7 +121,7 @@ mod tests {
             .build();
 
         assert_eq!(builder.lints.len(), 1);
-        
+
         // Simple type check only to verify the matcher was created and stored properly
         if let ConfiguredLint::Struct(struct_lint) = &builder.lints[0] {
             assert_eq!(struct_lint.name, "complex_struct_matcher");
@@ -223,9 +223,13 @@ mod context_generation_tests {
 
         // NOTE: The current implementation doesn't add any lints, this will be implemented later
         // For now, we simply verify that the method runs without errors
-        
+
         // TODO: Update once the generate_from_contexts implementation is completed
-        assert_eq!(builder.lints.len(), 0, "Current implementation adds no lints");
+        assert_eq!(
+            builder.lints.len(),
+            0,
+            "Current implementation adds no lints"
+        );
     }
 
     #[test]
@@ -257,7 +261,7 @@ mod context_generation_tests {
 
         // NOTE: The current implementation doesn't add any lints, this will be implemented later
         // For now, we simply verify that the method runs without errors
-        
+
         // TODO: Update once the generate_from_contexts implementation is completed
         assert_eq!(
             builder.lints.len(),

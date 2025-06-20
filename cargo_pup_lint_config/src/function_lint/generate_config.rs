@@ -1,8 +1,11 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
-use cargo_pup_common::project_context::ProjectContext;
 use crate::function_lint::FunctionLint;
-use crate::{ConfiguredLint, FunctionMatch, FunctionRule, GenerateFromContext, LintBuilder, ReturnTypePattern, Severity};
+use crate::{
+    ConfiguredLint, FunctionMatch, FunctionRule, GenerateFromContext, LintBuilder,
+    ReturnTypePattern, Severity,
+};
+use cargo_pup_common::project_context::ProjectContext;
 
 impl GenerateFromContext for FunctionLint {
     fn generate_from_contexts(contexts: &[ProjectContext], builder: &mut LintBuilder) {
@@ -10,22 +13,18 @@ impl GenerateFromContext for FunctionLint {
         let function_length_lint = FunctionLint {
             name: "function_length_limit".to_string(),
             matches: FunctionMatch::NameRegex(".*".to_string()),
-            rules: vec![
-                FunctionRule::MaxLength(50, Severity::Error),
-            ],
+            rules: vec![FunctionRule::MaxLength(50, Severity::Error)],
         };
         builder.push(ConfiguredLint::Function(function_length_lint));
-        
+
         // Rule 2: Global result error rule
         let result_error_lint = FunctionLint {
             name: "result_error_must_implement_error".to_string(),
             matches: FunctionMatch::ReturnsType(ReturnTypePattern::Result),
-            rules: vec![
-                FunctionRule::ResultErrorMustImplementError(Severity::Error),
-            ],
+            rules: vec![FunctionRule::ResultErrorMustImplementError(Severity::Error)],
         };
         builder.push(ConfiguredLint::Function(result_error_lint));
-        
+
         // Add context-specific rules if contexts are provided
         if !contexts.is_empty() {
             for context in contexts {
@@ -35,9 +34,7 @@ impl GenerateFromContext for FunctionLint {
                     let module_functions_rule = FunctionLint {
                         name: format!("func_rules_for_{}", context.module_root),
                         matches: FunctionMatch::InModule(format!("{}::*", context.module_root)),
-                        rules: vec![
-                            FunctionRule::MaxLength(30, Severity::Warn),
-                        ],
+                        rules: vec![FunctionRule::MaxLength(30, Severity::Warn)],
                     };
                     builder.push(ConfiguredLint::Function(module_functions_rule));
                 }

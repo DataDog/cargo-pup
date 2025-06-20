@@ -3,13 +3,13 @@
 use super::types::ModuleMatch;
 
 /// Fluent interface for creating module matchers
-/// 
+///
 /// Used with the `matching()` method to create module matching criteria
 pub struct ModuleMatcher;
 
 impl ModuleMatcher {
     /// Match a module by name or path
-    /// 
+    ///
     /// The module parameter can be either:
     /// - An exact module path (e.g., "crate::api::v1")
     /// - A regular expression pattern (e.g., "^crate::api::.*")
@@ -19,7 +19,7 @@ impl ModuleMatcher {
 }
 
 /// Node in the matcher expression tree
-/// 
+///
 /// You can combine these nodes with logical operations (.and(), .or(), .not())
 #[derive(Clone)]
 pub enum ModuleMatchNode {
@@ -69,7 +69,7 @@ impl ModuleMatchNode {
 }
 
 /// Helper function that converts a matcher DSL expression to a ModuleMatch
-/// 
+///
 /// This is used internally by the builder API and typically not called directly
 pub fn matcher<F>(f: F) -> ModuleMatch
 where

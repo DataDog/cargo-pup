@@ -51,7 +51,7 @@ impl<'a> FunctionNamedBuilder<'a> {
     }
 
     /// Define function matching using the fluent DSL
-    /// 
+    ///
     /// # Example
     /// ```
     /// use cargo_pup_lint_config::{FunctionLintExt, LintBuilder};

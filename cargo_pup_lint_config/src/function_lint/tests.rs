@@ -5,15 +5,15 @@ mod tests {
     use crate::ConfiguredLint;
     use crate::GenerateFromContext;
     use crate::LintBuilder;
-    use crate::function_lint::{FunctionLint, FunctionLintExt, FunctionMatch, FunctionRule};
     use crate::Severity;
+    use crate::function_lint::{FunctionLint, FunctionLintExt, FunctionMatch, FunctionRule};
     use cargo_pup_common::project_context::{ModuleInfo, ProjectContext};
 
     // Helper function to verify default severity
     fn assert_default_severity(severity: &Severity) {
         assert_eq!(severity, &Severity::Warn, "Default severity should be Warn");
     }
-    
+
     #[test]
     fn test_function_lint_max_length() {
         let mut builder = LintBuilder::new();
@@ -207,7 +207,7 @@ mod tests {
             }
         }
     }
-    
+
     #[test]
     fn test_function_lint_generate_from_empty_contexts() {
         // Test with empty contexts
@@ -288,10 +288,13 @@ mod tests {
         assert_eq!(function_lints.len(), 3);
 
         // Verify we have a lint for the project
-        let has_project_lint = function_lints.iter().any(|lint| {
-            lint.name.contains("test_crate") 
-        });
-        assert!(has_project_lint, "Should have a lint for the test_crate project");
+        let has_project_lint = function_lints
+            .iter()
+            .any(|lint| lint.name.contains("test_crate"));
+        assert!(
+            has_project_lint,
+            "Should have a lint for the test_crate project"
+        );
     }
 
     #[test]
@@ -349,7 +352,7 @@ mod tests {
         let has_crate2_lint = function_lints
             .iter()
             .any(|lint| lint.name.contains("crate2"));
-            
+
         assert!(has_crate1_lint, "Should have a lint for crate1");
         assert!(has_crate2_lint, "Should have a lint for crate2");
 

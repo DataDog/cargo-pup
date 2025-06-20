@@ -1,9 +1,6 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
-
-use crate::{
-    ArchitectureLintRule,
-};
+use crate::ArchitectureLintRule;
 
 ///
 /// Collects a set of architecture lints configured

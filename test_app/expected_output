@@ -1,3 +1,38 @@
+warning: proc macro 'forbidden_proc_macro' is not allowed in this module
+ --> proc_macro_test/src/lib.rs:6:1
+  |
+6 | / pub fn forbidden_proc_macro(input: TokenStream) -> TokenStream {
+7 | |     input
+8 | | }
+  | |_^
+  |
+  = help: Consider moving this item to a different module
+  = note: Applied by cargo-pup rule 'proc_macro_restriction_test'.
+  = note: `#[warn(module_denied_items)]` on by default
+
+warning: proc macro attribute 'forbidden_attr_macro' is not allowed in this module
+  --> proc_macro_test/src/lib.rs:12:1
+   |
+12 | / pub fn forbidden_attr_macro(_attr: TokenStream, item: TokenStream) -> TokenStream {
+13 | |     item
+14 | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'proc_macro_restriction_test'.
+
+warning: proc macro derive 'forbidden_derive_macro' is not allowed in this module
+  --> proc_macro_test/src/lib.rs:18:1
+   |
+18 | / pub fn forbidden_derive_macro(input: TokenStream) -> TokenStream {
+19 | |     input
+20 | | }
+   | |_^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'proc_macro_restriction_test'.
+
+warning: `proc_macro_test` (lib) generated 3 warnings
 warning: unused macro definition: `forbidden_macro`
  --> src/macro_restriction/mod.rs:4:14
   |

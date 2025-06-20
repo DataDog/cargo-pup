@@ -1,5 +1,5 @@
 error: declarative macro 'forbidden_declarative_macro' is not allowed in this module
-  --> tests/ui/module_lint_new/macro_restrictions.rs:15:1
+  --> tests/ui/module_lint_new/macro_restrictions.rs:12:1
    |
 LL | / macro_rules! forbidden_declarative_macro {
 LL | |     () => {
@@ -13,7 +13,7 @@ LL | | }
    = note: `#[deny(module_denied_items)]` on by default
 
 error: declarative macro 'another_forbidden_macro' is not allowed in this module
-  --> tests/ui/module_lint_new/macro_restrictions.rs:22:1
+  --> tests/ui/module_lint_new/macro_restrictions.rs:19:1
    |
 LL | / macro_rules! another_forbidden_macro {
 LL | |     ($x:expr) => {

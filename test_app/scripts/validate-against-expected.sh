@@ -12,7 +12,7 @@ pushd "$(dirname "$0")/../" > /dev/null
 cargo pup > /dev/null 2>&1
 
 # Now run it for real and check
-cargo pup 2>&1 | grep -v 'Finished' | grep -vE '^\s*Checking test_app' | diff - expected_output
+cargo pup 2>&1 | grep -v 'Finished' | grep -vE '^\s*Checking .* \(\/.*\)' | grep -vE '^\s*Compiling .* \(\/.*\)' | diff - expected_output
 if [ $? -ne 0 ]; then
   popd > /dev/null
   exit -1

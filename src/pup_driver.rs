@@ -1,6 +1,5 @@
 #![feature(rustc_private)]
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
-
 #![feature(let_chains)]
 #![feature(array_windows)]
 #![feature(try_blocks)]
@@ -20,6 +19,8 @@ use anyhow::Result;
 use cargo_pup_common::cli::{PupCli, PupCommand};
 use cargo_pup_common::workspace::find_workspace_pup_ron;
 
+use cargo_pup_lint_impl::lints::configuration_factory::LintConfigurationFactory;
+use cargo_pup_lint_impl::{ArchitectureLintCollection, ArchitectureLintRunner, Mode};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{
     env,
@@ -29,12 +30,8 @@ use std::{
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
 };
-use cargo_pup_lint_impl::{ArchitectureLintCollection, ArchitectureLintRunner, Mode};
-use cargo_pup_lint_impl::lints::configuration_factory::LintConfigurationFactory;
-
 
 pub fn main() -> Result<()> {
-
     let early_dcx = EarlyDiagCtxt::new(ErrorOutputType::default());
     rustc_driver::init_rustc_env_logger(&early_dcx);
 
@@ -98,23 +95,21 @@ pub fn main() -> Result<()> {
         // For UI testing, look for pup files in the same directory as the test file
         let source_file = find_source_file(&orig_args)?;
         let test_dir = source_file.parent().unwrap_or(Path::new("."));
-        
+
         // Try loading from pup.ron
         let ron_path = test_dir.join("pup.ron");
         if ron_path.exists() {
             match LintConfigurationFactory::from_file(ron_path.to_str().unwrap().to_string()) {
-                Ok(lint_rules) => {
-                    ArchitectureLintCollection::new(lint_rules)
-                },
+                Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
                 Err(e) => {
                     // In UI tests, print detailed error messages about configuration issues
                     panic!("UI TEST ERROR: Failed to parse pup.ron: {}", e);
                 }
             }
         } else {
-                eprintln!("UI TEST ERROR: No configuration file found in test directory");
-                ArchitectureLintCollection::new(Vec::new())
-            }
+            eprintln!("UI TEST ERROR: No configuration file found in test directory");
+            ArchitectureLintCollection::new(Vec::new())
+        }
     } else {
         // For normal operation, load from specified config file or default to pup.ron
         // Get config path from CLI args if provided
@@ -125,13 +120,13 @@ pub fn main() -> Result<()> {
         } else {
             PupCli::from_env_str(cli_args)
         };
-        
+
         let original_dir = if let Ok(original_dir) = env::var("PUP_ORIGINAL_DIR") {
             PathBuf::from(original_dir)
         } else {
             env::current_dir()?
         };
-        
+
         let config_path = if let Some(path) = cli_config.config_path {
             // Use provided config path, resolve relative to original directory
             if Path::new(&path).is_absolute() {
@@ -143,12 +138,10 @@ pub fn main() -> Result<()> {
             // Default to workspace root pup.ron, fallback to local only if not in workspace
             find_workspace_pup_ron().unwrap_or_else(|| original_dir.join("pup.ron"))
         };
-        
+
         if config_path.exists() {
             match LintConfigurationFactory::from_file(config_path.to_str().unwrap().to_string()) {
-                Ok(lint_rules) => {
-                    ArchitectureLintCollection::new(lint_rules)
-                },
+                Ok(lint_rules) => ArchitectureLintCollection::new(lint_rules),
                 Err(e) => {
                     eprintln!("Failed to parse {}: {}", config_path.display(), e);
                     ArchitectureLintCollection::new(Vec::new())

@@ -326,6 +326,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo_pup_lint_config",
+ "proc_macro_test",
  "rand",
 ]
 

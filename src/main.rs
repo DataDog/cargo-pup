@@ -127,7 +127,6 @@ fn validate_project(config_path: Option<&str>) -> ProjectType {
     }
 }
 
-
 fn show_ascii_puppy() {
     println!(
         "{}",
@@ -385,13 +384,14 @@ where
             return Ok(());
         }
 
-
         // Load all contexts using ProjectContext's loading functionality
         let (contexts, crate_names) = match ProjectContext::load_all_contexts_with_crate_names() {
             Ok((contexts, crate_names)) => (contexts, crate_names),
             Err(e) => {
                 println!("Warning: Failed to load project contexts: {}", e);
-                println!("Make sure that context files (with *_context.json suffix) exist in the .pup directory.");
+                println!(
+                    "Make sure that context files (with *_context.json suffix) exist in the .pup directory."
+                );
                 println!("These files should be created by pup-driver during compilation.");
                 return Ok(());
             }
@@ -414,7 +414,7 @@ where
 
         // Generate the configuration from the loaded contexts using LintBuilder
         let builder = LintBuilder::generate_from_contexts(&[contexts]);
-        
+
         // Write the generated configuration to the target file
         match builder.write_to_file(target_filename) {
             Ok(_) => {

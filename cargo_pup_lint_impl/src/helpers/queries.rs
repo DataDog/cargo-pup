@@ -3,11 +3,11 @@
 use rustc_hir::OwnerId;
 use rustc_hir::def_id::DefId;
 use rustc_infer::infer::TyCtxtInferExt;
-use rustc_type_ir::TypeVisitableExt;
 use rustc_middle::ty::{self, ParamEnv, Ty, TyCtxt, TypingMode};
 use rustc_span::symbol::sym;
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
 use rustc_trait_selection::traits::{Obligation, ObligationCause};
+use rustc_type_ir::TypeVisitableExt;
 
 ///
 /// Returns the name for a module. If the module is the root module, returns just the crate name.

@@ -1,7 +1,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
-use serde::{Deserialize, Serialize};
 use crate::Severity;
+use serde::{Deserialize, Serialize};
 
 /// Defines patterns for matching function return types
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -59,11 +59,11 @@ impl FunctionRule {
     // pub fn and(self, other: FunctionRule) -> Self {
     //     FunctionRule::And(Box::new(self), Box::new(other))
     // }
-    
+
     // pub fn or(self, other: FunctionRule) -> Self {
     //     FunctionRule::Or(Box::new(self), Box::new(other))
     // }
-    
+
     // pub fn not(self) -> Self {
     //     FunctionRule::Not(Box::new(self))
     // }

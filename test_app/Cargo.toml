@@ -9,6 +9,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.80"
 rand = "0.8.5"
+proc_macro_test = { path = "proc_macro_test" }
 
 [dev-dependencies]
 cargo_pup_lint_config = { path = "../cargo_pup_lint_config" }
