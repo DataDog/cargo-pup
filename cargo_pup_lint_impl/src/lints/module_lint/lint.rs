@@ -359,17 +359,18 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                 }
                 ModuleRule::MustNotBeEmpty(severity) => {
                     if let ItemKind::Mod(_, module_data) = item.kind
-                        && module_data.item_ids.is_empty() {
-                            span_lint_and_help(
-                                ctx,
-                                MODULE_MUST_NOT_BE_EMPTY::get_by_severity(*severity),
-                                self.name().as_str(),
-                                item.span,
-                                "Module must not be empty",
-                                None,
-                                "Add content to this module or remove it",
-                            );
-                        }
+                        && module_data.item_ids.is_empty()
+                    {
+                        span_lint_and_help(
+                            ctx,
+                            MODULE_MUST_NOT_BE_EMPTY::get_by_severity(*severity),
+                            self.name().as_str(),
+                            item.span,
+                            "Module must not be empty",
+                            None,
+                            "Add content to this module or remove it",
+                        );
+                    }
                 }
                 ModuleRule::MustBeEmpty(severity) => {
                     if let ItemKind::Mod(_, module_data) = item.kind {
@@ -468,8 +469,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                                 });
 
                             if is_denied {
-                                let message =
-                                    format!("Use of module '{import_module}' is denied");
+                                let message = format!("Use of module '{import_module}' is denied");
 
                                 span_lint_and_help(
                                     ctx,
@@ -534,9 +534,7 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                             MODULE_DENIED_ITEMS::get_by_severity(*severity),
                             self.name().as_str(),
                             item.span,
-                            format!(
-                                "{display_type} '{item_name}' is not allowed in this module"
-                            ),
+                            format!("{display_type} '{item_name}' is not allowed in this module"),
                             None,
                             "Consider moving this item to a different module",
                         );

@@ -137,9 +137,10 @@ fn test_config_generation_ron_validation() {
 
                 // If this is the generated RON file, print its contents
                 if entry.path().to_string_lossy().contains("pup.generated")
-                    && let Ok(content) = std::fs::read_to_string(entry.path()) {
-                        println!("Content of generated file: {content}");
-                    }
+                    && let Ok(content) = std::fs::read_to_string(entry.path())
+                {
+                    println!("Content of generated file: {content}");
+                }
             }
         }
     } else {
@@ -162,9 +163,7 @@ fn test_config_generation_ron_validation() {
         .collect::<Vec<_>>()
         .join("\n");
 
-    println!(
-        "\nProcessed RON content (comments removed):\n{processed_content}"
-    );
+    println!("\nProcessed RON content (comments removed):\n{processed_content}");
 
     // Try to parse it manually first
     match ron::from_str::<LintBuilder>(&processed_content) {

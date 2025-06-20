@@ -191,14 +191,15 @@ fn find_workspace_root() -> Result<std::path::PathBuf> {
     while let Some(dir) = check_dir {
         let cargo_toml = dir.join("Cargo.toml");
         if cargo_toml.exists()
-            && let Ok(contents) = std::fs::read_to_string(&cargo_toml) {
-                // Look specifically for cargo-pup project or workspace with cargo-pup
-                if contents.contains("name = \"cargo-pup\"")
-                    || (contents.contains("[workspace]") && contents.contains("cargo_pup"))
-                {
-                    return Ok(dir.to_path_buf());
-                }
+            && let Ok(contents) = std::fs::read_to_string(&cargo_toml)
+        {
+            // Look specifically for cargo-pup project or workspace with cargo-pup
+            if contents.contains("name = \"cargo-pup\"")
+                || (contents.contains("[workspace]") && contents.contains("cargo_pup"))
+            {
+                return Ok(dir.to_path_buf());
             }
+        }
 
         // Also check if this directory has the specific cargo-pup source structure
         if dir.join("src").join("pup_driver.rs").exists() {

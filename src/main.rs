@@ -314,9 +314,7 @@ where
         if (target_filename == "pup.ron" && pup_ron_exists)
             || (target_filename == "pup.generated.ron" && pup_generated_ron_exists)
         {
-            println!(
-                "Error: {target_filename} already exists in the project root."
-            );
+            println!("Error: {target_filename} already exists in the project root.");
             println!("Remove this file if you want to regenerate the configuration.");
             return Err(CommandExitStatus(1));
         }

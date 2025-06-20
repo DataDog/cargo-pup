@@ -252,9 +252,10 @@ impl ProjectContext {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|f| f.to_str())
-                && filename.ends_with(CONTEXT_FILE_SUFFIX) {
-                    let _ = fs::remove_file(&path); // Ignore errors on deletion
-                }
+                && filename.ends_with(CONTEXT_FILE_SUFFIX)
+            {
+                let _ = fs::remove_file(&path); // Ignore errors on deletion
+            }
         }
 
         Ok(())

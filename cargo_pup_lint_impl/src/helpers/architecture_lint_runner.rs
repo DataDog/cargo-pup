@@ -188,30 +188,31 @@ impl ArchitectureLintRunner {
         for item_id in module_items.free_items() {
             let item = tcx.hir_item(item_id);
             if let ItemKind::Impl(impl_data) = &item.kind
-                && let Some(trait_ref) = impl_data.of_trait {
-                    // This is a trait implementation
-                    // Get the canonical trait name using the centralized helper
-                    let trait_def_id = trait_ref.path.res.def_id();
-                    let canonical_full_name =
-                        crate::helpers::queries::get_full_canonical_trait_name_from_def_id(
-                            &tcx,
-                            trait_def_id,
-                        );
+                && let Some(trait_ref) = impl_data.of_trait
+            {
+                // This is a trait implementation
+                // Get the canonical trait name using the centralized helper
+                let trait_def_id = trait_ref.path.res.def_id();
+                let canonical_full_name =
+                    crate::helpers::queries::get_full_canonical_trait_name_from_def_id(
+                        &tcx,
+                        trait_def_id,
+                    );
 
-                    // Get the implementing type and clean up the display
-                    let self_ty = tcx.type_of(item.owner_id).skip_binder();
-                    let impl_type_raw = format!("{self_ty}");
+                // Get the implementing type and clean up the display
+                let self_ty = tcx.type_of(item.owner_id).skip_binder();
+                let impl_type_raw = format!("{self_ty}");
 
-                    // Clean up implementation type by removing generic parameters using the centralized helper
-                    let impl_type =
-                        crate::helpers::queries::get_canonical_type_name(&impl_type_raw);
+                // Clean up implementation type by removing generic parameters using the centralized helper
+                let impl_type = crate::helpers::queries::get_canonical_type_name(&impl_type_raw);
 
-                    // Add implementor to trait if it's not already in the list
-                    if let Some((implementors, _)) = trait_map.get_mut(&canonical_full_name)
-                        && !implementors.contains(&impl_type) {
-                            implementors.push(impl_type);
-                        }
+                // Add implementor to trait if it's not already in the list
+                if let Some((implementors, _)) = trait_map.get_mut(&canonical_full_name)
+                    && !implementors.contains(&impl_type)
+                {
+                    implementors.push(impl_type);
                 }
+            }
         }
 
         // Find lints that apply to each trait

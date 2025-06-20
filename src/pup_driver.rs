@@ -193,14 +193,16 @@ fn find_sysroot() -> String {
     }
 
     if let Ok(rustup_home) = env::var("RUSTUP_HOME")
-        && let Ok(toolchain) = env::var("RUSTUP_TOOLCHAIN") {
-            return format!("{rustup_home}/toolchains/{toolchain}");
-        }
+        && let Ok(toolchain) = env::var("RUSTUP_TOOLCHAIN")
+    {
+        return format!("{rustup_home}/toolchains/{toolchain}");
+    }
 
     if let Ok(output) = Command::new("rustc").arg("--print").arg("sysroot").output()
-        && output.status.success() {
-            return String::from_utf8(output.stdout).expect("Invalid UTF-8 in sysroot output");
-        }
+        && output.status.success()
+    {
+        return String::from_utf8(output.stdout).expect("Invalid UTF-8 in sysroot output");
+    }
 
     panic!("Could not determine sysroot.");
 }

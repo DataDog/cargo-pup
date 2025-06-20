@@ -122,9 +122,10 @@ fn evaluate_function_match(
 
                         // Extract the type name without module path
                         if let Some(last_segment) = path.split("::").last()
-                            && last_segment == *name {
-                                return true;
-                            }
+                            && last_segment == *name
+                        {
+                            return true;
+                        }
                     }
 
                     // Fallback: use the string representation
@@ -223,26 +224,27 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                         let source_map = ctx.tcx.sess.source_map();
 
                         if let Ok(file_lines) = source_map.span_to_lines(body.value.span)
-                            && file_lines.lines.len() > *max_lines {
-                                // Create a span that only covers the function signature
-                                let sig_span = item.span.with_hi(
-                                    item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
-                                );
+                            && file_lines.lines.len() > *max_lines
+                        {
+                            // Create a span that only covers the function signature
+                            let sig_span = item.span.with_hi(
+                                item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
+                            );
 
-                                span_lint_and_help(
-                                    ctx,
-                                    FUNCTION_LINT::get_by_severity(*severity),
-                                    self.name().as_str(),
-                                    sig_span,
-                                    format!(
-                                        "Function exceeds maximum length of {} lines with {} lines",
-                                        max_lines,
-                                        file_lines.lines.len()
-                                    ),
-                                    None,
-                                    "Consider breaking this function into smaller parts",
-                                );
-                            }
+                            span_lint_and_help(
+                                ctx,
+                                FUNCTION_LINT::get_by_severity(*severity),
+                                self.name().as_str(),
+                                sig_span,
+                                format!(
+                                    "Function exceeds maximum length of {} lines with {} lines",
+                                    max_lines,
+                                    file_lines.lines.len()
+                                ),
+                                None,
+                                "Consider breaking this function into smaller parts",
+                            );
+                        }
                     }
                     FunctionRule::ResultErrorMustImplementError(severity) => {
                         // Get the return type
@@ -310,26 +312,27 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                         let source_map = ctx.tcx.sess.source_map();
 
                         if let Ok(file_lines) = source_map.span_to_lines(body.value.span)
-                            && file_lines.lines.len() > *max_lines {
-                                // Create a span that only covers the method signature
-                                let sig_span = impl_item.span.with_hi(
-                                    impl_item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
-                                );
+                            && file_lines.lines.len() > *max_lines
+                        {
+                            // Create a span that only covers the method signature
+                            let sig_span = impl_item.span.with_hi(
+                                impl_item.span.lo() + BytePos((item_name.len() + 5) as u32), // "fn name"
+                            );
 
-                                span_lint_and_help(
-                                    ctx,
-                                    FUNCTION_LINT::get_by_severity(*severity),
-                                    self.name().as_str(),
-                                    sig_span,
-                                    format!(
-                                        "Function exceeds maximum length of {} lines with {} lines",
-                                        max_lines,
-                                        file_lines.lines.len()
-                                    ),
-                                    None,
-                                    "Consider breaking this function into smaller parts",
-                                );
-                            }
+                            span_lint_and_help(
+                                ctx,
+                                FUNCTION_LINT::get_by_severity(*severity),
+                                self.name().as_str(),
+                                sig_span,
+                                format!(
+                                    "Function exceeds maximum length of {} lines with {} lines",
+                                    max_lines,
+                                    file_lines.lines.len()
+                                ),
+                                None,
+                                "Consider breaking this function into smaller parts",
+                            );
+                        }
                     }
                     FunctionRule::ResultErrorMustImplementError(severity) => {
                         // Get the return type
