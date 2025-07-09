@@ -127,6 +127,22 @@ impl<'a> StructConstraintBuilder<'a> {
         self
     }
 
+    /// Add a rule requiring the struct to implement a given trait
+    pub fn must_implement_trait(mut self, trait_path: impl Into<String>) -> Self {
+        self.add_rule_internal(StructRule::ImplementsTrait(
+            trait_path.into(),
+            self.current_severity,
+        ));
+        self
+    }
+
+    /// Add a rule requiring the struct NOT to implement a given trait
+    pub fn must_not_implement_trait(mut self, trait_path: impl Into<String>) -> Self {
+        let inner = StructRule::ImplementsTrait(trait_path.into(), self.current_severity);
+        self.add_rule_internal(StructRule::Not(Box::new(inner)));
+        self
+    }
+
     /// Add a rule requiring the struct to have public visibility
     pub fn must_be_public(mut self) -> Self {
         self.add_rule_internal(StructRule::MustBePublic(self.current_severity));
