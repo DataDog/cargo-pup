@@ -12,6 +12,16 @@ use rustc_middle::ty::TyKind;
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
 
+// Helper: retrieve the concrete Self type of the impl the method belongs to, if any
+fn get_self_type<'tcx>(
+    ctx: &LateContext<'tcx>,
+    fn_def_id: rustc_hir::def_id::DefId,
+) -> Option<rustc_middle::ty::Ty<'tcx>> {
+    ctx.tcx
+        .impl_of_method(fn_def_id)
+        .map(|impl_def_id| ctx.tcx.type_of(impl_def_id).instantiate_identity())
+}
+
 pub struct FunctionLint {
     name: String,
     matches: FunctionMatch,
@@ -141,6 +151,23 @@ fn evaluate_function_match(
                             regex.is_match(&type_string)
                         }
                         Err(_) => false,
+                    }
+                }
+                ReturnTypePattern::SelfValue => get_self_type(ctx, fn_def_id) == Some(return_ty),
+                ReturnTypePattern::SelfRef => {
+                    match (get_self_type(ctx, fn_def_id), return_ty.kind()) {
+                        (Some(self_ty), &TyKind::Ref(_, inner, rustc_hir::Mutability::Not)) => {
+                            inner == self_ty
+                        }
+                        _ => false,
+                    }
+                }
+                ReturnTypePattern::SelfMutRef => {
+                    match (get_self_type(ctx, fn_def_id), return_ty.kind()) {
+                        (Some(self_ty), &TyKind::Ref(_, inner, rustc_hir::Mutability::Mut)) => {
+                            inner == self_ty
+                        }
+                        _ => false,
                     }
                 }
             }
@@ -284,6 +311,21 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                             }
                         }
                     }
+                    FunctionRule::MustNotExist(severity) => {
+                        let sig_span = item
+                            .span
+                            .with_hi(item.span.lo() + BytePos((item_name.len() + 5) as u32));
+
+                        span_lint_and_help(
+                            ctx,
+                            FUNCTION_LINT::get_by_severity(*severity),
+                            self.name().as_str(),
+                            sig_span,
+                            format!("Function '{item_name}' is forbidden by lint rule"),
+                            None,
+                            "Remove this function to satisfy the architectural rule",
+                        );
+                    }
                 }
             }
         }
@@ -371,6 +413,21 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                                 }
                             }
                         }
+                    }
+                    FunctionRule::MustNotExist(severity) => {
+                        let sig_span = impl_item
+                            .span
+                            .with_hi(impl_item.span.lo() + BytePos((item_name.len() + 5) as u32));
+
+                        span_lint_and_help(
+                            ctx,
+                            FUNCTION_LINT::get_by_severity(*severity),
+                            self.name().as_str(),
+                            sig_span,
+                            format!("Function '{item_name}' is forbidden by lint rule"),
+                            None,
+                            "Remove this function to satisfy the architectural rule",
+                        );
                     }
                 }
             }

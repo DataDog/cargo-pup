@@ -98,6 +98,26 @@ fn test_lint_config() {
         .enforce_error_trait_implementation()
         .build();
 
+    // ------------------------------------------------------------------
+    // Builder style lint rules (demonstrates consuming vs reference pattern)
+    // ------------------------------------------------------------------
+
+    builder
+        .function_lint()
+        .lint_named("builder_style_with_consuming_forbidden")
+        .matching(|m| m.name_regex("^with_.*").and(m.returns_self()))
+        .with_severity(Severity::Error)
+        .must_not_exist()
+        .build();
+
+    builder
+        .function_lint()
+        .lint_named("builder_style_set_consuming_forbidden")
+        .matching(|m| m.name_regex("^set_.*").and(m.returns_self()))
+        .with_severity(Severity::Error)
+        .must_not_exist()
+        .build();
+
     // Write the configuration to pup.ron using the fixed write_to_file method
     builder
         .write_to_file("pup.ron")

@@ -240,4 +240,24 @@ warning: Struct 'MyBadlyNamedThing' is public, but must be private
    = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
+error: Function 'with_width' is forbidden by lint rule
+ --> src/builder_style/mod.rs:8:5
+  |
+8 |     pub fn with_width(self, width: u32) -> Self {
+  |     ^^^^^^^^^^^^^^^
+  |
+  = help: Remove this function to satisfy the architectural rule
+  = note: Applied by cargo-pup rule 'builder_style_with_consuming_forbidden'.
+  = note: `#[deny(function_lint)]` on by default
+
+error: Function 'set_height' is forbidden by lint rule
+  --> src/builder_style/mod.rs:13:5
+   |
+13 |     pub fn set_height(self, height: u32) -> Self {
+   |     ^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'builder_style_set_consuming_forbidden'.
+
 warning: `test_app` (bin "test_app") generated 20 warnings
+error: could not compile `test_app` (bin "test_app") due to 2 previous errors; 20 warnings emitted

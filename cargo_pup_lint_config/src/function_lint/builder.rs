@@ -123,6 +123,12 @@ impl<'a> FunctionConstraintBuilder<'a> {
         self
     }
 
+    /// Require that no function matching the selector exists
+    pub fn must_not_exist(mut self) -> Self {
+        self.add_rule_internal(FunctionRule::MustNotExist(self.current_severity));
+        self
+    }
+
     /// Create a new MaxLength rule with the current severity
     pub fn create_max_length_rule(&self, length: usize) -> FunctionRule {
         FunctionRule::MaxLength(length, self.current_severity)

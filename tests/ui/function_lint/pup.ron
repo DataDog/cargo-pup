@@ -300,6 +300,40 @@
                     )
                 ]
             )
+        ),
+
+        // ======================================================================
+        // SECTION: Builder Style Tests (for builder_style.rs)
+        // ======================================================================
+
+        Function(
+            (
+                name: "builder_style_with_methods_forbidden",
+                matches: AndMatches(
+                    NameRegex("^with_.*"),
+                    ReturnsType(SelfValue)
+                ),
+                rules: [
+                    MustNotExist(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        Function(
+            (
+                name: "builder_style_set_methods_forbid_self_value",
+                matches: AndMatches(
+                    NameRegex("^set_.*"),
+                    ReturnsType(SelfValue)
+                ),
+                rules: [
+                    MustNotExist(
+                        Error,
+                    )
+                ]
+            )
         )
     ]
 ) 

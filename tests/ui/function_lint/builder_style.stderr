@@ -1,0 +1,21 @@
+error: Function 'with_val' is forbidden by lint rule
+  --> tests/ui/function_lint/builder_style.rs:13:5
+   |
+LL |     pub fn with_val(mut self, val: i32) -> Self {
+   |     ^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'builder_style_with_methods_forbidden'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function 'set_val_value' is forbidden by lint rule
+  --> tests/ui/function_lint/builder_style.rs:31:5
+   |
+LL |     pub fn set_val_value(self, val: i32) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'builder_style_set_methods_forbid_self_value'.
+
+error: aborting due to 2 previous errors
+

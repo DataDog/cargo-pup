@@ -16,6 +16,12 @@ pub enum ReturnTypePattern {
     Regex(String),
     /// Match Result<T, E> where E implements Error trait
     ResultWithErrorImpl,
+    /// Match when the function returns `Self` by value (e.g., a consuming builder-style method)
+    SelfValue,
+    /// Match when the function returns `&Self` (immutable reference, e.g., fluent interface)
+    SelfRef,
+    /// Match when the function returns `&mut Self` (mutable reference, e.g., classic builder setter)
+    SelfMutRef,
 }
 
 /// Specifies how to match functions for linting
@@ -52,6 +58,8 @@ pub enum FunctionRule {
     MaxLength(usize, Severity),
     /// Enforces that Result error types must implement the Error trait
     ResultErrorMustImplementError(Severity),
+    /// Enforces that a function matching the selector must not exist at all
+    MustNotExist(Severity),
 }
 
 // Helper methods for FunctionRule
