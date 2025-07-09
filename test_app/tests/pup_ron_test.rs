@@ -82,11 +82,11 @@ fn test_lint_config() {
     // Trait restrictions
     builder.struct_lint()
         .lint_named("trait_restrictions")
-        .matching(|m|
-        m.implements_trait("^test_app::trait_impl::MyTrait$"))
+        .matching(|m| m.implements_trait("^test_app::trait_impl::MyTrait$"))
         .with_severity(Severity::Warn)
-        .must_be_named(".*MyTraitImpl$".into())        
+        .must_be_named(".*MyTraitImpl$".into())
         .must_be_private()
+        .must_implement_trait("test_app::trait_impl::MyTrait")
         .build();
         
     // Result error implementation check

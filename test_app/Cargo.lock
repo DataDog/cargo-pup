@@ -322,7 +322,7 @@ dependencies = [
 
 [[package]]
 name = "test_app"
-version = "0.1.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo_pup_lint_config",
