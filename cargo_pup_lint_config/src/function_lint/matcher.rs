@@ -60,6 +60,21 @@ impl FunctionMatcher {
             pattern.into(),
         )))
     }
+
+    /// Matches functions that return `Self` by value
+    pub fn returns_self(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::SelfValue))
+    }
+
+    /// Matches functions that return `&Self`
+    pub fn returns_self_ref(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::SelfRef))
+    }
+
+    /// Matches functions that return `&mut Self`
+    pub fn returns_self_mut_ref(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::SelfMutRef))
+    }
 }
 
 /// Node in the matcher expression tree

@@ -12,6 +12,7 @@ mod module_usage;
 mod must_be_empty;
 mod result_error;
 mod trait_impl;
+mod builder_style;
 
 fn main() {
     println!("Hello, world!");
