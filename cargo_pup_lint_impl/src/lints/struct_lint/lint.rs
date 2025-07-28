@@ -128,10 +128,10 @@ impl StructLint {
             // Get parameter environment for the struct
             let param_env = ctx.param_env;
 
-            // For each trait in the crate, check if:
+            // For each trait in all crates, check if:
             // 1. The trait name matches our pattern
             // 2. The struct implements the trait
-            for trait_def_id in ctx.tcx.all_traits() {
+            for trait_def_id in ctx.tcx.all_traits_including_private() {
                 // Get the full canonical trait name
                 let full_trait_name =
                     queries::get_full_canonical_trait_name_from_def_id(&ctx.tcx, trait_def_id);

@@ -8,11 +8,11 @@ use crate::{ConfiguredLint, Severity};
 /// Extension trait that adds module linting capabilities to LintBuilder
 pub trait ModuleLintExt {
     /// Start building a module lint rule
-    fn module_lint(&mut self) -> ModuleLintBuilder;
+    fn module_lint(&mut self) -> ModuleLintBuilder<'_>;
 }
 
 impl ModuleLintExt for LintBuilder {
-    fn module_lint(&mut self) -> ModuleLintBuilder {
+    fn module_lint(&mut self) -> ModuleLintBuilder<'_> {
         ModuleLintBuilder { parent: self }
     }
 }

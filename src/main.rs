@@ -59,7 +59,6 @@
 //!
 //!
 
-#![feature(let_chains)]
 #![feature(array_windows)]
 #![feature(try_blocks)]
 #![warn(rust_2018_idioms, unused_lifetimes)]

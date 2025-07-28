@@ -8,11 +8,11 @@ use crate::{ConfiguredLint, Severity};
 /// Extension trait that adds struct linting capabilities to LintBuilder
 pub trait StructLintExt {
     /// Start building a struct lint rule
-    fn struct_lint(&mut self) -> StructLintBuilder;
+    fn struct_lint(&mut self) -> StructLintBuilder<'_>;
 }
 
 impl StructLintExt for LintBuilder {
-    fn struct_lint(&mut self) -> StructLintBuilder {
+    fn struct_lint(&mut self) -> StructLintBuilder<'_> {
         StructLintBuilder { parent: self }
     }
 }
