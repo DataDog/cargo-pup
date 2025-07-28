@@ -21,7 +21,7 @@ First, make sure to install [rustup](https://rustup.rs/) to manage your local ru
 
 Then install pup; **you must use this nightly toolchain, as pup depends on compiler internals that are otherwise unavailable!**
 ```bash
-cargo +nightly-2025-05-31 install cargo_pup
+cargo +nightly-2025-07-25 install cargo_pup
 ```
 
 ## Getting Started
@@ -120,7 +120,7 @@ First, add the following to your `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-cargo_pup_lint_config = "0.1.2"
+cargo_pup_lint_config = "0.1.3"
 ```
 
 ## Examples
