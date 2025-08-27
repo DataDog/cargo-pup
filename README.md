@@ -21,6 +21,7 @@ First, make sure to install [rustup](https://rustup.rs/) to manage your local ru
 
 Then install pup; **you must use this nightly toolchain, as pup depends on compiler internals that are otherwise unavailable!**
 ```bash
+rustup component add --toolchain nightly-2025-07-25 rust-src rustc-dev llvm-tools-preview
 cargo +nightly-2025-07-25 install cargo_pup
 ```
 
