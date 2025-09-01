@@ -119,5 +119,15 @@
                 MustNotExist(Error),
             ],
         )),
+        Function((
+            name: "async_functions_forbidden",
+            matches: AndMatches(
+                InModule("^test_app::async_functions$"),
+                IsAsync
+            ),
+            rules: [
+                MustNotExist(Error),
+            ],
+        )),
     ],
 )

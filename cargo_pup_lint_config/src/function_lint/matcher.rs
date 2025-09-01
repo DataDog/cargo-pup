@@ -75,6 +75,11 @@ impl FunctionMatcher {
     pub fn returns_self_mut_ref(&self) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::ReturnsType(ReturnTypePattern::SelfMutRef))
     }
+
+    /// Matches async functions
+    pub fn is_async(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::IsAsync)
+    }
 }
 
 /// Node in the matcher expression tree

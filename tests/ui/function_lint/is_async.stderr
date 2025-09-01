@@ -1,0 +1,39 @@
+error: Function 'async_function' is forbidden by lint rule
+  --> tests/ui/function_lint/is_async.rs:9:1
+   |
+LL | async fn async_function() {
+   | ^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'async_function_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function 'async_with_return' is forbidden by lint rule
+  --> tests/ui/function_lint/is_async.rs:13:1
+   |
+LL | async fn async_with_return() -> String {
+   | ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'async_function_test'.
+
+error: Function 'async_method' is forbidden by lint rule
+  --> tests/ui/function_lint/is_async.rs:30:5
+   |
+LL |     async fn async_method(&self) {
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'async_function_test'.
+
+error: Function 'trait_async_method' is forbidden by lint rule
+  --> tests/ui/function_lint/is_async.rs:45:5
+   |
+LL |     async fn trait_async_method(&self) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'async_function_test'.
+
+error: aborting due to 4 previous errors
+
