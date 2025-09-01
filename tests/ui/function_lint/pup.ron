@@ -334,6 +334,23 @@
                     )
                 ]
             )
+        ),
+        
+        // ======================================================================
+        // SECTION: IsAsync Tests (for is_async.rs)
+        // ======================================================================
+        
+        // Test that async functions are detected and can be linted
+        Function(
+            (
+                name: "async_function_test",
+                matches: IsAsync,
+                rules: [
+                    MustNotExist(
+                        Error,
+                    )
+                ]
+            )
         )
     ]
 ) 

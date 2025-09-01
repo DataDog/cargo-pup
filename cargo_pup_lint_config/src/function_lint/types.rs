@@ -35,6 +35,8 @@ pub enum FunctionMatch {
     InModule(String),
     /// Match functions that return a specific type pattern
     ReturnsType(ReturnTypePattern),
+    /// Match async functions
+    IsAsync,
     /// Logical AND - both patterns must match
     AndMatches(Box<FunctionMatch>, Box<FunctionMatch>),
     /// Logical OR - either pattern must match

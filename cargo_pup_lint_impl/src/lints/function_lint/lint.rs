@@ -172,6 +172,31 @@ fn evaluate_function_match(
                 }
             }
         }
+        FunctionMatch::IsAsync => {
+            // Check if the function is async by examining the HIR
+            if let Some(local_def_id) = fn_def_id.as_local() {
+                let node = ctx.tcx.hir_node_by_def_id(local_def_id);
+                match node {
+                    rustc_hir::Node::Item(item) => {
+                        if let rustc_hir::ItemKind::Fn { sig, .. } = &item.kind {
+                            return matches!(sig.header.asyncness, rustc_hir::IsAsync::Async(_));
+                        }
+                    }
+                    rustc_hir::Node::TraitItem(trait_item) => {
+                        if let rustc_hir::TraitItemKind::Fn(sig, _) = &trait_item.kind {
+                            return matches!(sig.header.asyncness, rustc_hir::IsAsync::Async(_));
+                        }
+                    }
+                    rustc_hir::Node::ImplItem(impl_item) => {
+                        if let rustc_hir::ImplItemKind::Fn(sig, _) = &impl_item.kind {
+                            return matches!(sig.header.asyncness, rustc_hir::IsAsync::Async(_));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            false
+        }
         FunctionMatch::AndMatches(left, right) => {
             evaluate_function_match(left, ctx, module_path, function_name, fn_def_id)
                 && evaluate_function_match(right, ctx, module_path, function_name, fn_def_id)

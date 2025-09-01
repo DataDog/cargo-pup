@@ -259,5 +259,41 @@ error: Function 'set_height' is forbidden by lint rule
    = help: Remove this function to satisfy the architectural rule
    = note: Applied by cargo-pup rule 'builder_style_set_consuming_forbidden'.
 
+error: Function 'forbidden_async_function' is forbidden by lint rule
+ --> src/async_functions/mod.rs:8:1
+  |
+8 | pub async fn forbidden_async_function() -> String {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: Remove this function to satisfy the architectural rule
+  = note: Applied by cargo-pup rule 'async_functions_forbidden'.
+
+error: Function 'async_result_function' is forbidden by lint rule
+  --> src/async_functions/mod.rs:13:1
+   |
+13 | pub async fn async_result_function() -> Result<i32, String> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'async_functions_forbidden'.
+
+error: Function 'process_async' is forbidden by lint rule
+  --> src/async_functions/mod.rs:33:5
+   |
+33 |     pub async fn process_async(&self) -> Result<String, String> {
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'async_functions_forbidden'.
+
+error: Function 'process_item' is forbidden by lint rule
+  --> src/async_functions/mod.rs:55:5
+   |
+55 |     async fn process_item(&self, item: String) -> Result<String, String> {
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'async_functions_forbidden'.
+
 warning: `test_app` (bin "test_app") generated 20 warnings
-error: could not compile `test_app` (bin "test_app") due to 2 previous errors; 20 warnings emitted
+error: could not compile `test_app` (bin "test_app") due to 6 previous errors; 20 warnings emitted
