@@ -130,6 +130,9 @@ impl<'a> FunctionConstraintBuilder<'a> {
     }
 
     /// Require that the function does not perform heap allocations
+    /// This is a best-efforts lint! There are limits to the extent to which we can
+    /// scan _everything_ used in function bodies to find allocations, but in most
+    /// cases it should work well.
     pub fn no_allocation(mut self) -> Self {
         self.add_rule_internal(FunctionRule::NoAllocation(self.current_severity));
         self

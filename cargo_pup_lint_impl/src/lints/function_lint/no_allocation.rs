@@ -24,11 +24,55 @@ pub fn detect_allocation_in_mir<'tcx>(
     for (_bb, bb_data) in mir.basic_blocks.iter_enumerated() {
         // Check terminator for calls
         if let Some(terminator) = &bb_data.terminator
-            && let TerminatorKind::Call { func, .. } = &terminator.kind
+            && let TerminatorKind::Call { func, args, .. } = &terminator.kind
         {
             // Extract function DefId using const_fn_def
             if let Some((callee_def_id, _generics)) = func.const_fn_def() {
                 let path = tcx.def_path_str(callee_def_id);
+
+                // Check arguments for closures
+                for arg in args.iter() {
+                    use rustc_middle::mir::Operand;
+
+                    // Try to extract closure DefId from the operand
+                    let closure_def_id = match &arg.node {
+                        Operand::Constant(constant) => {
+                            // Check if this is a closure type
+                            let ty = constant.const_.ty();
+                            if let rustc_middle::ty::TyKind::Closure(def_id, _) = ty.kind() {
+                                Some(*def_id)
+                            } else if let rustc_middle::ty::TyKind::FnDef(def_id, _) = ty.kind() {
+                                Some(*def_id)
+                            } else {
+                                None
+                            }
+                        }
+                        Operand::Move(place) | Operand::Copy(place) => {
+                            // For Move/Copy operands, check the type of the place
+                            let ty = place.ty(mir, tcx).ty;
+                            if let rustc_middle::ty::TyKind::Closure(def_id, _) = ty.kind() {
+                                Some(*def_id)
+                            } else if let rustc_middle::ty::TyKind::FnDef(def_id, _) = ty.kind() {
+                                Some(*def_id)
+                            } else {
+                                None
+                            }
+                        }
+                    };
+
+                    if let Some(closure_def_id) = closure_def_id {
+                        // Analyze the closure if it's local
+                        if closure_def_id.krate == rustc_hir::def_id::LOCAL_CRATE
+                            && tcx.is_mir_available(closure_def_id)
+                            && function_allocates(tcx, closure_def_id, cache)
+                        {
+                            return Some(AllocationViolation {
+                                span: terminator.source_info.span,
+                                reason: format!("passes allocating closure to {path}"),
+                            });
+                        }
+                    }
+                }
 
                 // Check if it's a known allocating function
                 if is_allocating_function(&path) {
