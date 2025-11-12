@@ -14,6 +14,7 @@ mod result_error;
 mod trait_impl;
 mod builder_style;
 mod async_functions;
+mod no_allocation;
 
 fn main() {
     println!("Hello, world!");

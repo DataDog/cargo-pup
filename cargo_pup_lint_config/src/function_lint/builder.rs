@@ -129,6 +129,12 @@ impl<'a> FunctionConstraintBuilder<'a> {
         self
     }
 
+    /// Require that the function does not perform heap allocations
+    pub fn no_allocation(mut self) -> Self {
+        self.add_rule_internal(FunctionRule::NoAllocation(self.current_severity));
+        self
+    }
+
     /// Create a new MaxLength rule with the current severity
     pub fn create_max_length_rule(&self, length: usize) -> FunctionRule {
         FunctionRule::MaxLength(length, self.current_severity)

@@ -62,6 +62,8 @@ pub enum FunctionRule {
     ResultErrorMustImplementError(Severity),
     /// Enforces that a function matching the selector must not exist at all
     MustNotExist(Severity),
+    /// Enforces that a function must not perform heap allocations
+    NoAllocation(Severity),
 }
 
 // Helper methods for FunctionRule
