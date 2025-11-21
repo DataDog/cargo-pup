@@ -192,7 +192,7 @@ impl ArchitectureLintRunner {
             {
                 // This is a trait implementation
                 // Get the canonical trait name using the centralized helper
-                let trait_def_id = trait_ref.path.res.def_id();
+                let trait_def_id = trait_ref.trait_ref.path.res.def_id();
                 let canonical_full_name =
                     crate::helpers::queries::get_full_canonical_trait_name_from_def_id(
                         &tcx,
@@ -326,8 +326,6 @@ impl Callbacks for ArchitectureLintRunner {
         _compiler: &rustc_interface::interface::Compiler,
         _tcx: TyCtxt<'_>,
     ) -> rustc_driver::Compilation {
-        _compiler.sess.coverage_discard_all_spans_in_codegen();
-
         rustc_driver::Compilation::Continue
     }
 }

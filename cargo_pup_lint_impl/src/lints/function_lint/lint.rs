@@ -22,7 +22,11 @@ fn get_self_type<'tcx>(
     fn_def_id: rustc_hir::def_id::DefId,
 ) -> Option<rustc_middle::ty::Ty<'tcx>> {
     ctx.tcx
-        .impl_of_method(fn_def_id)
+        .opt_associated_item(fn_def_id)
+        .and_then(|assoc_item| {
+            // Check if this associated item is from an impl block
+            assoc_item.impl_container(ctx.tcx)
+        })
         .map(|impl_def_id| ctx.tcx.type_of(impl_def_id).instantiate_identity())
 }
 
