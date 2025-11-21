@@ -1,0 +1,93 @@
+error: Function allocates heap memory: calls allocating function: std::boxed::Box::<T>::new
+  --> tests/ui/function_lint/no_allocation.rs:20:5
+   |
+LL |     Box::new(42)
+   |     ^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function allocates heap memory: calls allocating function: std::vec::Vec::<T>::new
+  --> tests/ui/function_lint/no_allocation.rs:24:14
+   |
+LL |     let _v = Vec::<i32>::new();
+   |              ^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls allocating function: std::string::String::new
+  --> tests/ui/function_lint/no_allocation.rs:28:14
+   |
+LL |     let _s = String::new();
+   |              ^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls allocating function: std::string::ToString::to_string
+  --> tests/ui/function_lint/no_allocation.rs:32:5
+   |
+LL |     x.to_string()
+   |     ^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls allocating function: std::rc::Rc::<T>::new
+  --> tests/ui/function_lint/no_allocation.rs:36:5
+   |
+LL |     std::rc::Rc::new(42)
+   |     ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls allocating function: std::sync::Arc::<T>::new
+  --> tests/ui/function_lint/no_allocation.rs:40:5
+   |
+LL |     std::sync::Arc::new(42)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls allocating function: std::collections::HashMap::<K, V>::new
+  --> tests/ui/function_lint/no_allocation.rs:44:16
+   |
+LL |     let _map = std::collections::HashMap::<i32, i32>::new();
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls allocating function: std::vec::Vec::<T>::new
+  --> tests/ui/function_lint/no_allocation.rs:50:13
+   |
+LL |     let v = Vec::new();
+   |             ^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls function that allocates: helper_allocates
+  --> tests/ui/function_lint/no_allocation.rs:55:13
+   |
+LL |     let v = helper_allocates();
+   |             ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: Function allocates heap memory: calls allocating function: std::string::ToString::to_string
+  --> tests/ui/function_lint/no_allocation.rs:70:9
+   |
+LL |         self.value.to_string()
+   |         ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove heap allocations to satisfy the NoAllocation rule
+   = note: Applied by cargo-pup rule 'no_allocation_test'.
+
+error: aborting due to 10 previous errors
+

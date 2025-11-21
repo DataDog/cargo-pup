@@ -11,6 +11,10 @@ use rustc_lint::{LateContext, LateLintPass, LintStore};
 use rustc_middle::ty::TyKind;
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+use super::no_allocation::detect_allocation_in_mir;
 
 // Helper: retrieve the concrete Self type of the impl the method belongs to, if any
 fn get_self_type<'tcx>(
@@ -26,6 +30,8 @@ pub struct FunctionLint {
     name: String,
     matches: FunctionMatch,
     function_rules: Vec<FunctionRule>,
+    // Cache for allocation detection to avoid re-analyzing the same functions
+    allocation_cache: Mutex<HashMap<rustc_hir::def_id::DefId, bool>>,
 }
 
 impl FunctionLint {
@@ -36,6 +42,7 @@ impl FunctionLint {
                 name: f.name.clone(),
                 matches: f.matches.clone(),
                 function_rules: f.rules.clone(),
+                allocation_cache: Mutex::new(HashMap::new()),
             })
         } else {
             panic!("Expected a Function lint configuration")
@@ -245,6 +252,7 @@ impl ArchitectureLintRule for FunctionLint {
                 name: name.clone(),
                 matches: matches.clone(),
                 function_rules: function_rules.clone(),
+                allocation_cache: Mutex::new(HashMap::new()),
             })
         });
     }
@@ -351,6 +359,28 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                             "Remove this function to satisfy the architectural rule",
                         );
                     }
+                    FunctionRule::NoAllocation(severity) => {
+                        if ctx.tcx.is_mir_available(fn_def_id) {
+                            let mir = ctx.tcx.optimized_mir(fn_def_id);
+
+                            if let Some(violation) = detect_allocation_in_mir(
+                                ctx.tcx,
+                                mir,
+                                fn_def_id,
+                                &mut self.allocation_cache.lock().unwrap(),
+                            ) {
+                                span_lint_and_help(
+                                    ctx,
+                                    FUNCTION_LINT::get_by_severity(*severity),
+                                    self.name().as_str(),
+                                    violation.span,
+                                    format!("Function allocates heap memory: {}", violation.reason),
+                                    None,
+                                    "Remove heap allocations to satisfy the NoAllocation rule",
+                                );
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -453,6 +483,28 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                             None,
                             "Remove this function to satisfy the architectural rule",
                         );
+                    }
+                    FunctionRule::NoAllocation(severity) => {
+                        if ctx.tcx.is_mir_available(fn_def_id) {
+                            let mir = ctx.tcx.optimized_mir(fn_def_id);
+
+                            if let Some(violation) = detect_allocation_in_mir(
+                                ctx.tcx,
+                                mir,
+                                fn_def_id,
+                                &mut self.allocation_cache.lock().unwrap(),
+                            ) {
+                                span_lint_and_help(
+                                    ctx,
+                                    FUNCTION_LINT::get_by_severity(*severity),
+                                    self.name().as_str(),
+                                    violation.span,
+                                    format!("Function allocates heap memory: {}", violation.reason),
+                                    None,
+                                    "Remove heap allocations to satisfy the NoAllocation rule",
+                                );
+                            }
+                        }
                     }
                 }
             }

@@ -339,7 +339,7 @@
         // ======================================================================
         // SECTION: IsAsync Tests (for is_async.rs)
         // ======================================================================
-        
+
         // Test that async functions are detected and can be linted
         Function(
             (
@@ -347,6 +347,23 @@
                 matches: IsAsync,
                 rules: [
                     MustNotExist(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        // ======================================================================
+        // SECTION: NoAllocation Tests (for no_allocation.rs)
+        // ======================================================================
+
+        // Test that functions with specific names do not allocate
+        Function(
+            (
+                name: "no_allocation_test",
+                matches: InModule("test_crate"),
+                rules: [
+                    NoAllocation(
                         Error,
                     )
                 ]

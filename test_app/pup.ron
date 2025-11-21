@@ -129,5 +129,12 @@
                 MustNotExist(Error),
             ],
         )),
+        Function((
+            name: "no_allocation_check",
+            matches: InModule("^test_app::no_allocation$"),
+            rules: [
+                NoAllocation(Warn),
+            ],
+        )),
     ],
 )
