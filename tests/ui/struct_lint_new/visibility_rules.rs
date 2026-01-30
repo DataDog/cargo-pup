@@ -6,7 +6,7 @@
 // This test verifies that the StructRule::MustBePrivate and StructRule::MustBePublic rules work correctly
 
 // Testing MustBePrivate rule:
-pub struct InternalData { //~ ERROR: Struct 'InternalData' is public, but must be private
+pub struct InternalData { //~ ERROR: Struct 'InternalData' has pub visibility, but must be private
     field: i32,
 }
 
@@ -16,7 +16,7 @@ struct CorrectlyPrivate {
 }
 
 // Testing MustBePublic rule:
-struct HiddenApi { //~ WARN: Struct 'HiddenApi' is private, but must be public
+struct HiddenApi { //~ WARN: Struct 'HiddenApi' has private visibility, but must be pub
     id: u64,
 }
 
@@ -26,7 +26,7 @@ pub struct CorrectlyPublic {
 }
 
 // Also testing name-pattern + visibility combination
-pub struct InternalModel { //~ ERROR: Struct 'InternalModel' is public, but must be private
+pub struct InternalModel { //~ ERROR: Struct 'InternalModel' has pub visibility, but must be private
     sensitive_data: String,
 }
 

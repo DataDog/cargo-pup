@@ -35,10 +35,12 @@ pub enum StructRule {
     MustBeNamed(String, Severity),
     /// Enforces that the struct name does not match the specified pattern
     MustNotBeNamed(String, Severity),
-    /// Enforces that the struct has private visibility
+    /// Enforces that the struct has private visibility (not pub, not pub(crate), not pub(super))
     MustBePrivate(Severity),
-    /// Enforces that the struct has public visibility
+    /// Enforces that the struct has public visibility (pub)
     MustBePublic(Severity),
+    /// Enforces that the struct has pub(crate) visibility
+    MustBePubCrate(Severity),
     /// Enforces that the struct implements a specific trait
     ImplementsTrait(String, Severity),
     /// Logical AND - both rules must pass

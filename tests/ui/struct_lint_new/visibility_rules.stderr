@@ -1,30 +1,30 @@
-error: Struct 'InternalData' is public, but must be private
+error: Struct 'InternalData' has pub visibility, but must be private
   --> tests/ui/struct_lint_new/visibility_rules.rs:9:1
    |
 LL | pub struct InternalData {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove the 'pub' visibility modifier
+   = help: Remove the visibility modifier
    = note: Applied by cargo-pup rule 'must_be_private_test'.
    = note: `#[deny(struct_lint_must_be_private)]` on by default
 
-warning: Struct 'HiddenApi' is private, but must be public
+warning: Struct 'HiddenApi' has private visibility, but must be pub
   --> tests/ui/struct_lint_new/visibility_rules.rs:19:1
    |
 LL | struct HiddenApi {
    | ^^^^^^^^^^^^^^^^^^
    |
-   = help: Add the 'pub' visibility modifier
+   = help: Change the visibility to 'pub'
    = note: Applied by cargo-pup rule 'must_be_public_test'.
    = note: `#[warn(struct_lint_must_be_public)]` on by default
 
-error: Struct 'InternalModel' is public, but must be private
+error: Struct 'InternalModel' has pub visibility, but must be private
   --> tests/ui/struct_lint_new/visibility_rules.rs:29:1
    |
 LL | pub struct InternalModel {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove the 'pub' visibility modifier
+   = help: Remove the visibility modifier
    = note: Applied by cargo-pup rule 'name_and_visibility_test'.
 
 error: aborting due to 2 previous errors; 1 warning emitted

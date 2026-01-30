@@ -186,6 +186,14 @@ declare_variable_severity_lint!(
     "Struct must have public visibility"
 );
 
+declare_variable_severity_lint!(
+    pub,
+    STRUCT_LINT_MUST_BE_PUB_CRATE,
+    STRUCT_LINT_MUST_BE_PUB_CRATE_DENY,
+    STRUCT_LINT_MUST_BE_PUB_CRATE_WARN,
+    "Struct must have pub(crate) visibility"
+);
+
 impl_lint_pass!(StructLint => [
     STRUCT_LINT_MUST_BE_NAMED_DENY,
     STRUCT_LINT_MUST_BE_NAMED_WARN,
@@ -194,7 +202,9 @@ impl_lint_pass!(StructLint => [
     STRUCT_LINT_MUST_BE_PRIVATE_DENY,
     STRUCT_LINT_MUST_BE_PRIVATE_WARN,
     STRUCT_LINT_MUST_BE_PUBLIC_DENY,
-    STRUCT_LINT_MUST_BE_PUBLIC_WARN
+    STRUCT_LINT_MUST_BE_PUBLIC_WARN,
+    STRUCT_LINT_MUST_BE_PUB_CRATE_DENY,
+    STRUCT_LINT_MUST_BE_PUB_CRATE_WARN
 ]);
 
 impl ArchitectureLintRule for StructLint {
@@ -266,6 +276,22 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
             let struct_visibility = ctx.tcx.visibility(def_id);
             let is_public = struct_visibility == rustc_middle::ty::Visibility::Public;
 
+            // Check if there's a visibility keyword (pub, pub(crate), pub(super), etc.)
+            let has_visibility_keyword = !item.vis_span.is_empty();
+
+            // Check if visibility is pub(crate):
+            // - Must have a visibility keyword (not inherited/private)
+            // - Must be restricted to the crate root
+            let is_pub_crate = match struct_visibility {
+                rustc_middle::ty::Visibility::Restricted(restricted_to) => {
+                    has_visibility_keyword && restricted_to.is_crate_root()
+                }
+                _ => false,
+            };
+
+            // Truly private means no visibility keyword at all (inherited visibility)
+            let is_private = !has_visibility_keyword;
+
             // Apply rules
             for rule in &self.struct_rules {
                 match rule {
@@ -317,28 +343,64 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                         }
                     }
                     StructRule::MustBePrivate(severity) => {
-                        if is_public {
+                        if !is_private {
+                            let visibility_desc = if is_public {
+                                "pub"
+                            } else if is_pub_crate {
+                                "pub(crate)"
+                            } else {
+                                "restricted" // pub(super) or pub(in path)
+                            };
                             span_lint_and_help(
                                 ctx,
                                 STRUCT_LINT_MUST_BE_PRIVATE::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
-                                format!("Struct '{item_name}' is public, but must be private"),
+                                format!(
+                                    "Struct '{item_name}' has {visibility_desc} visibility, but must be private"
+                                ),
                                 None,
-                                "Remove the 'pub' visibility modifier",
+                                "Remove the visibility modifier",
                             );
                         }
                     }
                     StructRule::MustBePublic(severity) => {
                         if !is_public {
+                            let visibility_desc = if is_pub_crate {
+                                "pub(crate)"
+                            } else {
+                                "private"
+                            };
                             span_lint_and_help(
                                 ctx,
                                 STRUCT_LINT_MUST_BE_PUBLIC::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
-                                format!("Struct '{item_name}' is private, but must be public"),
+                                format!(
+                                    "Struct '{item_name}' has {visibility_desc} visibility, but must be pub"
+                                ),
                                 None,
-                                "Add the 'pub' visibility modifier",
+                                "Change the visibility to 'pub'",
+                            );
+                        }
+                    }
+                    StructRule::MustBePubCrate(severity) => {
+                        if !is_pub_crate {
+                            let visibility_desc = if is_public {
+                                "pub"
+                            } else {
+                                "private"
+                            };
+                            span_lint_and_help(
+                                ctx,
+                                STRUCT_LINT_MUST_BE_PUB_CRATE::get_by_severity(*severity),
+                                self.name().as_str(),
+                                definition_span,
+                                format!(
+                                    "Struct '{item_name}' has {visibility_desc} visibility, but must be pub(crate)"
+                                ),
+                                None,
+                                "Change the visibility to 'pub(crate)'",
                             );
                         }
                     }

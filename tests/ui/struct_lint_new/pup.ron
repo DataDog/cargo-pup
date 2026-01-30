@@ -107,6 +107,20 @@
                     MustBePrivate(Error), // All InternalModel structs must be private
                 ]
             )
+        ),
+
+        // Test MustBePubCrate rule - only apply to test_pub_crate_visibility crate
+        Struct(
+            (
+                name: "must_be_pub_crate_test",
+                matches: AndMatches(
+                    Name("test_pub_crate_visibility"), // Match based on crate name
+                    Name(".*Internal"), // Match structs ending with Internal
+                ),
+                rules: [
+                    MustBePubCrate(Error), // Struct must be pub(crate)
+                ]
+            )
         )
     ]
 ) 
