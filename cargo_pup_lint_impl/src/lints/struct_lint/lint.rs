@@ -386,11 +386,7 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                     }
                     StructRule::MustBePubCrate(severity) => {
                         if !is_pub_crate {
-                            let visibility_desc = if is_public {
-                                "pub"
-                            } else {
-                                "private"
-                            };
+                            let visibility_desc = if is_public { "pub" } else { "private" };
                             span_lint_and_help(
                                 ctx,
                                 STRUCT_LINT_MUST_BE_PUB_CRATE::get_by_severity(*severity),

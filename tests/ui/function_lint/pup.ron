@@ -368,6 +368,66 @@
                     )
                 ]
             )
+        ),
+
+        // ======================================================================
+        // SECTION: NoPanic Tests (for no_panic.rs)
+        // ======================================================================
+
+        // Test that functions must not use unwrap/expect on Option/Result
+        Function(
+            (
+                name: "no_panic_test",
+                matches: InModule("test_no_panic"),
+                rules: [
+                    NoUnwrap(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        // Test NoPanic rule (all panic-family macros: panic!, unreachable!, unimplemented!, todo!, assert!)
+        Function(
+            (
+                name: "no_explicit_panic_test",
+                matches: InModule("test_no_panic"),
+                rules: [
+                    NoPanic(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        // Test NoIndexPanic rule
+        Function(
+            (
+                name: "no_index_panic_test",
+                matches: InModule("test_no_panic"),
+                rules: [
+                    NoIndexPanic(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        // ======================================================================
+        // SECTION: IsUnsafe Matcher Tests (for is_unsafe_match.rs)
+        // ======================================================================
+
+        // Test that unsafe functions can be matched and forbidden
+        Function(
+            (
+                name: "unsafe_forbidden_test",
+                matches: IsUnsafe,
+                rules: [
+                    MustNotExist(
+                        Error,
+                    )
+                ]
+            )
         )
     ]
 ) 

@@ -138,6 +138,37 @@ impl<'a> FunctionConstraintBuilder<'a> {
         self
     }
 
+    /// Forbid unwrap/expect calls on Option and Result
+    /// This detects: Option::unwrap, Option::expect, Result::unwrap, Result::expect,
+    /// Result::unwrap_err, Result::expect_err
+    pub fn no_unwrap(mut self) -> Self {
+        self.add_rule_internal(FunctionRule::NoUnwrap(self.current_severity));
+        self
+    }
+
+    /// Forbid all panic-family macros: panic!(), unreachable!(), unimplemented!(), todo!(), assert!()
+    /// Note: MIR-level analysis cannot distinguish between these macros as they all
+    /// compile to similar underlying panic functions.
+    pub fn no_panic(mut self) -> Self {
+        self.add_rule_internal(FunctionRule::NoPanic(self.current_severity));
+        self
+    }
+
+    /// Forbid index bounds panics
+    pub fn no_index_panic(mut self) -> Self {
+        self.add_rule_internal(FunctionRule::NoIndexPanic(self.current_severity));
+        self
+    }
+
+    /// Convenience method: forbid ALL panic sources
+    /// This adds all panic-related rules: NoUnwrap, NoPanic, and NoIndexPanic
+    pub fn no_panics(mut self) -> Self {
+        self.add_rule_internal(FunctionRule::NoUnwrap(self.current_severity));
+        self.add_rule_internal(FunctionRule::NoPanic(self.current_severity));
+        self.add_rule_internal(FunctionRule::NoIndexPanic(self.current_severity));
+        self
+    }
+
     /// Create a new MaxLength rule with the current severity
     pub fn create_max_length_rule(&self, length: usize) -> FunctionRule {
         FunctionRule::MaxLength(length, self.current_severity)

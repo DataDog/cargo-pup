@@ -1,0 +1,39 @@
+error: Function 'forbidden_unsafe_function' is forbidden by lint rule
+  --> tests/ui/function_lint/is_unsafe_match.rs:9:1
+   |
+LL | unsafe fn forbidden_unsafe_function() {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_forbidden_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function 'forbidden_unsafe_with_return' is forbidden by lint rule
+  --> tests/ui/function_lint/is_unsafe_match.rs:13:1
+   |
+LL | unsafe fn forbidden_unsafe_with_return() -> i32 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_forbidden_test'.
+
+error: Function 'unsafe_method' is forbidden by lint rule
+  --> tests/ui/function_lint/is_unsafe_match.rs:30:5
+   |
+LL |     unsafe fn unsafe_method(&self) {
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_forbidden_test'.
+
+error: Function 'trait_unsafe_method' is forbidden by lint rule
+  --> tests/ui/function_lint/is_unsafe_match.rs:45:5
+   |
+LL |     unsafe fn trait_unsafe_method(&self) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_forbidden_test'.
+
+error: aborting due to 4 previous errors
+

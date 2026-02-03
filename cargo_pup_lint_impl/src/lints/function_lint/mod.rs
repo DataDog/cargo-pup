@@ -2,5 +2,6 @@
 
 mod lint;
 mod no_allocation;
+mod no_panic;
 
 pub use lint::FunctionLint;

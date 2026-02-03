@@ -80,26 +80,6 @@
                 ResultErrorMustImplementError(Warn),
             ],
         )),
-        Module((
-            name: "macro_restriction_test",
-            matches: Module("^test_app::macro_restriction$"),
-            rules: [
-                DeniedItems(
-                    items: ["declarative_macro"],
-                    severity: Warn,
-                ),
-            ],
-        )),
-        Module((
-            name: "proc_macro_restriction_test",
-            matches: Module("^proc_macro_test$"),
-            rules: [
-                DeniedItems(
-                    items: ["proc_macro", "proc_macro_attribute", "proc_macro_derive"],
-                    severity: Warn,
-                ),
-            ],
-        )),
         Function((
             name: "builder_style_with_consuming_forbidden",
             matches: AndMatches(NameRegex("^with_.*"), ReturnsType(SelfValue)),
@@ -114,12 +94,35 @@
                 MustNotExist(Error),
             ],
         )),
+        Module((
+            name: "macro_restriction_test",
+            matches: Module("^test_app::macro_restriction$"),
+            rules: [
+                DeniedItems(
+                    items: [
+                        "declarative_macro",
+                    ],
+                    severity: Warn,
+                ),
+            ],
+        )),
+        Module((
+            name: "proc_macro_restriction_test",
+            matches: Module("^proc_macro_test$"),
+            rules: [
+                DeniedItems(
+                    items: [
+                        "proc_macro",
+                        "proc_macro_attribute",
+                        "proc_macro_derive",
+                    ],
+                    severity: Warn,
+                ),
+            ],
+        )),
         Function((
             name: "async_functions_forbidden",
-            matches: AndMatches(
-                InModule("^test_app::async_functions$"),
-                IsAsync
-            ),
+            matches: AndMatches(InModule("^test_app::async_functions$"), IsAsync),
             rules: [
                 MustNotExist(Error),
             ],
@@ -129,6 +132,22 @@
             matches: InModule("^test_app::no_allocation$"),
             rules: [
                 NoAllocation(Warn),
+            ],
+        )),
+        Function((
+            name: "no_panic_check",
+            matches: InModule("^test_app::no_panic$"),
+            rules: [
+                NoUnwrap(Warn),
+                NoPanic(Warn),
+                NoIndexPanic(Warn),
+            ],
+        )),
+        Function((
+            name: "unsafe_functions_forbidden",
+            matches: AndMatches(InModule("^test_app::unsafe_functions$"), IsUnsafe),
+            rules: [
+                MustNotExist(Error),
             ],
         )),
     ],

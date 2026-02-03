@@ -144,7 +144,10 @@ impl ModuleLint {
             // Detect proc_macro attributes via their Debug representation
             // (the AttributeKind enum is not publicly accessible)
             let attr_str = format!("{:?}", attr);
-            if attr_str.contains("ProcMacro(") && !attr_str.contains("ProcMacroAttribute") && !attr_str.contains("ProcMacroDerive") {
+            if attr_str.contains("ProcMacro(")
+                && !attr_str.contains("ProcMacroAttribute")
+                && !attr_str.contains("ProcMacroDerive")
+            {
                 return Some("proc_macro");
             } else if attr_str.contains("ProcMacroAttribute(") {
                 return Some("proc_macro_attribute");
@@ -297,7 +300,6 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
     fn check_item(&mut self, ctx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
         let parent_item = ctx.tcx.hir_get_parent_item(item.hir_id());
         let parent_module_path = get_full_module_name(&ctx.tcx, &parent_item);
-
 
         // Check if the parent module matches our patterns
         if !self.matches_module(&parent_module_path) {

@@ -11,10 +11,11 @@ use rustc_lint::{LateContext, LateLintPass, LintStore};
 use rustc_middle::ty::TyKind;
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
 use super::no_allocation::detect_allocation_in_mir;
+use super::no_panic::{PanicCategory, detect_panic_in_mir};
 
 // Helper: retrieve the concrete Self type of the impl the method belongs to, if any
 fn get_self_type<'tcx>(
@@ -60,7 +61,33 @@ impl FunctionLint {
         evaluate_function_match(&self.matches, ctx, module_path, function_name, fn_def_id)
     }
 
-    // Evaluates the complex matcher structure to determine if a function matches
+    /// Helper method to check a single panic category and emit a lint if found
+    fn check_panic_category(
+        &self,
+        ctx: &LateContext<'_>,
+        fn_def_id: rustc_hir::def_id::DefId,
+        severity: cargo_pup_lint_config::Severity,
+        category: PanicCategory,
+        rule_name: &str,
+    ) {
+        if ctx.tcx.is_mir_available(fn_def_id) {
+            let mir = ctx.tcx.optimized_mir(fn_def_id);
+            let mut categories = HashSet::new();
+            categories.insert(category);
+
+            if let Some(violation) = detect_panic_in_mir(ctx.tcx, mir, &categories) {
+                span_lint_and_help(
+                    ctx,
+                    FUNCTION_LINT::get_by_severity(severity),
+                    self.name().as_str(),
+                    violation.span,
+                    format!("Function may panic: {}", violation.reason),
+                    None,
+                    format!("Remove panic paths to satisfy the {} rule", rule_name),
+                );
+            }
+        }
+    }
 }
 
 fn evaluate_function_match(
@@ -197,6 +224,40 @@ fn evaluate_function_match(
                     rustc_hir::Node::ImplItem(impl_item) => {
                         if let rustc_hir::ImplItemKind::Fn(sig, _) = &impl_item.kind {
                             return matches!(sig.header.asyncness, rustc_hir::IsAsync::Async(_));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            false
+        }
+        FunctionMatch::IsUnsafe => {
+            // Check if the function is unsafe by examining the HIR
+            if let Some(local_def_id) = fn_def_id.as_local() {
+                let node = ctx.tcx.hir_node_by_def_id(local_def_id);
+                match node {
+                    rustc_hir::Node::Item(item) => {
+                        if let rustc_hir::ItemKind::Fn { sig, .. } = &item.kind {
+                            return matches!(
+                                sig.header.safety,
+                                rustc_hir::HeaderSafety::Normal(rustc_hir::Safety::Unsafe)
+                            );
+                        }
+                    }
+                    rustc_hir::Node::TraitItem(trait_item) => {
+                        if let rustc_hir::TraitItemKind::Fn(sig, _) = &trait_item.kind {
+                            return matches!(
+                                sig.header.safety,
+                                rustc_hir::HeaderSafety::Normal(rustc_hir::Safety::Unsafe)
+                            );
+                        }
+                    }
+                    rustc_hir::Node::ImplItem(impl_item) => {
+                        if let rustc_hir::ImplItemKind::Fn(sig, _) = &impl_item.kind {
+                            return matches!(
+                                sig.header.safety,
+                                rustc_hir::HeaderSafety::Normal(rustc_hir::Safety::Unsafe)
+                            );
                         }
                     }
                     _ => {}
@@ -381,6 +442,33 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                             }
                         }
                     }
+                    FunctionRule::NoUnwrap(severity) => {
+                        self.check_panic_category(
+                            ctx,
+                            fn_def_id,
+                            *severity,
+                            PanicCategory::Unwrap,
+                            "NoUnwrap",
+                        );
+                    }
+                    FunctionRule::NoPanic(severity) => {
+                        self.check_panic_category(
+                            ctx,
+                            fn_def_id,
+                            *severity,
+                            PanicCategory::ExplicitPanic,
+                            "NoPanic",
+                        );
+                    }
+                    FunctionRule::NoIndexPanic(severity) => {
+                        self.check_panic_category(
+                            ctx,
+                            fn_def_id,
+                            *severity,
+                            PanicCategory::IndexBounds,
+                            "NoIndexPanic",
+                        );
+                    }
                 }
             }
         }
@@ -505,6 +593,33 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                                 );
                             }
                         }
+                    }
+                    FunctionRule::NoUnwrap(severity) => {
+                        self.check_panic_category(
+                            ctx,
+                            fn_def_id,
+                            *severity,
+                            PanicCategory::Unwrap,
+                            "NoUnwrap",
+                        );
+                    }
+                    FunctionRule::NoPanic(severity) => {
+                        self.check_panic_category(
+                            ctx,
+                            fn_def_id,
+                            *severity,
+                            PanicCategory::ExplicitPanic,
+                            "NoPanic",
+                        );
+                    }
+                    FunctionRule::NoIndexPanic(severity) => {
+                        self.check_panic_category(
+                            ctx,
+                            fn_def_id,
+                            *severity,
+                            PanicCategory::IndexBounds,
+                            "NoIndexPanic",
+                        );
                     }
                 }
             }
