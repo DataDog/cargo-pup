@@ -39,7 +39,7 @@ warning: unused macro definition: `forbidden_macro`
 4 | macro_rules! forbidden_macro {
   |              ^^^^^^^^^^^^^^^
   |
-  = note: `#[warn(unused_macros)]` on by default
+  = note: `#[warn(unused_macros)]` (part of `#[warn(unused)]`) on by default
 
 warning: Item 'DisallowedInModRs' disallowed in mod.rs due to empty-mod-file policy
   --> src/empty_mod_file/mod.rs:10:1
@@ -108,8 +108,8 @@ warning: struct 'DeniedStruct' is not allowed in this module
 warning: enum 'DeniedEnum' is not allowed in this module
   --> src/item_type/mod.rs:8:1
    |
-8  | / pub enum DeniedEnum {
-9  | |     Variant1,
+ 8 | / pub enum DeniedEnum {
+ 9 | |     Variant1,
 10 | |     Variant2,
 11 | | }
    | |_^

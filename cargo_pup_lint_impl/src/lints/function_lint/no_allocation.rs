@@ -58,6 +58,8 @@ pub fn detect_allocation_in_mir<'tcx>(
                                 None
                             }
                         }
+                        // RuntimeChecks are UB checks inserted by the compiler, not relevant for allocation detection
+                        Operand::RuntimeChecks(_) => None,
                     };
 
                     if let Some(closure_def_id) = closure_def_id {

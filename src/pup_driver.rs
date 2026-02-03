@@ -1,6 +1,5 @@
 #![feature(rustc_private)]
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
-#![feature(array_windows)]
 #![feature(try_blocks)]
 
 extern crate rustc_driver;

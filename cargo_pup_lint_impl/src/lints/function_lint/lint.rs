@@ -22,7 +22,7 @@ fn get_self_type<'tcx>(
     fn_def_id: rustc_hir::def_id::DefId,
 ) -> Option<rustc_middle::ty::Ty<'tcx>> {
     ctx.tcx
-        .impl_of_method(fn_def_id)
+        .impl_of_assoc(fn_def_id)
         .map(|impl_def_id| ctx.tcx.type_of(impl_def_id).instantiate_identity())
 }
 
