@@ -118,6 +118,80 @@ fn test_lint_config() {
         .must_not_exist()
         .build();
 
+    // ------------------------------------------------------------------
+    // Macro restriction rules
+    // ------------------------------------------------------------------
+
+    builder
+        .module_lint()
+        .lint_named("macro_restriction_test")
+        .matching(|m| m.module("^test_app::macro_restriction$"))
+        .with_severity(Severity::Warn)
+        .denied_items(vec!["declarative_macro".to_string()])
+        .build();
+
+    builder
+        .module_lint()
+        .lint_named("proc_macro_restriction_test")
+        .matching(|m| m.module("^proc_macro_test$"))
+        .with_severity(Severity::Warn)
+        .denied_items(vec![
+            "proc_macro".to_string(),
+            "proc_macro_attribute".to_string(),
+            "proc_macro_derive".to_string(),
+        ])
+        .build();
+
+    // ------------------------------------------------------------------
+    // Async functions forbidden
+    // ------------------------------------------------------------------
+
+    builder
+        .function_lint()
+        .lint_named("async_functions_forbidden")
+        .matching(|m| m.in_module("^test_app::async_functions$").and(m.is_async()))
+        .with_severity(Severity::Error)
+        .must_not_exist()
+        .build();
+
+    // ------------------------------------------------------------------
+    // NoAllocation rule
+    // ------------------------------------------------------------------
+
+    builder
+        .function_lint()
+        .lint_named("no_allocation_check")
+        .matching(|m| m.in_module("^test_app::no_allocation$"))
+        .with_severity(Severity::Warn)
+        .no_allocation()
+        .build();
+
+    // ------------------------------------------------------------------
+    // Panic detection rules (NoUnwrap, NoPanic, NoIndexPanic)
+    // ------------------------------------------------------------------
+
+    builder
+        .function_lint()
+        .lint_named("no_panic_check")
+        .matching(|m| m.in_module("^test_app::no_panic$"))
+        .with_severity(Severity::Warn)
+        .no_unwrap()
+        .no_panic()
+        .no_index_panic()
+        .build();
+
+    // ------------------------------------------------------------------
+    // Unsafe functions forbidden
+    // ------------------------------------------------------------------
+
+    builder
+        .function_lint()
+        .lint_named("unsafe_functions_forbidden")
+        .matching(|m| m.in_module("^test_app::unsafe_functions$").and(m.is_unsafe()))
+        .with_severity(Severity::Error)
+        .must_not_exist()
+        .build();
+
     // Write the configuration to pup.ron using the fixed write_to_file method
     builder
         .write_to_file("pup.ron")

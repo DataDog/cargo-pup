@@ -15,6 +15,8 @@ mod trait_impl;
 mod builder_style;
 mod async_functions;
 mod no_allocation;
+mod no_panic;
+mod unsafe_functions;
 
 fn main() {
     println!("Hello, world!");

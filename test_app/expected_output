@@ -39,7 +39,36 @@ warning: unused macro definition: `forbidden_macro`
 4 | macro_rules! forbidden_macro {
   |              ^^^^^^^^^^^^^^^
   |
-  = note: `#[warn(unused_macros)]` on by default
+  = note: `#[warn(unused_macros)]` (part of `#[warn(unused)]`) on by default
+
+warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
+  --> src/unsafe_functions.rs:40:5
+   |
+40 |     *ptr
+   |     ^^^^ dereference of raw pointer
+   |
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+   = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+note: an unsafe function restricts its caller, but its body is safe by default
+  --> src/unsafe_functions.rs:39:1
+   |
+39 | pub unsafe fn forbidden_unsafe_with_params(ptr: *const i32) -> i32 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: `#[warn(unsafe_op_in_unsafe_fn)]` (part of `#[warn(rust_2024_compatibility)]`) on by default
+
+warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
+  --> src/unsafe_functions.rs:69:21
+   |
+69 |         self.data = *ptr;
+   |                     ^^^^ dereference of raw pointer
+   |
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+   = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+note: an unsafe function restricts its caller, but its body is safe by default
+  --> src/unsafe_functions.rs:68:5
+   |
+68 |     pub unsafe fn mutate_unsafe(&mut self, ptr: *const i32) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: Item 'DisallowedInModRs' disallowed in mod.rs due to empty-mod-file policy
   --> src/empty_mod_file/mod.rs:10:1
@@ -108,8 +137,8 @@ warning: struct 'DeniedStruct' is not allowed in this module
 warning: enum 'DeniedEnum' is not allowed in this module
   --> src/item_type/mod.rs:8:1
    |
-8  | / pub enum DeniedEnum {
-9  | |     Variant1,
+ 8 | / pub enum DeniedEnum {
+ 9 | |     Variant1,
 10 | |     Variant2,
 11 | | }
    | |_^
@@ -230,13 +259,13 @@ warning: Struct must match pattern '.*MyTraitImpl$', found 'MyBadlyNamedThing'
    = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_named)]` on by default
 
-warning: Struct 'MyBadlyNamedThing' is public, but must be private
+warning: Struct 'MyBadlyNamedThing' has pub visibility, but must be private
   --> src/trait_impl/mod.rs:17:1
    |
 17 | pub struct MyBadlyNamedThing {}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove the 'pub' visibility modifier
+   = help: Remove the visibility modifier
    = note: Applied by cargo-pup rule 'trait_restrictions'.
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
@@ -358,5 +387,240 @@ warning: Function allocates heap memory: calls function that allocates: no_alloc
    = help: Remove heap allocations to satisfy the NoAllocation rule
    = note: Applied by cargo-pup rule 'no_allocation_check'.
 
-warning: `test_app` (bin "test_app") generated 27 warnings
-error: could not compile `test_app` (bin "test_app") due to 6 previous errors; 27 warnings emitted
+warning: Function may panic: calls panicking function: std::option::Option::<T>::unwrap
+  --> src/no_panic.rs:57:5
+   |
+57 |     opt.unwrap()
+   |     ^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::option::Option::<T>::expect
+  --> src/no_panic.rs:62:5
+   |
+62 |     opt.expect("expected a value")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::result::Result::<T, E>::unwrap
+  --> src/no_panic.rs:67:5
+   |
+67 |     res.unwrap()
+   |     ^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::result::Result::<T, E>::expect
+  --> src/no_panic.rs:72:5
+   |
+72 |     res.expect("expected success")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::result::Result::<T, E>::unwrap_err
+  --> src/no_panic.rs:77:5
+   |
+77 |     res.unwrap_err()
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::result::Result::<T, E>::expect_err
+  --> src/no_panic.rs:82:5
+   |
+82 |     res.expect_err("expected error")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::option::Option::<T>::unwrap
+  --> src/no_panic.rs:91:5
+   |
+91 |     opt.unwrap()
+   |     ^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls function that may panic: no_panic::helper_that_panics
+  --> src/no_panic.rs:96:5
+   |
+96 |     helper_that_panics(opt)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::option::Option::<T>::expect
+   --> src/no_panic.rs:101:5
+    |
+101 |     opt.expect("deep panic")
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoUnwrap rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls function that may panic: no_panic::deep_panicking_helper
+   --> src/no_panic.rs:106:5
+    |
+106 |     deep_panicking_helper(opt)
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoUnwrap rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls function that may panic: no_panic::middle_helper
+   --> src/no_panic.rs:111:5
+    |
+111 |     middle_helper(opt)
+    |     ^^^^^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoUnwrap rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::option::Option::<T>::unwrap
+   --> src/no_panic.rs:134:9
+    |
+134 |         self.value.unwrap()
+    |         ^^^^^^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoUnwrap rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: std::rt::panic_fmt
+   --> src/no_panic.rs:144:5
+    |
+144 |     panic!("explicit panic");
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: core::panicking::panic
+   --> src/no_panic.rs:149:5
+    |
+149 |     assert!(x > 0);
+    |     ^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: core::panicking::assert_failed
+   --> src/no_panic.rs:154:5
+    |
+154 |     assert_eq!(x, y);
+    |     ^^^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: core::panicking::panic
+   --> src/no_panic.rs:159:5
+    |
+159 |     unreachable!()
+    |     ^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: core::panicking::panic
+   --> src/no_panic.rs:164:5
+    |
+164 |     unimplemented!()
+    |     ^^^^^^^^^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: calls panicking function: core::panicking::panic
+   --> src/no_panic.rs:169:5
+    |
+169 |     todo!()
+    |     ^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: index bounds check may panic
+   --> src/no_panic.rs:178:5
+    |
+178 |     arr[0]
+    |     ^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoIndexPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+warning: Function may panic: index bounds check may panic
+   --> src/no_panic.rs:183:5
+    |
+183 |     arr[idx]
+    |     ^^^^^^^^
+    |
+    = help: Remove panic paths to satisfy the NoIndexPanic rule
+    = note: Applied by cargo-pup rule 'no_panic_check'.
+
+error: Function 'forbidden_unsafe_function' is forbidden by lint rule
+  --> src/unsafe_functions.rs:29:1
+   |
+29 | pub unsafe fn forbidden_unsafe_function() {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
+
+error: Function 'forbidden_unsafe_with_return' is forbidden by lint rule
+  --> src/unsafe_functions.rs:34:1
+   |
+34 | pub unsafe fn forbidden_unsafe_with_return() -> i32 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
+
+error: Function 'forbidden_unsafe_with_params' is forbidden by lint rule
+  --> src/unsafe_functions.rs:39:1
+   |
+39 | pub unsafe fn forbidden_unsafe_with_params(ptr: *const i32) -> i32 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
+
+error: Function 'get_data_unsafe' is forbidden by lint rule
+  --> src/unsafe_functions.rs:63:5
+   |
+63 |     pub unsafe fn get_data_unsafe(&self) -> i32 {
+   |     ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
+
+error: Function 'mutate_unsafe' is forbidden by lint rule
+  --> src/unsafe_functions.rs:68:5
+   |
+68 |     pub unsafe fn mutate_unsafe(&mut self, ptr: *const i32) {
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
+
+error: Function 'process_unsafe' is forbidden by lint rule
+  --> src/unsafe_functions.rs:91:5
+   |
+91 |     unsafe fn process_unsafe(&self) -> i32 {
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove this function to satisfy the architectural rule
+   = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
+
+For more information about this error, try `rustc --explain E0133`.
+warning: `test_app` (bin "test_app") generated 49 warnings
+error: could not compile `test_app` (bin "test_app") due to 12 previous errors; 49 warnings emitted

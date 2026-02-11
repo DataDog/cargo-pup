@@ -80,6 +80,11 @@ impl FunctionMatcher {
     pub fn is_async(&self) -> FunctionMatchNode {
         FunctionMatchNode::Leaf(FunctionMatch::IsAsync)
     }
+
+    /// Matches unsafe functions
+    pub fn is_unsafe(&self) -> FunctionMatchNode {
+        FunctionMatchNode::Leaf(FunctionMatch::IsUnsafe)
+    }
 }
 
 /// Node in the matcher expression tree

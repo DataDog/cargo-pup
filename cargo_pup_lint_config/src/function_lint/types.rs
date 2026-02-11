@@ -37,6 +37,8 @@ pub enum FunctionMatch {
     ReturnsType(ReturnTypePattern),
     /// Match async functions
     IsAsync,
+    /// Match unsafe functions
+    IsUnsafe,
     /// Logical AND - both patterns must match
     AndMatches(Box<FunctionMatch>, Box<FunctionMatch>),
     /// Logical OR - either pattern must match
@@ -64,6 +66,15 @@ pub enum FunctionRule {
     MustNotExist(Severity),
     /// Enforces that a function must not perform heap allocations
     NoAllocation(Severity),
+    /// Enforces that a function must not call unwrap/expect on Option or Result
+    NoUnwrap(Severity),
+    /// Enforces that a function must not use any panic-family macros.
+    /// This includes: panic!(), unreachable!(), unimplemented!(), todo!(), and assert!().
+    /// Note: MIR-level analysis cannot distinguish between these macros as they all
+    /// compile to similar underlying panic functions.
+    NoPanic(Severity),
+    /// Enforces that a function must not trigger index bounds panics
+    NoIndexPanic(Severity),
 }
 
 // Helper methods for FunctionRule

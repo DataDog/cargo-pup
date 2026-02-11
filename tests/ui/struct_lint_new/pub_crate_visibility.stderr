@@ -1,0 +1,21 @@
+error: Struct 'CrateInternal' has pub visibility, but must be pub(crate)
+  --> tests/ui/struct_lint_new/pub_crate_visibility.rs:9:1
+   |
+LL | pub struct CrateInternal {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Change the visibility to 'pub(crate)'
+   = note: Applied by cargo-pup rule 'must_be_pub_crate_test'.
+   = note: `#[deny(struct_lint_must_be_pub_crate)]` on by default
+
+error: Struct 'AlsoInternal' has private visibility, but must be pub(crate)
+  --> tests/ui/struct_lint_new/pub_crate_visibility.rs:14:1
+   |
+LL | struct AlsoInternal {
+   | ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Change the visibility to 'pub(crate)'
+   = note: Applied by cargo-pup rule 'must_be_pub_crate_test'.
+
+error: aborting due to 2 previous errors
+

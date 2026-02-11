@@ -189,21 +189,22 @@ fn find_workspace_root() -> Result<std::path::PathBuf> {
     let mut check_dir = current_exe.parent();
 
     while let Some(dir) = check_dir {
+        // Check if this directory has the specific cargo-pup source structure
+        // This is the most reliable indicator that we're in the cargo-pup workspace
+        if dir.join("src").join("pup_driver.rs").exists() {
+            return Ok(dir.to_path_buf());
+        }
+
         let cargo_toml = dir.join("Cargo.toml");
         if cargo_toml.exists()
             && let Ok(contents) = std::fs::read_to_string(&cargo_toml)
         {
-            // Look specifically for cargo-pup project or workspace with cargo-pup
-            if contents.contains("name = \"cargo-pup\"")
-                || (contents.contains("[workspace]") && contents.contains("cargo_pup"))
-            {
+            // Look specifically for the cargo-pup package itself (not a dependency)
+            // We check for the exact package name pattern to avoid matching projects
+            // that merely depend on cargo_pup_lint_config
+            if contents.contains("name = \"cargo_pup\"") {
                 return Ok(dir.to_path_buf());
             }
-        }
-
-        // Also check if this directory has the specific cargo-pup source structure
-        if dir.join("src").join("pup_driver.rs").exists() {
-            return Ok(dir.to_path_buf());
         }
 
         check_dir = dir.parent();

@@ -148,4 +148,10 @@ impl<'a> StructConstraintBuilder<'a> {
         self.add_rule_internal(StructRule::MustBePublic(self.current_severity));
         self
     }
+
+    /// Add a rule requiring the struct to have pub(crate) visibility
+    pub fn must_be_pub_crate(mut self) -> Self {
+        self.add_rule_internal(StructRule::MustBePubCrate(self.current_severity));
+        self
+    }
 }
