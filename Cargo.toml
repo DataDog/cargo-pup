@@ -25,8 +25,8 @@ serde_json = "1.0.138"
 anyhow = "1.0.95"
 regex = "1.11.1"
 tempfile = "3.14.0"
-ron = "0.8.1"
-cargo_metadata = "0.18"
+ron = "0.12.0"
+cargo_metadata = "0.23"
 
 [dependencies]
 ansi_term = "0.12.1"
@@ -51,13 +51,13 @@ cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "=0.1.5" }
 #  rustc_lint = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_lint", optional = true}
 #  rustc_trait_selection = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_trait_selection", optional = true}
 # rustc_errors = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_errors", optional = true}
-toml = "0.8.19"
+toml = "0.9.0"
 which = "7.0.1"
 rustup-toolchain = "0.1.8"
 
 [dev-dependencies]
 rustc_version = "0.4"
-ui_test = "0.29.2"
+ui_test = "0.30.0"
 ron = { workspace = true }
 
 [[test]]
