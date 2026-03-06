@@ -52,7 +52,7 @@ cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "=0.1.5" }
 #  rustc_trait_selection = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_trait_selection", optional = true}
 # rustc_errors = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_errors", optional = true}
 toml = "0.8.19"
-which = "7.0.1"
+which = "8.0.0"
 rustup-toolchain = "0.1.8"
 
 [dev-dependencies]
