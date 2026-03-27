@@ -46,6 +46,10 @@ pub fn implements_trait<'tcx>(
         || ty.walk().any(|t| {
             if let Some(ty) = t.as_type() {
                 matches!(ty.kind(), ty::Alias(ty::Projection, _) | ty::Param(_))
+            } else if let Some(ct) = t.as_const() {
+                // Const generic parameters (e.g., N in Index<N>) also need
+                // Analysis mode — Coherence's orphan check panics on them.
+                matches!(ct.kind(), ty::ConstKind::Param(_))
             } else {
                 false
             }
