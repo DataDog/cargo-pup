@@ -6,3 +6,4 @@ mod
 *.generated.*
 CLAUDE.md
 .claude
+.idea
