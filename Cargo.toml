@@ -9,7 +9,7 @@ exclude = ["test_app"]
 
 [package]
 name = "cargo_pup"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 description = "A Rust architectural linting tool that integrates with rustc to enforce architectural patterns and boundaries"
 license = "Apache-2.0"
@@ -20,13 +20,13 @@ categories = ["development-tools"]
 readme = "README.md"
 
 [workspace.dependencies]
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.138"
-anyhow = "1.0.95"
-regex = "1.11.1"
-tempfile = "3.14.0"
-ron = "0.8.1"
-cargo_metadata = "0.18"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+anyhow = "1.0.102"
+regex = "1.12.3"
+tempfile = "3.27.0"
+ron = "0.12.1"
+cargo_metadata = "0.23"
 
 [dependencies]
 ansi_term = "0.12.1"
@@ -34,9 +34,9 @@ anyhow = { workspace = true }
 tempfile = { workspace = true }
 ron = { workspace = true }
 cargo_metadata = { workspace = true }
-cargo_pup_common = { path = "cargo_pup_common", version = "=0.1.6" }
-cargo_pup_lint_impl = { path = "cargo_pup_lint_impl", version = "=0.1.6" }
-cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "=0.1.6" }
+cargo_pup_common = { path = "cargo_pup_common", version = "=0.1.7" }
+cargo_pup_lint_impl = { path = "cargo_pup_lint_impl", version = "=0.1.7" }
+cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "=0.1.7" }
 
 #
 # These bits are just to keep rust rover happy.
@@ -51,13 +51,13 @@ cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "=0.1.6" }
 #  rustc_lint = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_lint", optional = true}
 #  rustc_trait_selection = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_trait_selection", optional = true}
 # rustc_errors = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_errors", optional = true}
-toml = "0.8.19"
-which = "7.0.1"
-rustup-toolchain = "0.1.8"
+toml = "1.1.1"
+which = "8.0.2"
+rustup-toolchain = "0.1.10"
 
 [dev-dependencies]
 rustc_version = "0.4"
-ui_test = "0.29.2"
+ui_test = "0.30.4"
 ron = { workspace = true }
 
 [[test]]

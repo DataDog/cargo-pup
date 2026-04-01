@@ -66,6 +66,6 @@ fn main() {
         vec![config],
         ui_test::default_file_filter,
         ui_test::default_per_file_config,
-        status_emitter::Text::from(args.format),
+        Box::<dyn status_emitter::StatusEmitter>::from(args.format),
     );
 }
