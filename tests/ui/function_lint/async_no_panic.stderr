@@ -1,0 +1,57 @@
+error: Function may panic: calls panicking function: std::option::Option::<T>::unwrap
+  --> tests/ui/function_lint/async_no_panic.rs:10:5
+   |
+LL |     x.unwrap()
+   |     ^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'async_no_unwrap_test'.
+   = note: `#[deny(function_lint)]` on by default
+
+error: Function may panic: calls panicking function: std::result::Result::<T, E>::expect
+  --> tests/ui/function_lint/async_no_panic.rs:14:5
+   |
+LL |     x.expect("boom")
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'async_no_unwrap_test'.
+
+error: Function may panic: calls panicking function: std::rt::panic_fmt
+  --> tests/ui/function_lint/async_no_panic.rs:20:5
+   |
+LL |     panic!("async panic");
+   |     ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoPanic rule
+   = note: Applied by cargo-pup rule 'async_no_explicit_panic_test'.
+
+error: Function may panic: calls panicking function: core::panicking::panic
+  --> tests/ui/function_lint/async_no_panic.rs:24:5
+   |
+LL |     todo!()
+   |     ^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoPanic rule
+   = note: Applied by cargo-pup rule 'async_no_explicit_panic_test'.
+
+error: Function may panic: index bounds check may panic
+  --> tests/ui/function_lint/async_no_panic.rs:30:5
+   |
+LL |     arr[0]
+   |     ^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoIndexPanic rule
+   = note: Applied by cargo-pup rule 'async_no_index_panic_test'.
+
+error: Function may panic: calls panicking function: std::option::Option::<T>::unwrap
+  --> tests/ui/function_lint/async_no_panic.rs:56:9
+   |
+LL |         x.unwrap()
+   |         ^^^^^^^^^^
+   |
+   = help: Remove panic paths to satisfy the NoUnwrap rule
+   = note: Applied by cargo-pup rule 'async_no_unwrap_test'.
+
+error: aborting due to 6 previous errors
+

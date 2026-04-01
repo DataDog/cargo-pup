@@ -1,7 +1,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
 use rustc_hir::def_id::DefId;
-use rustc_middle::mir::{Body, TerminatorKind};
+use rustc_middle::mir::{Body, Rvalue, StatementKind, TerminatorKind};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Span;
 use std::collections::HashMap;
@@ -20,6 +20,28 @@ pub fn detect_allocation_in_mir<'tcx>(
     _fn_def_id: DefId,
     cache: &mut HashMap<DefId, bool>,
 ) -> Option<AllocationViolation> {
+    // Async functions are desugared into a thin wrapper whose MIR just
+    // constructs a coroutine via Rvalue::Aggregate(Coroutine(..)).  The
+    // actual user code lives in the coroutine body, so we must follow
+    // into it to detect allocations.
+    for bb_data in mir.basic_blocks.iter() {
+        for stmt in &bb_data.statements {
+            if let StatementKind::Assign(assign) = &stmt.kind
+                && let Rvalue::Aggregate(kind, _) = &assign.1
+                && let rustc_middle::mir::AggregateKind::Coroutine(def_id, _) = &**kind
+                && def_id.krate == rustc_hir::def_id::LOCAL_CRATE
+                && tcx.is_mir_available(*def_id)
+            {
+                let coroutine_mir = tcx.optimized_mir(*def_id);
+                if let Some(violation) =
+                    detect_allocation_in_mir(tcx, coroutine_mir, *def_id, cache)
+                {
+                    return Some(violation);
+                }
+            }
+        }
+    }
+
     // Iterate through basic blocks
     for (_bb, bb_data) in mir.basic_blocks.iter_enumerated() {
         // Check terminator for calls

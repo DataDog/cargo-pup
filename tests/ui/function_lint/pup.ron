@@ -344,7 +344,10 @@
         Function(
             (
                 name: "async_function_test",
-                matches: IsAsync,
+                matches: AndMatches(
+                    InModule("test_is_async"),
+                    IsAsync
+                ),
                 rules: [
                     MustNotExist(
                         Error,
@@ -424,6 +427,48 @@
                 matches: IsUnsafe,
                 rules: [
                     MustNotExist(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        // ======================================================================
+        // SECTION: Async NoPanic Tests (for async_no_panic.rs)
+        // ======================================================================
+
+        // Test that NoPanic/NoUnwrap/NoIndexPanic rules detect violations
+        // inside async function bodies (coroutine desugaring)
+        Function(
+            (
+                name: "async_no_unwrap_test",
+                matches: InModule("test_async_no_panic"),
+                rules: [
+                    NoUnwrap(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        Function(
+            (
+                name: "async_no_explicit_panic_test",
+                matches: InModule("test_async_no_panic"),
+                rules: [
+                    NoPanic(
+                        Error,
+                    )
+                ]
+            )
+        ),
+
+        Function(
+            (
+                name: "async_no_index_panic_test",
+                matches: InModule("test_async_no_panic"),
+                rules: [
+                    NoIndexPanic(
                         Error,
                     )
                 ]
