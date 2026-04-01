@@ -3,7 +3,7 @@
 use ron::de::from_reader;
 use ron::ser::{PrettyConfig, to_writer_pretty};
 use std::fs::File;
-use std::io;
+use std::io::{self, Write};
 // lint_builder.rs
 use crate::function_lint::FunctionLint;
 use crate::module_lint::ModuleLint;
@@ -65,8 +65,11 @@ impl LintBuilder {
 
     // Method to write the LintBuilder to a file
     pub fn write_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> io::Result<()> {
-        let file = File::create(path).map_err(io::Error::other)?;
-        to_writer_pretty(file, &self, PrettyConfig::default()).map_err(io::Error::other)?;
+        let mut content = String::new();
+        to_writer_pretty(&mut content, &self, PrettyConfig::default()).map_err(io::Error::other)?;
+        let mut file = File::create(path).map_err(io::Error::other)?;
+        file.write_all(content.as_bytes())
+            .map_err(io::Error::other)?;
         Ok(())
     }
 
