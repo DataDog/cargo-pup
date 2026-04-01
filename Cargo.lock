@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "cargo_pup"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -175,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "cargo_pup_common"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "cargo_metadata 0.23.1",
@@ -186,7 +186,7 @@ dependencies = [
 
 [[package]]
 name = "cargo_pup_lint_config"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "cargo_pup_common",
@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "cargo_pup_lint_impl"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "cargo_pup_common",
