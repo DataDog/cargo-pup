@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "cargo_pup_common"
-version = "0.1.6"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "cargo_pup_lint_config"
-version = "0.1.6"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "cargo_pup_common",
