@@ -218,11 +218,23 @@ fn find_workspace_root() -> Result<std::path::PathBuf> {
         if dir.join("src").join("pup_driver.rs").exists() {
             return Ok(dir.to_path_buf());
         }
+
+        let cargo_toml = dir.join("Cargo.toml");
+        if cargo_toml.exists()
+            && let Ok(contents) = std::fs::read_to_string(&cargo_toml)
+            && contents.contains("name = \"cargo_pup\"")
+        {
+            return Ok(dir.to_path_buf());
+        }
+
         check_dir = dir.parent();
     }
 
-    // If we can't find workspace root, return current directory
-    Ok(current_dir)
+    // Neither walking up from the test binary nor from the current working
+    // directory found a real cargo-pup workspace.  Bail so the caller falls
+    // back to the system-installed `cargo pup` instead of accidentally
+    // treating the user's own project directory as the cargo-pup workspace.
+    anyhow::bail!("Failed to find cargo-pup workspace root")
 }
 
 fn run_command(lint_builder: &LintBuilder, command: &str, args: &[&str]) -> Result<Output> {
