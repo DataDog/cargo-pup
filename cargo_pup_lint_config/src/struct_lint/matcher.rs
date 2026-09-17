@@ -12,9 +12,16 @@ impl StructMatcher {
         StructMatchNode::Leaf(StructMatch::Name(name.into()))
     }
 
-    /// Matches structs by attribute. The attribute name is
-    /// given by a regular expression.
-    /// e.g., "derive\\(.*Debug.*\\)"
+    /// Matches structs by an attribute name that remains attached after macro expansion.
+    ///
+    /// The regular expression must match the complete, compiler-normalised name. For example,
+    /// `"repr"` matches `#[repr(C)]`, but attribute arguments such as `C` are not available.
+    ///
+    /// Supported built-in names are `deprecated`, `doc`, `must_use`, `non_exhaustive`, and `repr`.
+    /// Custom and tool attributes can also match if they remain attached after expansion. This
+    /// does not work for attributes consumed while expanding code, including `derive` and
+    /// attribute procedural macros. The original `cfg_attr` expression is not available, but a
+    /// supported attribute produced by an active `cfg_attr` can match by its name.
     ///
     pub fn has_attribute(&self, attr: impl Into<String>) -> StructMatchNode {
         StructMatchNode::Leaf(StructMatch::HasAttribute(attr.into()))

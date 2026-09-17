@@ -73,6 +73,41 @@
                 ImplementsTrait("test_app::trait_impl::MyTrait", Warn),
             ],
         )),
+        Struct((
+            name: "attribute_matcher_check",
+            matches: AndMatches(Name("^AppRepr"), HasAttribute("repr")),
+            rules: [
+                MustBeNamed("^AppReprAllowed", Warn),
+            ],
+        )),
+        Struct((
+            name: "required_trait_rule_check",
+            matches: Name("^AppNeedsTrait"),
+            rules: [
+                ImplementsTrait("test_app::configured_struct_rules::RequiredTrait", Warn),
+            ],
+        )),
+        Struct((
+            name: "forbidden_trait_rule_check",
+            matches: Name("^AppMustAvoidTrait"),
+            rules: [
+                Not(ImplementsTrait("test_app::configured_struct_rules::ForbiddenTrait", Warn)),
+            ],
+        )),
+        Struct((
+            name: "or_struct_rule_check",
+            matches: Name("AppCompositeOr"),
+            rules: [
+                Or(MustBeNamed("^AppAllowedComposite", Warn), MustBePrivate(Warn)),
+            ],
+        )),
+        Struct((
+            name: "negated_trait_matcher_check",
+            matches: AndMatches(Name("^AppMatcherNegation"), NotMatch(ImplementsTrait("test_app::configured_struct_rules::RequiredTrait"))),
+            rules: [
+                MustBeNamed("^AppMatcherNegationAllowed", Warn),
+            ],
+        )),
         Function((
             name: "result_type_check",
             matches: InModule("^test_app::result_error$"),

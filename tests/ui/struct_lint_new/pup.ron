@@ -121,6 +121,67 @@
                     MustBePubCrate(Error), // Struct must be pub(crate)
                 ]
             )
-        )
+        ),
+
+        Struct((
+            name: "attribute_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                HasAttribute("repr"),
+            ),
+            rules: [
+                MustBeNamed("^ReprAllowed", Error),
+            ],
+        )),
+
+        Struct((
+            name: "required_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^NeedsTrait"),
+            ),
+            rules: [
+                ImplementsTrait("test_attributes_and_configured_rules::RequiredTrait", Error),
+            ],
+        )),
+
+        Struct((
+            name: "forbidden_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^MustAvoidTrait"),
+            ),
+            rules: [
+                Not(ImplementsTrait("test_attributes_and_configured_rules::ForbiddenTrait", Error)),
+            ],
+        )),
+
+        Struct((
+            name: "or_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("CompositeOr"),
+            ),
+            rules: [
+                Or(
+                    MustBeNamed("^AllowedComposite", Error),
+                    MustBePrivate(Error),
+                ),
+            ],
+        )),
+
+        Struct((
+            name: "negated_trait_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                AndMatches(
+                    Name("^MatcherNegation"),
+                    NotMatch(ImplementsTrait("test_attributes_and_configured_rules::RequiredTrait")),
+                ),
+            ),
+            rules: [
+                MustBeNamed("^MatcherNegationAllowed", Error),
+            ],
+        ))
     ]
 ) 

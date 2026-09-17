@@ -8,7 +8,12 @@ use serde::{Deserialize, Serialize};
 pub enum StructMatch {
     /// Match structs by name (exact name or regex pattern)
     Name(String),
-    /// Match structs that have a specific attribute (e.g., #[derive(Debug)])
+    /// Match the name of an attribute that remains after macro expansion.
+    ///
+    /// Supported built-ins are `deprecated`, `doc`, `must_use`, `non_exhaustive`, and `repr`;
+    /// arguments are unavailable. Custom and tool attributes can match if they survive expansion.
+    /// Consumed attributes such as `derive` and attribute procedural macros cannot match. An active
+    /// `cfg_attr` may match a supported resulting attribute, but not the original expression.
     HasAttribute(String),
     /// Match structs that implement a specific trait
     ImplementsTrait(String),

@@ -3,6 +3,7 @@
 
 #![allow(dead_code)]
 
+mod configured_struct_rules;
 mod empty_mod;
 mod empty_mod_file;
 mod function_length;

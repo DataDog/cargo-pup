@@ -4,7 +4,9 @@
 //!
 //! This test verifies that we can build a configuration with pup.ron
 
-use cargo_pup_lint_config::{FunctionLintExt, LintBuilder, ModuleLintExt, Severity, StructLintExt};
+use cargo_pup_lint_config::{
+    FunctionLintExt, LintBuilder, ModuleLintExt, Severity, StructLintExt, StructRule,
+};
 
 #[test]
 fn test_lint_config() {
@@ -80,7 +82,8 @@ fn test_lint_config() {
         .build();
 
     // Trait restrictions
-    builder.struct_lint()
+    builder
+        .struct_lint()
         .lint_named("trait_restrictions")
         .matching(|m| m.implements_trait("^test_app::trait_impl::MyTrait$"))
         .with_severity(Severity::Warn)
@@ -88,7 +91,61 @@ fn test_lint_config() {
         .must_be_private()
         .must_implement_trait("test_app::trait_impl::MyTrait")
         .build();
-        
+
+    // Attribute matching, required and forbidden traits, and logical struct rules.
+    builder
+        .struct_lint()
+        .lint_named("attribute_matcher_check")
+        .matching(|m| {
+            m.name("^AppRepr")
+                .and(m.has_attribute("repr"))
+        })
+        .with_severity(Severity::Warn)
+        .must_be_named("^AppReprAllowed".into())
+        .build();
+
+    builder
+        .struct_lint()
+        .lint_named("required_trait_rule_check")
+        .matching(|m| m.name("^AppNeedsTrait"))
+        .with_severity(Severity::Warn)
+        .must_implement_trait("test_app::configured_struct_rules::RequiredTrait")
+        .build();
+
+    builder
+        .struct_lint()
+        .lint_named("forbidden_trait_rule_check")
+        .matching(|m| m.name("^AppMustAvoidTrait"))
+        .with_severity(Severity::Warn)
+        .must_not_implement_trait("test_app::configured_struct_rules::ForbiddenTrait")
+        .build();
+
+    builder
+        .struct_lint()
+        .lint_named("or_struct_rule_check")
+        .matching(|m| m.name("AppCompositeOr"))
+        .add_rule(StructRule::Or(
+            Box::new(StructRule::MustBeNamed(
+                "^AppAllowedComposite".into(),
+                Severity::Warn,
+            )),
+            Box::new(StructRule::MustBePrivate(Severity::Warn)),
+        ))
+        .build();
+
+    builder
+        .struct_lint()
+        .lint_named("negated_trait_matcher_check")
+        .matching(|m| {
+            m.name("^AppMatcherNegation").and(
+                m.implements_trait("test_app::configured_struct_rules::RequiredTrait")
+                    .not(),
+            )
+        })
+        .with_severity(Severity::Warn)
+        .must_be_named("^AppMatcherNegationAllowed".into())
+        .build();
+
     // Result error implementation check
     builder
         .function_lint()
