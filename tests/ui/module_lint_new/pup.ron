@@ -150,7 +150,7 @@
             matches: Module("^test_logical_module_rules::and_"),
             rules: [
                 And(
-                    MustBeNamed("^and_good$", Error),
+                    MustBeNamed("^and_good$", Warn),
                     MustNotBeEmpty(Error),
                 ),
             ],

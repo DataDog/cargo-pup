@@ -24,3 +24,4 @@ pub use architecture_lint_rule::ArchitectureLintRule;
 pub use helpers::architecture_lint_collection::ArchitectureLintCollection;
 pub use helpers::architecture_lint_runner::ArchitectureLintRunner;
 pub use helpers::architecture_lint_runner::Mode;
+pub use lints::configuration_factory::LintConfigurationFactory;

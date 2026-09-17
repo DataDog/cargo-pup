@@ -48,11 +48,11 @@ fn validate_cargo_pup_structure() {
         .enforce_error_trait_implementation()
         .build();
 
-    // Keep the cargo-pup binary on cargo_pup_lint_impl's public API.
+    // Keep both binaries on cargo_pup_lint_impl's public API.
     builder
         .module_lint()
         .lint_named("cargo_pup_no_lints_usage")
-        .matching(|m| m.module("^cargo_pup$"))
+        .matching(|m| m.module("^(cargo_pup|pup_driver)(::.*)?$"))
         .with_severity(Severity::Error)
         .restrict_imports(None, Some(vec!["^cargo_pup_lint_impl::lints".to_string()]))
         .build();

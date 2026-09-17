@@ -6,10 +6,16 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-if ! cargo nextest --version >/dev/null 2>&1; then
+NEXTEST_PINNED_VERSION="0.9.145"
+
+if ! NEXTEST_VERSION_OUTPUT="$(cargo nextest --version 2>&1)"; then
     echo "cargo-nextest is required. Install it with:" >&2
-    echo "  cargo install cargo-nextest --version 0.9.145 --locked" >&2
+    echo "  cargo install cargo-nextest --version ${NEXTEST_PINNED_VERSION} --locked" >&2
     exit 1
+fi
+
+if ! grep -q "$NEXTEST_PINNED_VERSION" <<<"$NEXTEST_VERSION_OUTPUT"; then
+    echo "Warning: installed cargo-nextest ($NEXTEST_VERSION_OUTPUT) does not match the CI-pinned version ${NEXTEST_PINNED_VERSION}; local results may diverge from CI." >&2
 fi
 
 # Build the binaries explicitly because integration tests and test_app resolve

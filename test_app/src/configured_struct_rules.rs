@@ -27,7 +27,7 @@ pub struct AppMustAvoidTraitGood;
 
 pub struct AppCompositeOrBad;
 struct AppCompositeOrPrivate;
-pub struct AppAllowedCompositeOr;
+pub struct AppCompositeOrAllowed;
 
 pub struct AppMatcherNegationBad;
 

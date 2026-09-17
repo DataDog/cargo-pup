@@ -9,11 +9,16 @@ use rustc_hir::{Item, ItemKind, def_id::DefId};
 use rustc_lint::{LateContext, LateLintPass, LintStore};
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
 pub struct StructLint {
     name: String,
     matches: StructMatch,
     struct_rules: Vec<StructRule>,
+    // Cache trait metadata and compiled regexes for this lint pass.
+    trait_cache: OnceLock<Vec<(DefId, String)>>,
+    regex_cache: Mutex<HashMap<String, Regex>>,
 }
 
 fn attribute_matches(regex: &Regex, attribute: &str) -> bool {
@@ -38,6 +43,7 @@ fn hir_attribute_name(attribute: &rustc_hir::Attribute) -> Option<String> {
     }
 }
 
+// Report referenced traits in print-traits regardless of matcher polarity.
 fn matcher_references_trait(matcher: &StructMatch, trait_path: &str) -> bool {
     match matcher {
         StructMatch::ImplementsTrait(pattern) => Regex::new(pattern)
@@ -52,6 +58,7 @@ fn matcher_references_trait(matcher: &StructMatch, trait_path: &str) -> bool {
     }
 }
 
+#[cfg(test)]
 fn evaluate_rule_with(rule: &StructRule, evaluate_leaf: &impl Fn(&StructRule) -> bool) -> bool {
     match rule {
         StructRule::And(left, right) => {
@@ -65,38 +72,65 @@ fn evaluate_rule_with(rule: &StructRule, evaluate_leaf: &impl Fn(&StructRule) ->
     }
 }
 
+// Cache subtree results because violation collection revisits them.
+fn evaluate_rule_cached(
+    rule: &StructRule,
+    evaluate_leaf: &impl Fn(&StructRule) -> bool,
+    cache: &mut HashMap<*const StructRule, bool>,
+) -> bool {
+    let key = rule as *const StructRule;
+    if let Some(&value) = cache.get(&key) {
+        return value;
+    }
+
+    let value = match rule {
+        StructRule::And(left, right) => {
+            evaluate_rule_cached(left, evaluate_leaf, cache)
+                && evaluate_rule_cached(right, evaluate_leaf, cache)
+        }
+        StructRule::Or(left, right) => {
+            evaluate_rule_cached(left, evaluate_leaf, cache)
+                || evaluate_rule_cached(right, evaluate_leaf, cache)
+        }
+        StructRule::Not(inner) => !evaluate_rule_cached(inner, evaluate_leaf, cache),
+        leaf => evaluate_leaf(leaf),
+    };
+
+    cache.insert(key, value);
+    value
+}
+
 fn collect_rule_violations<'a>(
     rule: &'a StructRule,
     expected: bool,
     evaluate_leaf: &impl Fn(&StructRule) -> bool,
+    cache: &mut HashMap<*const StructRule, bool>,
     violations: &mut Vec<(&'a StructRule, bool)>,
 ) {
-    if evaluate_rule_with(rule, evaluate_leaf) == expected {
+    if evaluate_rule_cached(rule, evaluate_leaf, cache) == expected {
         return;
     }
 
     match rule {
         StructRule::And(left, right) if expected => {
-            collect_rule_violations(left, true, evaluate_leaf, violations);
-            collect_rule_violations(right, true, evaluate_leaf, violations);
+            collect_rule_violations(left, true, evaluate_leaf, cache, violations);
+            collect_rule_violations(right, true, evaluate_leaf, cache, violations);
         }
-        StructRule::And(left, right) => {
-            // Both children are true when !(left && right) fails. Reporting both
-            // alternatives makes the available ways to satisfy the rule visible.
-            collect_rule_violations(left, false, evaluate_leaf, violations);
-            collect_rule_violations(right, false, evaluate_leaf, violations);
+        StructRule::And(left, _right) => {
+            // Negating A && B requires only one operand to become false.
+            collect_rule_violations(left, false, evaluate_leaf, cache, violations);
         }
         StructRule::Or(left, right) if expected => {
             // Both alternatives failed, so report both leaf requirements.
-            collect_rule_violations(left, true, evaluate_leaf, violations);
-            collect_rule_violations(right, true, evaluate_leaf, violations);
+            collect_rule_violations(left, true, evaluate_leaf, cache, violations);
+            collect_rule_violations(right, true, evaluate_leaf, cache, violations);
         }
         StructRule::Or(left, right) => {
-            collect_rule_violations(left, false, evaluate_leaf, violations);
-            collect_rule_violations(right, false, evaluate_leaf, violations);
+            collect_rule_violations(left, false, evaluate_leaf, cache, violations);
+            collect_rule_violations(right, false, evaluate_leaf, cache, violations);
         }
         StructRule::Not(inner) => {
-            collect_rule_violations(inner, !expected, evaluate_leaf, violations);
+            collect_rule_violations(inner, !expected, evaluate_leaf, cache, violations);
         }
         leaf => violations.push((leaf, expected)),
     }
@@ -110,6 +144,8 @@ impl StructLint {
                 name: s.name.clone(),
                 matches: s.matches.clone(),
                 struct_rules: s.rules.to_vec(),
+                trait_cache: OnceLock::new(),
+                regex_cache: Mutex::new(HashMap::new()),
             })
         } else {
             panic!("Expected a Struct lint configuration")
@@ -192,6 +228,18 @@ impl StructLint {
         })
     }
 
+    fn cached_regex(&self, pattern: &str) -> Option<Regex> {
+        if let Some(regex) = self.regex_cache.lock().unwrap().get(pattern) {
+            return Some(regex.clone());
+        }
+        let regex = Regex::new(pattern).ok()?;
+        self.regex_cache
+            .lock()
+            .unwrap()
+            .insert(pattern.to_string(), regex.clone());
+        Some(regex)
+    }
+
     fn implements_matching_trait(
         &self,
         ctx: &LateContext<'_>,
@@ -200,16 +248,30 @@ impl StructLint {
     ) -> bool {
         use crate::helpers::queries;
 
-        let Ok(trait_regex) = Regex::new(trait_pattern) else {
+        let Some(trait_regex) = self.cached_regex(trait_pattern) else {
             return false;
         };
         let ty = ctx.tcx.type_of(def_id).skip_binder();
 
-        ctx.tcx.all_traits_including_private().any(|trait_def_id| {
-            let full_trait_name =
-                queries::get_full_canonical_trait_name_from_def_id(&ctx.tcx, trait_def_id);
-            trait_regex.is_match(&full_trait_name)
-                && queries::implements_trait(ctx.tcx, ctx.param_env, ty, trait_def_id)
+        let candidates = self.trait_cache.get_or_init(|| {
+            ctx.tcx
+                .all_traits_including_private()
+                .filter(|&trait_def_id| {
+                    // implements_trait currently supports traits parameterised only by Self.
+                    ctx.tcx.generics_of(trait_def_id).own_params.len() <= 1
+                })
+                .map(|trait_def_id| {
+                    (
+                        trait_def_id,
+                        queries::get_full_canonical_trait_name_from_def_id(&ctx.tcx, trait_def_id),
+                    )
+                })
+                .collect()
+        });
+
+        candidates.iter().any(|(trait_def_id, full_trait_name)| {
+            trait_regex.is_match(full_trait_name)
+                && queries::implements_trait(ctx.tcx, ctx.param_env, ty, *trait_def_id)
         })
     }
 }
@@ -300,6 +362,8 @@ impl ArchitectureLintRule for StructLint {
                 name: name.clone(),
                 matches: matches.clone(),
                 struct_rules: struct_rules.clone(),
+                trait_cache: OnceLock::new(),
+                regex_cache: Mutex::new(HashMap::new()),
             })
         });
     }
@@ -377,7 +441,14 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
 
             for configured_rule in &self.struct_rules {
                 let mut violations = Vec::new();
-                collect_rule_violations(configured_rule, true, &evaluate_leaf, &mut violations);
+                let mut cache = HashMap::new();
+                collect_rule_violations(
+                    configured_rule,
+                    true,
+                    &evaluate_leaf,
+                    &mut cache,
+                    &mut violations,
+                );
 
                 for (rule, expected) in violations {
                     match rule {
@@ -403,7 +474,11 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                                 (
                                     STRUCT_LINT_MUST_NOT_BE_NAMED::get_by_severity(*severity),
                                     format!("Struct must not match {pattern_type} '{pattern}'"),
-                                    "Choose a name that doesn't match this pattern".to_string(),
+                                    if pattern_type == "name" {
+                                        "Choose a different name for this struct".to_string()
+                                    } else {
+                                        "Choose a name that doesn't match this pattern".to_string()
+                                    },
                                 )
                             };
                             span_lint_and_help(
@@ -544,6 +619,7 @@ mod tests {
     };
     use cargo_pup_lint_config::{Severity, StructMatch, StructRule};
     use regex::Regex;
+    use std::collections::HashMap;
 
     fn named(pattern: &str) -> StructRule {
         StructRule::MustBeNamed(pattern.to_string(), Severity::Warn)
@@ -596,23 +672,64 @@ mod tests {
         ));
     }
 
+    fn pattern_of(rule: &StructRule) -> &str {
+        match rule {
+            StructRule::MustBeNamed(pattern, _) => pattern,
+            _ => unreachable!(),
+        }
+    }
+
     #[test]
     fn reports_both_failed_or_alternatives() {
         let rule = StructRule::Or(Box::new(named("first")), Box::new(named("second")));
         let mut violations = Vec::new();
+        let mut cache = HashMap::new();
 
-        collect_rule_violations(&rule, true, &leaf_value, &mut violations);
+        collect_rule_violations(&rule, true, &leaf_value, &mut cache, &mut violations);
 
         assert_eq!(violations.len(), 2);
         assert!(violations.iter().all(|(_, expected)| *expected));
+        let mut reported: Vec<&str> = violations
+            .iter()
+            .map(|(rule, _)| pattern_of(rule))
+            .collect();
+        reported.sort();
+        assert_eq!(reported, vec!["first", "second"]);
+    }
+
+    #[test]
+    fn reports_single_operand_for_negated_and() {
+        let rule = StructRule::And(Box::new(named("passes")), Box::new(named("passes")));
+        let mut violations = Vec::new();
+        let mut cache = HashMap::new();
+
+        collect_rule_violations(&rule, false, &leaf_value, &mut cache, &mut violations);
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(pattern_of(violations[0].0), "passes");
+        assert!(!violations[0].1);
+    }
+
+    #[test]
+    fn reports_only_failing_operand_of_required_and() {
+        let rule = StructRule::And(Box::new(named("passes")), Box::new(named("second")));
+        let mut violations = Vec::new();
+        let mut cache = HashMap::new();
+
+        collect_rule_violations(&rule, true, &leaf_value, &mut cache, &mut violations);
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(pattern_of(violations[0].0), "second");
+        assert!(violations[0].1);
     }
 
     #[test]
     fn inverts_not_rule_expectation() {
         let rule = StructRule::Not(Box::new(named("passes")));
         let mut violations = Vec::new();
+        let mut cache = HashMap::new();
 
-        collect_rule_violations(&rule, true, &leaf_value, &mut violations);
+        collect_rule_violations(&rule, true, &leaf_value, &mut cache, &mut violations);
 
         assert_eq!(violations.len(), 1);
         assert!(!violations[0].1);

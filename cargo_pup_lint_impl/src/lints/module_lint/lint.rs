@@ -20,13 +20,13 @@ fn evaluate_module_rule_with(
     rule: &ModuleRule,
     evaluate_leaf: &impl Fn(&ModuleRule) -> Option<bool>,
 ) -> Option<bool> {
+    // A composite is inapplicable if either operand is inapplicable.
     let combine =
         |left: Option<bool>, right: Option<bool>, operation: fn(bool, bool) -> bool| match (
             left, right,
         ) {
             (Some(left), Some(right)) => Some(operation(left, right)),
-            (Some(result), None) | (None, Some(result)) => Some(result),
-            (None, None) => None,
+            _ => None,
         };
 
     match rule {
@@ -44,6 +44,44 @@ fn evaluate_module_rule_with(
             evaluate_module_rule_with(inner, evaluate_leaf).map(|value| !value)
         }
         leaf => evaluate_leaf(leaf),
+    }
+}
+
+// Collect the failing leaves of an applicable composite rule.
+fn collect_module_rule_violations<'a>(
+    rule: &'a ModuleRule,
+    expected: bool,
+    evaluate_leaf: &impl Fn(&ModuleRule) -> Option<bool>,
+    violations: &mut Vec<(&'a ModuleRule, bool)>,
+) {
+    let actual = evaluate_module_rule_with(rule, evaluate_leaf).expect(
+        "collect_module_rule_violations is only invoked once the root rule evaluates to Some",
+    );
+    if actual == expected {
+        return;
+    }
+
+    match rule {
+        ModuleRule::And(left, right) if expected => {
+            collect_module_rule_violations(left, true, evaluate_leaf, violations);
+            collect_module_rule_violations(right, true, evaluate_leaf, violations);
+        }
+        ModuleRule::And(left, _right) => {
+            // Negating A && B requires only one operand to become false.
+            collect_module_rule_violations(left, false, evaluate_leaf, violations);
+        }
+        ModuleRule::Or(left, right) if expected => {
+            collect_module_rule_violations(left, true, evaluate_leaf, violations);
+            collect_module_rule_violations(right, true, evaluate_leaf, violations);
+        }
+        ModuleRule::Or(left, right) => {
+            collect_module_rule_violations(left, false, evaluate_leaf, violations);
+            collect_module_rule_violations(right, false, evaluate_leaf, violations);
+        }
+        ModuleRule::Not(inner) => {
+            collect_module_rule_violations(inner, !expected, evaluate_leaf, violations);
+        }
+        leaf => violations.push((leaf, expected)),
     }
 }
 
@@ -334,6 +372,159 @@ impl ModuleLint {
         }
     }
 
+    fn render_module_rule_violation(
+        &self,
+        ctx: &LateContext<'_>,
+        item: &Item<'_>,
+        rule: &ModuleRule,
+        expected: bool,
+        severity: Severity,
+    ) {
+        match rule {
+            ModuleRule::MustBeNamed(pattern, _) | ModuleRule::MustNotBeNamed(pattern, _) => {
+                let must_match = matches!(rule, ModuleRule::MustBeNamed(..)) == expected;
+                let item_name = ctx
+                    .tcx
+                    .item_name(item.owner_id.def_id.to_def_id())
+                    .to_string();
+                if must_match {
+                    span_lint_and_help(
+                        ctx,
+                        MODULE_MUST_BE_NAMED::get_by_severity(severity),
+                        self.name().as_str(),
+                        item.span,
+                        format!("Module must match pattern '{pattern}', found '{item_name}'"),
+                        None,
+                        format!("Rename this module to match the pattern '{pattern}'"),
+                    );
+                } else {
+                    span_lint_and_help(
+                        ctx,
+                        MODULE_MUST_NOT_BE_NAMED::get_by_severity(severity),
+                        self.name().as_str(),
+                        item.span,
+                        format!("Module must not match pattern '{pattern}'"),
+                        None,
+                        "Choose a name that doesn't match this pattern",
+                    );
+                }
+            }
+            ModuleRule::MustNotBeEmpty(_) => {
+                if expected {
+                    span_lint_and_help(
+                        ctx,
+                        MODULE_MUST_NOT_BE_EMPTY::get_by_severity(severity),
+                        self.name().as_str(),
+                        item.span,
+                        "Module must not be empty",
+                        None,
+                        "Add content to this module or remove it",
+                    );
+                } else {
+                    span_lint_and_help(
+                        ctx,
+                        MODULE_MUST_BE_EMPTY::get_by_severity(severity),
+                        self.name().as_str(),
+                        item.span,
+                        "Module must be empty",
+                        None,
+                        "Remove content from this module",
+                    );
+                }
+            }
+            ModuleRule::MustBeEmpty(_) => {
+                if expected {
+                    span_lint_and_help(
+                        ctx,
+                        MODULE_MUST_BE_EMPTY::get_by_severity(severity),
+                        self.name().as_str(),
+                        item.span,
+                        "Module must be empty",
+                        None,
+                        "Remove disallowed items from this module",
+                    );
+                } else {
+                    span_lint_and_help(
+                        ctx,
+                        MODULE_MUST_NOT_BE_EMPTY::get_by_severity(severity),
+                        self.name().as_str(),
+                        item.span,
+                        "Module must not be empty",
+                        None,
+                        "Add content to this module",
+                    );
+                }
+            }
+            ModuleRule::MustHaveEmptyModFile(_) => {
+                let message = if expected {
+                    "Module's mod.rs file must be empty (only allowed to re-export other modules)"
+                } else {
+                    "Module's mod.rs file must not be empty"
+                };
+                span_lint_and_help(
+                    ctx,
+                    MODULE_MUST_HAVE_EMPTY_MOD_FILE::get_by_severity(severity),
+                    self.name().as_str(),
+                    item.span,
+                    message,
+                    None,
+                    "Remove disallowed items from the mod.rs file or move them to a submodule",
+                );
+            }
+            ModuleRule::RestrictImports { .. } => {
+                let message = if expected {
+                    "Use of this module is not permitted by the configured import restrictions"
+                } else {
+                    "Use of this module is required to be denied by the configured import restrictions"
+                };
+                span_lint_and_help(
+                    ctx,
+                    MODULE_RESTRICT_IMPORTS::get_by_severity(severity),
+                    self.name().as_str(),
+                    item.span,
+                    message,
+                    None,
+                    "Adjust this import to satisfy the configured restrictions",
+                );
+            }
+            ModuleRule::NoWildcardImports(_) => {
+                let message = if expected {
+                    "Wildcard imports are not allowed"
+                } else {
+                    "Wildcard imports are required here"
+                };
+                span_lint_and_help(
+                    ctx,
+                    MODULE_WILDCARD_IMPORT::get_by_severity(severity),
+                    self.name().as_str(),
+                    item.span,
+                    message,
+                    None,
+                    "Import specific items instead of using a wildcard",
+                );
+            }
+            ModuleRule::DeniedItems { .. } => {
+                let message = if expected {
+                    "This item type is not allowed in this module"
+                } else {
+                    "This item type is required to be denied in this module"
+                };
+                span_lint_and_help(
+                    ctx,
+                    MODULE_DENIED_ITEMS::get_by_severity(severity),
+                    self.name().as_str(),
+                    item.span,
+                    message,
+                    None,
+                    "Consider moving this item to a different module",
+                );
+            }
+            ModuleRule::And(_, _) | ModuleRule::Or(_, _) | ModuleRule::Not(_) => {
+                unreachable!("composite rules are not leaves")
+            }
+        }
+    }
+
     // Helper function to check for disallowed items in a module and call the callback when found
     fn check_for_disallowed_items<C>(
         &self,
@@ -435,14 +626,6 @@ declare_variable_severity_lint!(
     "Module's mod.rs file must be empty (only allowed to re-export other modules)"
 );
 
-declare_variable_severity_lint!(
-    pub,
-    MODULE_LOGICAL_RULE,
-    MODULE_LOGICAL_RULE_LINT_DENY,
-    MODULE_LOGICAL_RULE_LINT_WARN,
-    "Module must satisfy its configured logical rule"
-);
-
 impl_lint_pass!(ModuleLint => [
     MODULE_MUST_BE_NAMED_LINT_DENY, MODULE_MUST_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY, MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
@@ -451,8 +634,7 @@ impl_lint_pass!(ModuleLint => [
     MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_DENY, MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_WARN,
     MODULE_RESTRICT_IMPORTS_LINT_DENY, MODULE_RESTRICT_IMPORTS_LINT_WARN,
     MODULE_WILDCARD_IMPORT_LINT_DENY, MODULE_WILDCARD_IMPORT_LINT_WARN,
-    MODULE_DENIED_ITEMS_LINT_DENY, MODULE_DENIED_ITEMS_LINT_WARN,
-    MODULE_LOGICAL_RULE_LINT_DENY, MODULE_LOGICAL_RULE_LINT_WARN
+    MODULE_DENIED_ITEMS_LINT_DENY, MODULE_DENIED_ITEMS_LINT_WARN
 ]);
 
 impl ArchitectureLintRule for ModuleLint {
@@ -730,16 +912,15 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::And(_, _) | ModuleRule::Or(_, _) | ModuleRule::Not(_) => {
+                    let evaluate_leaf =
+                        |leaf: &ModuleRule| self.evaluate_module_rule_leaf(ctx, item, leaf);
                     if self.evaluate_module_rule(ctx, item, rule) == Some(false) {
-                        span_lint_and_help(
-                            ctx,
-                            MODULE_LOGICAL_RULE::get_by_severity(module_rule_severity(rule)),
-                            self.name().as_str(),
-                            item.span,
-                            "Item does not satisfy the configured logical module rule",
-                            None,
-                            "Satisfy at least the required combination of module constraints",
-                        );
+                        let severity = module_rule_severity(rule);
+                        let mut violations = Vec::new();
+                        collect_module_rule_violations(rule, true, &evaluate_leaf, &mut violations);
+                        for (leaf, expected) in violations {
+                            self.render_module_rule_violation(ctx, item, leaf, expected, severity);
+                        }
                     }
                 }
             }
@@ -790,13 +971,13 @@ mod tests {
     }
 
     #[test]
-    fn ignores_inapplicable_leaves_without_hiding_applicable_results() {
+    fn inapplicable_leaf_makes_composite_inapplicable() {
         let rule = ModuleRule::And(
             Box::new(named("passes", Severity::Warn)),
             Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
         );
 
-        assert_eq!(evaluate_module_rule_with(&rule, &leaf_value), Some(true));
+        assert_eq!(evaluate_module_rule_with(&rule, &leaf_value), None);
     }
 
     #[test]

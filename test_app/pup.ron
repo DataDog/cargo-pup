@@ -68,7 +68,7 @@
             name: "logical_module_and_check",
             matches: Module("^test_app::logical_module_rules::and_"),
             rules: [
-                And(MustBeNamed("^and_good$", Warn), MustNotBeEmpty(Warn)),
+                And(MustBeNamed("^and_good$", Warn), MustNotBeEmpty(Error)),
             ],
         )),
         Module((
@@ -119,7 +119,7 @@
             name: "or_struct_rule_check",
             matches: Name("AppCompositeOr"),
             rules: [
-                Or(MustBeNamed("^AppAllowedComposite", Warn), MustBePrivate(Warn)),
+                Or(MustBeNamed("^AppCompositeOrAllowed", Warn), MustBePrivate(Warn)),
             ],
         )),
         Struct((

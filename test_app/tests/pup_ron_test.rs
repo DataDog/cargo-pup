@@ -91,7 +91,7 @@ fn test_lint_config() {
                 "^and_good$".into(),
                 Severity::Warn,
             )),
-            Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
+            Box::new(ModuleRule::MustNotBeEmpty(Severity::Error)),
         ))
         .build();
 
@@ -164,7 +164,7 @@ fn test_lint_config() {
         .matching(|m| m.name("AppCompositeOr"))
         .add_rule(StructRule::Or(
             Box::new(StructRule::MustBeNamed(
-                "^AppAllowedComposite".into(),
+                "^AppCompositeOrAllowed".into(),
                 Severity::Warn,
             )),
             Box::new(StructRule::MustBePrivate(Severity::Warn)),

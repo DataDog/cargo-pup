@@ -112,14 +112,14 @@ warning: Struct 'AppMustAvoidTraitBad' must not implement trait matching 'test_a
    = help: Remove the forbidden trait implementation
    = note: Applied by cargo-pup rule 'forbidden_trait_rule_check'.
 
-warning: Struct must match pattern '^AppAllowedComposite', found 'AppCompositeOrBad'
+warning: Struct must match pattern '^AppCompositeOrAllowed', found 'AppCompositeOrBad'
   --> src/configured_struct_rules.rs:28:1
    |
 28 | / pub struct AppCompositeOrBad;
 29 | | struct AppCompositeOrPrivate;
    | |_^
    |
-   = help: Rename this struct to match the pattern '^AppAllowedComposite'
+   = help: Rename this struct to match the pattern '^AppCompositeOrAllowed'
    = note: Applied by cargo-pup rule 'or_struct_rule_check'.
 
 warning: Struct 'AppCompositeOrBad' has pub visibility, but must be private
@@ -241,26 +241,47 @@ warning: module 'nested' is not allowed in this module
    = help: Consider moving this item to a different module
    = note: Applied by cargo-pup rule 'item_type_restrictions'.
 
-warning: Item does not satisfy the configured logical module rule
+error: Module must match pattern '^and_good$', found 'and_bad'
  --> src/logical_module_rules.rs:3:1
   |
 3 | pub mod and_bad {}
   | ^^^^^^^^^^^^^^^^^^
   |
-  = help: Satisfy at least the required combination of module constraints
+  = help: Rename this module to match the pattern '^and_good$'
   = note: Applied by cargo-pup rule 'logical_module_and_check'.
-  = note: `#[warn(module_logical_rule)]` on by default
+  = note: `#[deny(module_must_be_named)]` on by default
 
-warning: Item does not satisfy the configured logical module rule
+error: Module must not be empty
+ --> src/logical_module_rules.rs:3:1
+  |
+3 | pub mod and_bad {}
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = help: Add content to this module or remove it
+  = note: Applied by cargo-pup rule 'logical_module_and_check'.
+  = note: `#[deny(module_must_not_be_empty)]` on by default
+
+warning: Module must match pattern '^or_named$', found 'or_bad'
   --> src/logical_module_rules.rs:15:1
    |
 15 | pub mod or_bad {}
    | ^^^^^^^^^^^^^^^^^
    |
-   = help: Satisfy at least the required combination of module constraints
+   = help: Rename this module to match the pattern '^or_named$'
    = note: Applied by cargo-pup rule 'logical_module_or_check'.
+   = note: `#[warn(module_must_be_named)]` on by default
 
-warning: Item does not satisfy the configured logical module rule
+warning: Module must not be empty
+  --> src/logical_module_rules.rs:15:1
+   |
+15 | pub mod or_bad {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: Add content to this module or remove it
+   = note: Applied by cargo-pup rule 'logical_module_or_check'.
+   = note: `#[warn(module_must_not_be_empty)]` on by default
+
+warning: Module must be empty
   --> src/logical_module_rules.rs:19:1
    |
 19 | / pub mod not_bad {
@@ -268,8 +289,9 @@ warning: Item does not satisfy the configured logical module rule
 21 | | }
    | |_^
    |
-   = help: Satisfy at least the required combination of module constraints
+   = help: Remove content from this module
    = note: Applied by cargo-pup rule 'logical_module_not_check'.
+   = note: `#[warn(module_must_be_empty)]` on by default
 
 warning: declarative macro 'forbidden_macro' is not allowed in this module
  --> src/macro_restriction/mod.rs:4:1
@@ -314,7 +336,6 @@ warning: Item 'this_should_not_be_here' not allowed in empty module
   |
   = help: Remove this item from the module, which must be empty
   = note: Applied by cargo-pup rule 'must_be_empty_module'.
-  = note: `#[warn(module_must_be_empty)]` on by default
 
 warning: Item 'ALSO_NOT_ALLOWED' not allowed in empty module
   --> src/must_be_empty.rs:10:1
@@ -724,4 +745,4 @@ error: Function 'process_unsafe' is forbidden by lint rule
 
 For more information about this error, try `rustc --explain E0133`.
 warning: `test_app` (bin "test_app") generated 59 warnings
-error: could not compile `test_app` (bin "test_app") due to 12 previous errors; 59 warnings emitted
+error: could not compile `test_app` (bin "test_app") due to 14 previous errors; 59 warnings emitted

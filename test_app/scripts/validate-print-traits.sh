@@ -9,8 +9,14 @@ PATHS=""
 export PATH="${PATHS}$PATH"
 
 pushd "$(dirname "$0")/../" >/dev/null
-output="$(cargo pup print-traits 2>&1 | perl -pe 's/\e\[[0-9;]*m//g')"
+if ! output="$(cargo pup print-traits 2>&1)"; then
+    echo "cargo pup print-traits failed:" >&2
+    echo "$output" >&2
+    exit 1
+fi
 popd >/dev/null
+
+output="$(sed $'s/\e\[[0-9;]*m//g' <<<"$output")"
 
 expected="::trait_impl::MyTrait [trait_restrictions]"
 if ! grep -Fq "$expected" <<<"$output"; then

@@ -180,11 +180,6 @@ dependencies = [
 [[package]]
 name = "proc_macro_test"
 version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.6",
-]
 
 [[package]]
 name = "quote"
@@ -347,6 +342,7 @@ dependencies = [
  "cargo_pup_lint_config",
  "proc_macro_test",
  "rand",
+ "tempfile",
 ]
 
 [[package]]

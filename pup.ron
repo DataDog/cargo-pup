@@ -24,7 +24,7 @@
         )),
         Module((
             name: "cargo_pup_no_lints_usage",
-            matches: Module("^cargo_pup$"),
+            matches: Module("^(cargo_pup|pup_driver)(::.*)?$"),
             rules: [
                 RestrictImports(
                     allowed_only: None,
