@@ -10,7 +10,7 @@ pub struct WidgetBuilder {
 
 impl WidgetBuilder {
     // This should trigger the MustNotExist rule
-    pub fn with_val(mut self, val: i32) -> Self { //~ ERROR: Function 'with_val' is forbidden by lint rule
+    pub fn with_val(mut self, val: i32) -> Self { //~ ERROR: Function 'with_val' is forbidden because
         self.val = val;
         self
     }
@@ -28,7 +28,7 @@ impl WidgetBuilder {
     }
 
     // Opposite rule: name starts with "set_" but returns Self – should trigger error
-    pub fn set_val_value(self, val: i32) -> Self { //~ ERROR: Function 'set_val_value' is forbidden by lint rule
+    pub fn set_val_value(self, val: i32) -> Self { //~ ERROR: Function 'set_val_value' is forbidden because
         Self { val }
     }
 

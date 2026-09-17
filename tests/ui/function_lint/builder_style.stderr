@@ -1,20 +1,20 @@
-error: Function 'with_val' is forbidden by lint rule
+error: Function 'with_val' is forbidden because its name `with_val` matches `^with_.*` and its return type is `WidgetBuilder`
   --> tests/ui/function_lint/builder_style.rs:13:5
    |
 LL |     pub fn with_val(mut self, val: i32) -> Self {
    |     ^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'builder_style_with_methods_forbidden'.
    = note: `#[deny(function_lint)]` on by default
 
-error: Function 'set_val_value' is forbidden by lint rule
+error: Function 'set_val_value' is forbidden because its name `set_val_value` matches `^set_.*` and its return type is `WidgetBuilder`
   --> tests/ui/function_lint/builder_style.rs:31:5
    |
 LL |     pub fn set_val_value(self, val: i32) -> Self {
    |     ^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'builder_style_set_methods_forbid_self_value'.
 
 error: aborting due to 2 previous errors

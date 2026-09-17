@@ -391,59 +391,59 @@ warning: Struct 'MyBadlyNamedThing' has pub visibility, but must be private
    = help: Remove the visibility modifier
    = note: Applied by cargo-pup rule 'trait_restrictions'.
 
-error: Function 'with_width' is forbidden by lint rule
+error: Function 'with_width' is forbidden because its name `with_width` matches `^with_.*` and its return type is `builder_style::WidgetBuilder`
  --> src/builder_style/mod.rs:8:5
   |
 8 |     pub fn with_width(self, width: u32) -> Self {
   |     ^^^^^^^^^^^^^^^
   |
-  = help: Remove this function to satisfy the architectural rule
+  = help: Change the matched function properties or remove the function
   = note: Applied by cargo-pup rule 'builder_style_with_consuming_forbidden'.
   = note: `#[deny(function_lint)]` on by default
 
-error: Function 'set_height' is forbidden by lint rule
+error: Function 'set_height' is forbidden because its name `set_height` matches `^set_.*` and its return type is `builder_style::WidgetBuilder`
   --> src/builder_style/mod.rs:13:5
    |
 13 |     pub fn set_height(self, height: u32) -> Self {
    |     ^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'builder_style_set_consuming_forbidden'.
 
-error: Function 'forbidden_async_function' is forbidden by lint rule
+error: Function 'forbidden_async_function' is forbidden because it is in module `test_app::async_functions` and it is async
  --> src/async_functions/mod.rs:8:1
   |
 8 | pub async fn forbidden_async_function() -> String {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = help: Remove this function to satisfy the architectural rule
+  = help: Change the matched function properties or remove the function
   = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
-error: Function 'async_result_function' is forbidden by lint rule
+error: Function 'async_result_function' is forbidden because it is in module `test_app::async_functions` and it is async
   --> src/async_functions/mod.rs:13:1
    |
 13 | pub async fn async_result_function() -> Result<i32, String> {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
-error: Function 'process_async' is forbidden by lint rule
+error: Function 'process_async' is forbidden because it is in module `test_app::async_functions` and it is async
   --> src/async_functions/mod.rs:33:5
    |
 33 |     pub async fn process_async(&self) -> Result<String, String> {
    |     ^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
-error: Function 'process_item' is forbidden by lint rule
+error: Function 'process_item' is forbidden because it is in module `test_app::async_functions` and it is async
   --> src/async_functions/mod.rs:55:5
    |
 55 |     async fn process_item(&self, item: String) -> Result<String, String> {
    |     ^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
 warning: Function allocates heap memory: calls allocating function: std::boxed::Box::<T>::new
@@ -689,58 +689,58 @@ warning: Function may panic: index bounds check may panic
     = help: Remove panic paths to satisfy the NoIndexPanic rule
     = note: Applied by cargo-pup rule 'no_panic_check'.
 
-error: Function 'forbidden_unsafe_function' is forbidden by lint rule
+error: Function 'forbidden_unsafe_function' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:29:1
    |
 29 | pub unsafe fn forbidden_unsafe_function() {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'forbidden_unsafe_with_return' is forbidden by lint rule
+error: Function 'forbidden_unsafe_with_return' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:34:1
    |
 34 | pub unsafe fn forbidden_unsafe_with_return() -> i32 {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'forbidden_unsafe_with_params' is forbidden by lint rule
+error: Function 'forbidden_unsafe_with_params' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:39:1
    |
 39 | pub unsafe fn forbidden_unsafe_with_params(ptr: *const i32) -> i32 {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'get_data_unsafe' is forbidden by lint rule
+error: Function 'get_data_unsafe' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:63:5
    |
 63 |     pub unsafe fn get_data_unsafe(&self) -> i32 {
    |     ^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'mutate_unsafe' is forbidden by lint rule
+error: Function 'mutate_unsafe' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:68:5
    |
 68 |     pub unsafe fn mutate_unsafe(&mut self, ptr: *const i32) {
    |     ^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'process_unsafe' is forbidden by lint rule
+error: Function 'process_unsafe' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:91:5
    |
 91 |     unsafe fn process_unsafe(&self) -> i32 {
    |     ^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
 For more information about this error, try `rustc --explain E0133`.

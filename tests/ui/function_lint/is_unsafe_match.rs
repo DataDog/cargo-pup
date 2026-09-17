@@ -6,11 +6,11 @@
 // This test verifies that the FunctionLint's IsUnsafe matcher works correctly
 
 // Unsafe function that should trigger the lint (unsafe functions are forbidden)
-unsafe fn forbidden_unsafe_function() { //~ ERROR: Function 'forbidden_unsafe_function' is forbidden by lint rule
+unsafe fn forbidden_unsafe_function() { //~ ERROR: Function 'forbidden_unsafe_function' is forbidden because
 }
 
 // Unsafe function with return type
-unsafe fn forbidden_unsafe_with_return() -> i32 { //~ ERROR: Function 'forbidden_unsafe_with_return' is forbidden by lint rule
+unsafe fn forbidden_unsafe_with_return() -> i32 { //~ ERROR: Function 'forbidden_unsafe_with_return' is forbidden because
     42
 }
 
@@ -27,7 +27,7 @@ fn allowed_safe_with_return() -> i32 {
 struct TestStruct;
 
 impl TestStruct {
-    unsafe fn unsafe_method(&self) { //~ ERROR: Function 'unsafe_method' is forbidden by lint rule
+    unsafe fn unsafe_method(&self) { //~ ERROR: Function 'unsafe_method' is forbidden because
     }
 
     fn safe_method(&self) {
@@ -42,7 +42,7 @@ trait UnsafeTrait {
 }
 
 impl UnsafeTrait for TestStruct {
-    unsafe fn trait_unsafe_method(&self) { //~ ERROR: Function 'trait_unsafe_method' is forbidden by lint rule
+    unsafe fn trait_unsafe_method(&self) { //~ ERROR: Function 'trait_unsafe_method' is forbidden because
     }
 
     fn trait_safe_method(&self) {
