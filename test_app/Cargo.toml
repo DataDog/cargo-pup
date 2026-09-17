@@ -7,8 +7,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.80"
-rand = "0.8.5"
+anyhow = "1.0.104"
+rand = "0.10.2"
 proc_macro_test = { path = "proc_macro_test" }
 
 [dev-dependencies]
