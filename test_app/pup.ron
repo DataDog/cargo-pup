@@ -109,6 +109,20 @@
             ],
         )),
         Struct((
+            name: "required_generic_trait_rule_check",
+            matches: Name("^AppNeedsGenericTrait"),
+            rules: [
+                ImplementsTrait("test_app::configured_struct_rules::GenericRequiredTrait", Warn),
+            ],
+        )),
+        Struct((
+            name: "generic_trait_matcher_check",
+            matches: AndMatches(Name("^AppGenericMatcher"), ImplementsTrait("test_app::configured_struct_rules::GenericRequiredTrait")),
+            rules: [
+                MustBeNamed("^AppGenericMatcherAllowed", Warn),
+            ],
+        )),
+        Struct((
             name: "forbidden_trait_rule_check",
             matches: Name("^AppMustAvoidTrait"),
             rules: [

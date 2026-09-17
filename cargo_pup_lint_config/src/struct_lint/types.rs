@@ -15,7 +15,10 @@ pub enum StructMatch {
     /// Consumed attributes such as `derive` and attribute procedural macros cannot match. An active
     /// `cfg_attr` may match a supported resulting attribute, but not the original expression.
     HasAttribute(String),
-    /// Match structs that implement a specific trait
+    /// Match structs that implement a specific trait.
+    ///
+    /// Generic arguments are not part of the trait path. A generic trait matches when the
+    /// struct implements it for any arguments; associated type values are not constrained.
     ImplementsTrait(String),
     /// Logical AND - both patterns must match
     AndMatches(Box<StructMatch>, Box<StructMatch>),
@@ -46,7 +49,10 @@ pub enum StructRule {
     MustBePublic(Severity),
     /// Enforces that the struct has pub(crate) visibility
     MustBePubCrate(Severity),
-    /// Enforces that the struct implements a specific trait
+    /// Enforces that the struct implements a specific trait.
+    ///
+    /// Generic arguments are not part of the trait path. A generic trait is implemented when
+    /// any valid arguments exist; associated type values are not constrained.
     ImplementsTrait(String, Severity),
     /// Logical AND - both rules must pass
     And(Box<StructRule>, Box<StructRule>),

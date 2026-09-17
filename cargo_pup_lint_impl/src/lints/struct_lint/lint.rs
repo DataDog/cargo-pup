@@ -44,17 +44,36 @@ fn hir_attribute_name(attribute: &rustc_hir::Attribute) -> Option<String> {
 }
 
 // Report referenced traits in print-traits regardless of matcher polarity.
+fn trait_pattern_matches(pattern: &str, trait_path: &str) -> bool {
+    Regex::new(pattern)
+        .map(|regex| regex.is_match(trait_path))
+        .unwrap_or(false)
+}
+
 fn matcher_references_trait(matcher: &StructMatch, trait_path: &str) -> bool {
     match matcher {
-        StructMatch::ImplementsTrait(pattern) => Regex::new(pattern)
-            .map(|regex| regex.is_match(trait_path))
-            .unwrap_or(false),
+        StructMatch::ImplementsTrait(pattern) => trait_pattern_matches(pattern, trait_path),
         StructMatch::AndMatches(left, right) | StructMatch::OrMatches(left, right) => {
             matcher_references_trait(left, trait_path)
                 || matcher_references_trait(right, trait_path)
         }
         StructMatch::NotMatch(inner) => matcher_references_trait(inner, trait_path),
         StructMatch::Name(_) | StructMatch::HasAttribute(_) => false,
+    }
+}
+
+fn rule_references_trait(rule: &StructRule, trait_path: &str) -> bool {
+    match rule {
+        StructRule::ImplementsTrait(pattern, _) => trait_pattern_matches(pattern, trait_path),
+        StructRule::And(left, right) | StructRule::Or(left, right) => {
+            rule_references_trait(left, trait_path) || rule_references_trait(right, trait_path)
+        }
+        StructRule::Not(inner) => rule_references_trait(inner, trait_path),
+        StructRule::MustBeNamed(_, _)
+        | StructRule::MustNotBeNamed(_, _)
+        | StructRule::MustBePrivate(_)
+        | StructRule::MustBePublic(_)
+        | StructRule::MustBePubCrate(_) => false,
     }
 }
 
@@ -256,10 +275,6 @@ impl StructLint {
         let candidates = self.trait_cache.get_or_init(|| {
             ctx.tcx
                 .all_traits_including_private()
-                .filter(|&trait_def_id| {
-                    // implements_trait currently supports traits parameterised only by Self.
-                    ctx.tcx.generics_of(trait_def_id).own_params.len() <= 1
-                })
                 .map(|trait_def_id| {
                     (
                         trait_def_id,
@@ -350,6 +365,10 @@ impl ArchitectureLintRule for StructLint {
 
     fn applies_to_trait(&self, trait_path: &str) -> bool {
         matcher_references_trait(&self.matches, trait_path)
+            || self
+                .struct_rules
+                .iter()
+                .any(|rule| rule_references_trait(rule, trait_path))
     }
 
     fn register_late_pass(&self, lint_store: &mut LintStore) {
@@ -616,8 +635,9 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
 mod tests {
     use super::{
         attribute_matches, collect_rule_violations, evaluate_rule_with, matcher_references_trait,
+        rule_references_trait,
     };
-    use cargo_pup_lint_config::{Severity, StructMatch, StructRule};
+    use cargo_pup_lint_config::{ConfiguredLint, Severity, StructMatch, StructRule};
     use regex::Regex;
     use std::collections::HashMap;
 
@@ -651,6 +671,40 @@ mod tests {
 
         assert!(matcher_references_trait(&matcher, "crate::RequiredTrait"));
         assert!(!matcher_references_trait(&matcher, "crate::OtherTrait"));
+    }
+
+    #[test]
+    fn identifies_traits_referenced_by_complex_rules() {
+        let rule = StructRule::And(
+            Box::new(named("Service")),
+            Box::new(StructRule::Not(Box::new(StructRule::Or(
+                Box::new(StructRule::MustBePrivate(Severity::Warn)),
+                Box::new(StructRule::ImplementsTrait(
+                    "^crate::RequiredTrait$".into(),
+                    Severity::Warn,
+                )),
+            )))),
+        );
+
+        assert!(rule_references_trait(&rule, "crate::RequiredTrait"));
+        assert!(!rule_references_trait(&rule, "crate::OtherTrait"));
+    }
+
+    #[test]
+    fn trait_applicability_includes_matchers_and_rules() {
+        let config = ConfiguredLint::Struct(cargo_pup_lint_config::struct_lint::StructLint {
+            name: "trait_check".into(),
+            matches: StructMatch::ImplementsTrait("^crate::MatchedTrait$".into()),
+            rules: vec![StructRule::Not(Box::new(StructRule::ImplementsTrait(
+                "^crate::RuledTrait$".into(),
+                Severity::Warn,
+            )))],
+        });
+        let lint = super::StructLint::new(&config);
+
+        assert!(lint.applies_to_trait("crate::MatchedTrait"));
+        assert!(lint.applies_to_trait("crate::RuledTrait"));
+        assert!(!lint.applies_to_trait("crate::OtherTrait"));
     }
 
     #[test]

@@ -152,6 +152,26 @@ fn test_lint_config() {
 
     builder
         .struct_lint()
+        .lint_named("required_generic_trait_rule_check")
+        .matching(|m| m.name("^AppNeedsGenericTrait"))
+        .with_severity(Severity::Warn)
+        .must_implement_trait("test_app::configured_struct_rules::GenericRequiredTrait")
+        .build();
+
+    builder
+        .struct_lint()
+        .lint_named("generic_trait_matcher_check")
+        .matching(|m| {
+            m.name("^AppGenericMatcher").and(
+                m.implements_trait("test_app::configured_struct_rules::GenericRequiredTrait"),
+            )
+        })
+        .with_severity(Severity::Warn)
+        .must_be_named("^AppGenericMatcherAllowed".into())
+        .build();
+
+    builder
+        .struct_lint()
         .lint_named("forbidden_trait_rule_check")
         .matching(|m| m.name("^AppMustAvoidTrait"))
         .with_severity(Severity::Warn)

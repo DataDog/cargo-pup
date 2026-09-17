@@ -66,6 +66,53 @@
                 ]
             )
         ),
+
+        Struct((
+            name: "generic_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::GenericTrait"),
+            ),
+            rules: [
+                MustBeNamed("GenericCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "standard_generic_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                AndMatches(
+                    Name("^ImplementsAsRefStr$"),
+                    ImplementsTrait("AsRef$"),
+                ),
+            ),
+            rules: [
+                MustBeNamed("AsRefCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "lifetime_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::LifetimeTrait"),
+            ),
+            rules: [
+                MustBeNamed("LifetimeCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "const_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::ConstTrait"),
+            ),
+            rules: [
+                MustBeNamed("ConstCompliant*", Error),
+            ],
+        )),
         
         // Test MustBePrivate rule - only apply to test_visibility_rules crate
         Struct(
@@ -142,6 +189,28 @@
             ),
             rules: [
                 ImplementsTrait("test_attributes_and_configured_rules::RequiredTrait", Error),
+            ],
+        )),
+
+        Struct((
+            name: "required_generic_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^NeedsGenericTrait"),
+            ),
+            rules: [
+                ImplementsTrait("test_attributes_and_configured_rules::GenericRequiredTrait", Error),
+            ],
+        )),
+
+        Struct((
+            name: "forbidden_generic_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^MustAvoidGenericTrait"),
+            ),
+            rules: [
+                Not(ImplementsTrait("test_attributes_and_configured_rules::GenericRequiredTrait", Error)),
             ],
         )),
 

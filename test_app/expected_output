@@ -71,10 +71,10 @@ note: an unsafe function restricts its caller, but its body is safe by default
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: Struct must match pattern '^AppReprAllowed', found 'AppReprWrongName'
- --> src/configured_struct_rules.rs:7:1
+ --> src/configured_struct_rules.rs:8:1
   |
-7 | / pub struct AppReprWrongName;
-8 | |
+8 | / pub struct AppReprWrongName;
+9 | |
   | |_^
   |
   = help: Rename this struct to match the pattern '^AppReprAllowed'
@@ -82,51 +82,71 @@ warning: Struct must match pattern '^AppReprAllowed', found 'AppReprWrongName'
   = note: `#[warn(struct_lint_must_be_named)]` on by default
 
 warning: Struct must match pattern '^AppReprAllowed', found 'AppReprActiveWrongName'
-  --> src/configured_struct_rules.rs:16:1
+  --> src/configured_struct_rules.rs:17:1
    |
-16 | / pub struct AppReprActiveWrongName;
-17 | |
+17 | / pub struct AppReprActiveWrongName;
+18 | |
    | |_^
    |
    = help: Rename this struct to match the pattern '^AppReprAllowed'
    = note: Applied by cargo-pup rule 'attribute_matcher_check'.
 
 warning: Struct 'AppNeedsTraitMissing' must implement trait matching 'test_app::configured_struct_rules::RequiredTrait'
-  --> src/configured_struct_rules.rs:18:1
+  --> src/configured_struct_rules.rs:19:1
    |
-18 | / pub struct AppNeedsTraitMissing;
-19 | |
+19 | / pub struct AppNeedsTraitMissing;
+20 | |
    | |_^
    |
    = help: Implement the required trait for this struct
    = note: Applied by cargo-pup rule 'required_trait_rule_check'.
    = note: `#[warn(struct_lint_implements_trait)]` on by default
 
-warning: Struct 'AppMustAvoidTraitBad' must not implement trait matching 'test_app::configured_struct_rules::ForbiddenTrait'
-  --> src/configured_struct_rules.rs:23:1
+warning: Struct 'AppNeedsGenericTraitMissing' must implement trait matching 'test_app::configured_struct_rules::GenericRequiredTrait'
+  --> src/configured_struct_rules.rs:24:1
    |
-23 | / pub struct AppMustAvoidTraitBad;
-24 | | impl ForbiddenTrait for AppMustAvoidTraitBad {}
+24 | / pub struct AppNeedsGenericTraitMissing;
+25 | |
+   | |_^
+   |
+   = help: Implement the required trait for this struct
+   = note: Applied by cargo-pup rule 'required_generic_trait_rule_check'.
+
+warning: Struct must match pattern '^AppGenericMatcherAllowed', found 'AppGenericMatcherBad'
+  --> src/configured_struct_rules.rs:29:1
+   |
+29 | / pub struct AppGenericMatcherBad;
+30 | | impl GenericRequiredTrait<u32> for AppGenericMatcherBad {}
+   | |_^
+   |
+   = help: Rename this struct to match the pattern '^AppGenericMatcherAllowed'
+   = note: Applied by cargo-pup rule 'generic_trait_matcher_check'.
+
+warning: Struct 'AppMustAvoidTraitBad' must not implement trait matching 'test_app::configured_struct_rules::ForbiddenTrait'
+  --> src/configured_struct_rules.rs:32:1
+   |
+32 | / pub struct AppMustAvoidTraitBad;
+33 | | impl ForbiddenTrait for AppMustAvoidTraitBad {}
    | |_^
    |
    = help: Remove the forbidden trait implementation
    = note: Applied by cargo-pup rule 'forbidden_trait_rule_check'.
 
 warning: Struct must match pattern '^AppCompositeOrAllowed', found 'AppCompositeOrBad'
-  --> src/configured_struct_rules.rs:28:1
+  --> src/configured_struct_rules.rs:37:1
    |
-28 | / pub struct AppCompositeOrBad;
-29 | | struct AppCompositeOrPrivate;
+37 | / pub struct AppCompositeOrBad;
+38 | | struct AppCompositeOrPrivate;
    | |_^
    |
    = help: Rename this struct to match the pattern '^AppCompositeOrAllowed'
    = note: Applied by cargo-pup rule 'or_struct_rule_check'.
 
 warning: Struct 'AppCompositeOrBad' has pub visibility, but must be private
-  --> src/configured_struct_rules.rs:28:1
+  --> src/configured_struct_rules.rs:37:1
    |
-28 | / pub struct AppCompositeOrBad;
-29 | | struct AppCompositeOrPrivate;
+37 | / pub struct AppCompositeOrBad;
+38 | | struct AppCompositeOrPrivate;
    | |_^
    |
    = help: Remove the visibility modifier
@@ -134,10 +154,10 @@ warning: Struct 'AppCompositeOrBad' has pub visibility, but must be private
    = note: `#[warn(struct_lint_must_be_private)]` on by default
 
 warning: Struct must match pattern '^AppMatcherNegationAllowed', found 'AppMatcherNegationBad'
-  --> src/configured_struct_rules.rs:32:1
+  --> src/configured_struct_rules.rs:41:1
    |
-32 | / pub struct AppMatcherNegationBad;
-33 | |
+41 | / pub struct AppMatcherNegationBad;
+42 | |
    | |_^
    |
    = help: Rename this struct to match the pattern '^AppMatcherNegationAllowed'
@@ -744,5 +764,5 @@ error: Function 'process_unsafe' is forbidden because it is in module `test_app:
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
 For more information about this error, try `rustc --explain E0133`.
-warning: `test_app` (bin "test_app") generated 59 warnings
-error: could not compile `test_app` (bin "test_app") due to 14 previous errors; 59 warnings emitted
+warning: `test_app` (bin "test_app") generated 61 warnings
+error: could not compile `test_app` (bin "test_app") due to 14 previous errors; 61 warnings emitted

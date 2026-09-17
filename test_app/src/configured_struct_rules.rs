@@ -1,6 +1,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2024 Datadog, Inc.
 
 pub trait RequiredTrait {}
+pub trait GenericRequiredTrait<T> {}
 pub trait ForbiddenTrait {}
 
 #[repr(C)]
@@ -19,6 +20,14 @@ pub struct AppNeedsTraitMissing;
 
 pub struct AppNeedsTraitPresent;
 impl RequiredTrait for AppNeedsTraitPresent {}
+
+pub struct AppNeedsGenericTraitMissing;
+
+pub struct AppNeedsGenericTraitPresent;
+impl GenericRequiredTrait<String> for AppNeedsGenericTraitPresent {}
+
+pub struct AppGenericMatcherBad;
+impl GenericRequiredTrait<u32> for AppGenericMatcherBad {}
 
 pub struct AppMustAvoidTraitBad;
 impl ForbiddenTrait for AppMustAvoidTraitBad {}

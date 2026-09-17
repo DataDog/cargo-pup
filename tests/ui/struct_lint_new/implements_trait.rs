@@ -16,6 +16,13 @@ pub trait UnrelatedTrait {
     fn unrelated_method(&self) -> i32;
 }
 
+pub trait GenericTrait<T> {
+    type Output;
+}
+
+pub trait LifetimeTrait<'a> {}
+pub trait ConstTrait<const N: usize> {}
+
 // This struct implements TestTrait and should trigger the lint
 pub struct ImplementsTestTrait { //~ ERROR: Struct must match pattern 'Compliant*', found 'ImplementsTestTrait'
     field: i32,
@@ -64,4 +71,27 @@ impl TestTrait for CompliantTraitImplementor {
     fn test_method(&self) -> bool {
         true
     }
-} 
+}
+
+// Generic trait arguments are inferred when testing implementations.
+pub struct ImplementsGenericTrait; //~ ERROR: Struct must match pattern 'GenericCompliant*', found 'ImplementsGenericTrait'
+
+impl GenericTrait<String> for ImplementsGenericTrait {
+    type Output = usize;
+}
+
+pub struct DoesNotImplementGenericTrait;
+
+pub struct ImplementsAsRefStr; //~ ERROR: Struct must match pattern 'AsRefCompliant*', found 'ImplementsAsRefStr'
+
+impl AsRef<str> for ImplementsAsRefStr {
+    fn as_ref(&self) -> &str {
+        ""
+    }
+}
+
+pub struct ImplementsLifetimeTrait; //~ ERROR: Struct must match pattern 'LifetimeCompliant*', found 'ImplementsLifetimeTrait'
+impl<'a> LifetimeTrait<'a> for ImplementsLifetimeTrait {}
+
+pub struct ImplementsConstTrait; //~ ERROR: Struct must match pattern 'ConstCompliant*', found 'ImplementsConstTrait'
+impl ConstTrait<8> for ImplementsConstTrait {}

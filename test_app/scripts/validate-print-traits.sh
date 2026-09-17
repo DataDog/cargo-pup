@@ -18,9 +18,16 @@ popd >/dev/null
 
 output="$(sed $'s/\e\[[0-9;]*m//g' <<<"$output")"
 
-expected="::trait_impl::MyTrait [trait_restrictions]"
-if ! grep -Fq "$expected" <<<"$output"; then
-    echo "Expected print-traits output to contain: $expected" >&2
-    echo "$output" >&2
-    exit 1
-fi
+expected_lines=(
+    "::trait_impl::MyTrait [trait_restrictions]"
+    "::configured_struct_rules::RequiredTrait [negated_trait_matcher_check, required_trait_rule_check]"
+    "::configured_struct_rules::GenericRequiredTrait [generic_trait_matcher_check, required_generic_trait_rule_check]"
+)
+
+for expected in "${expected_lines[@]}"; do
+    if ! grep -Fq "$expected" <<<"$output"; then
+        echo "Expected print-traits output to contain: $expected" >&2
+        echo "$output" >&2
+        exit 1
+    fi
+done

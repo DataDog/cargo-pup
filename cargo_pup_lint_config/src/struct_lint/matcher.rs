@@ -27,9 +27,11 @@ impl StructMatcher {
         StructMatchNode::Leaf(StructMatch::HasAttribute(attr.into()))
     }
 
-    /// Matches structs that implement a specific trait. The trait name
-    /// is given as a regular expression,
-    /// e.g. "^(Read|Write)$"
+    /// Matches structs that implement a specific trait. The trait name is given as a regular
+    /// expression, e.g. `"^(Read|Write)$"`.
+    ///
+    /// Generic arguments are not included in the name. A generic trait matches when the struct
+    /// implements it for any arguments; associated type values are not constrained.
     ///
     pub fn implements_trait(&self, trait_name: impl Into<String>) -> StructMatchNode {
         StructMatchNode::Leaf(StructMatch::ImplementsTrait(trait_name.into()))

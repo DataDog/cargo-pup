@@ -4,6 +4,7 @@
 //@compile-flags: --crate-type lib
 
 pub trait RequiredTrait {}
+pub trait GenericRequiredTrait<T> {}
 pub trait ForbiddenTrait {}
 
 // Matches inert attributes retained after expansion.
@@ -25,6 +26,18 @@ pub struct NeedsTraitMissing; //~ ERROR: Struct 'NeedsTraitMissing' must impleme
 
 pub struct NeedsTraitPresent;
 impl RequiredTrait for NeedsTraitPresent {}
+
+// Requires a generic trait.
+pub struct NeedsGenericTraitMissing; //~ ERROR: Struct 'NeedsGenericTraitMissing' must implement trait matching 'test_attributes_and_configured_rules::GenericRequiredTrait'
+
+pub struct NeedsGenericTraitPresent;
+impl GenericRequiredTrait<String> for NeedsGenericTraitPresent {}
+
+// Forbids a generic trait.
+pub struct MustAvoidGenericTraitBad; //~ ERROR: Struct 'MustAvoidGenericTraitBad' must not implement trait matching 'test_attributes_and_configured_rules::GenericRequiredTrait'
+impl GenericRequiredTrait<u8> for MustAvoidGenericTraitBad {}
+
+pub struct MustAvoidGenericTraitGood;
 
 // Forbids a trait.
 pub struct MustAvoidTraitBad; //~ ERROR: Struct 'MustAvoidTraitBad' must not implement trait matching 'test_attributes_and_configured_rules::ForbiddenTrait'
