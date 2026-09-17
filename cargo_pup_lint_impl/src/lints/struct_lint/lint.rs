@@ -38,6 +38,20 @@ fn hir_attribute_name(attribute: &rustc_hir::Attribute) -> Option<String> {
     }
 }
 
+fn matcher_references_trait(matcher: &StructMatch, trait_path: &str) -> bool {
+    match matcher {
+        StructMatch::ImplementsTrait(pattern) => Regex::new(pattern)
+            .map(|regex| regex.is_match(trait_path))
+            .unwrap_or(false),
+        StructMatch::AndMatches(left, right) | StructMatch::OrMatches(left, right) => {
+            matcher_references_trait(left, trait_path)
+                || matcher_references_trait(right, trait_path)
+        }
+        StructMatch::NotMatch(inner) => matcher_references_trait(inner, trait_path),
+        StructMatch::Name(_) | StructMatch::HasAttribute(_) => false,
+    }
+}
+
 fn evaluate_rule_with(rule: &StructRule, evaluate_leaf: &impl Fn(&StructRule) -> bool) -> bool {
     match rule {
         StructRule::And(left, right) => {
@@ -272,8 +286,8 @@ impl ArchitectureLintRule for StructLint {
         false
     }
 
-    fn applies_to_trait(&self, _trait_path: &str) -> bool {
-        false
+    fn applies_to_trait(&self, trait_path: &str) -> bool {
+        matcher_references_trait(&self.matches, trait_path)
     }
 
     fn register_late_pass(&self, lint_store: &mut LintStore) {
@@ -525,8 +539,10 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
 
 #[cfg(test)]
 mod tests {
-    use super::{attribute_matches, collect_rule_violations, evaluate_rule_with};
-    use cargo_pup_lint_config::{Severity, StructRule};
+    use super::{
+        attribute_matches, collect_rule_violations, evaluate_rule_with, matcher_references_trait,
+    };
+    use cargo_pup_lint_config::{Severity, StructMatch, StructRule};
     use regex::Regex;
 
     fn named(pattern: &str) -> StructRule {
@@ -546,6 +562,19 @@ mod tests {
 
         assert!(attribute_matches(&regex, "repr"));
         assert!(!attribute_matches(&regex, "other_repr"));
+    }
+
+    #[test]
+    fn identifies_traits_referenced_by_complex_matchers() {
+        let matcher = StructMatch::AndMatches(
+            Box::new(StructMatch::Name("Service".into())),
+            Box::new(StructMatch::NotMatch(Box::new(
+                StructMatch::ImplementsTrait("^crate::RequiredTrait$".into()),
+            ))),
+        );
+
+        assert!(matcher_references_trait(&matcher, "crate::RequiredTrait"));
+        assert!(!matcher_references_trait(&matcher, "crate::OtherTrait"));
     }
 
     #[test]

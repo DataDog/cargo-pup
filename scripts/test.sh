@@ -33,3 +33,4 @@ cargo test --test ui-test
 # Its first run warms this cache, and its second run compares stable output.
 rm -rf test_app/.pup
 test_app/scripts/validate-against-expected.sh
+test_app/scripts/validate-print-traits.sh
