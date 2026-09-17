@@ -2,18 +2,10 @@
     lints: [
         Struct((
             name: "architecture_lint_rule_checker",
-            matches: ImplementsTrait("^pup_driver::lints::architecture_lint_rule::ArchitectureLintRule"),
+            matches: ImplementsTrait("^cargo_pup_lint_impl::architecture_lint_rule::ArchitectureLintRule$"),
             rules: [
-                MustBeNamed(".*LintProcessor$", Error),
-                MustBePrivate(Error),
-            ],
-        )),
-        Struct((
-            name: "lint_factory_checker",
-            matches: ImplementsTrait("^pup_driver::lints::configuration_factory.rs::LintFactory"),
-            rules: [
-                MustBeNamed(".*LintFactory$", Error),
-                MustBePrivate(Error),
+                MustBeNamed("^(Function|Module|Struct)Lint$", Error),
+                MustBePublic(Error),
             ],
         )),
         Module((
@@ -21,32 +13,6 @@
             matches: Module(".*"),
             rules: [
                 MustHaveEmptyModFile(Warn),
-            ],
-        )),
-        Module((
-            name: "helpers_no_structs_or_traits",
-            matches: Module("^pup_driver::lints::helpers$"),
-            rules: [
-                DeniedItems(
-                    items: [
-                        "struct",
-                        "trait",
-                    ],
-                    severity: Error,
-                ),
-            ],
-        )),
-        Module((
-            name: "utils_no_structs_or_traits",
-            matches: Module("^pup_driver::utils$"),
-            rules: [
-                DeniedItems(
-                    items: [
-                        "struct",
-                        "trait",
-                    ],
-                    severity: Error,
-                ),
             ],
         )),
         Function((
@@ -58,12 +24,12 @@
         )),
         Module((
             name: "cargo_pup_no_lints_usage",
-            matches: Module("^cargo_pup::"),
+            matches: Module("^cargo_pup$"),
             rules: [
                 RestrictImports(
                     allowed_only: None,
                     denied: Some([
-                        "::lints",
+                        "^cargo_pup_lint_impl::lints",
                     ]),
                     severity: Error,
                 ),
