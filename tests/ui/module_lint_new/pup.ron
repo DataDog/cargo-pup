@@ -144,6 +144,37 @@
             )
         ),
                 
+        // Logical module rule combinations
+        Module((
+            name: "logical_and_test",
+            matches: Module("^test_logical_module_rules::and_"),
+            rules: [
+                And(
+                    MustBeNamed("^and_good$", Error),
+                    MustNotBeEmpty(Error),
+                ),
+            ],
+        )),
+
+        Module((
+            name: "logical_or_test",
+            matches: Module("^test_logical_module_rules::or_"),
+            rules: [
+                Or(
+                    MustBeNamed("^or_named$", Error),
+                    MustNotBeEmpty(Error),
+                ),
+            ],
+        )),
+
+        Module((
+            name: "logical_not_test",
+            matches: Module("^test_logical_module_rules::(must_be_empty|not_bad)$"),
+            rules: [
+                Not(MustNotBeEmpty(Error)),
+            ],
+        )),
+
         // Replace RestrictFunctions with Function lint
         Function(
             (

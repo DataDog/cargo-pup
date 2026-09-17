@@ -1,0 +1,32 @@
+error: Item does not satisfy the configured logical module rule
+  --> tests/ui/module_lint_new/logical_rules.rs:6:1
+   |
+LL | pub mod and_bad {}
+   | ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Satisfy at least the required combination of module constraints
+   = note: Applied by cargo-pup rule 'logical_and_test'.
+   = note: `#[deny(module_logical_rule)]` on by default
+
+error: Item does not satisfy the configured logical module rule
+  --> tests/ui/module_lint_new/logical_rules.rs:19:1
+   |
+LL | pub mod or_bad {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: Satisfy at least the required combination of module constraints
+   = note: Applied by cargo-pup rule 'logical_or_test'.
+
+error: Item does not satisfy the configured logical module rule
+  --> tests/ui/module_lint_new/logical_rules.rs:23:1
+   |
+LL | / pub mod not_bad {
+LL | |     pub const VALUE: usize = 1;
+LL | | }
+   | |_^
+   |
+   = help: Satisfy at least the required combination of module constraints
+   = note: Applied by cargo-pup rule 'logical_not_test'.
+
+error: aborting due to 3 previous errors
+

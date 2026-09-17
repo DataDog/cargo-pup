@@ -5,7 +5,7 @@
 //! This test verifies that we can build a configuration with pup.ron
 
 use cargo_pup_lint_config::{
-    FunctionLintExt, LintBuilder, ModuleLintExt, Severity, StructLintExt, StructRule,
+    FunctionLintExt, LintBuilder, ModuleLintExt, ModuleRule, Severity, StructLintExt, StructRule,
 };
 
 #[test]
@@ -79,6 +79,44 @@ fn test_lint_config() {
             "trait".to_string(),
             "module".to_string(),
         ])
+        .build();
+
+    // Logical module rule combinations.
+    builder
+        .module_lint()
+        .lint_named("logical_module_and_check")
+        .matching(|m| m.module("^test_app::logical_module_rules::and_"))
+        .add_rule(ModuleRule::And(
+            Box::new(ModuleRule::MustBeNamed(
+                "^and_good$".into(),
+                Severity::Warn,
+            )),
+            Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
+        ))
+        .build();
+
+    builder
+        .module_lint()
+        .lint_named("logical_module_or_check")
+        .matching(|m| m.module("^test_app::logical_module_rules::or_"))
+        .add_rule(ModuleRule::Or(
+            Box::new(ModuleRule::MustBeNamed(
+                "^or_named$".into(),
+                Severity::Warn,
+            )),
+            Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
+        ))
+        .build();
+
+    builder
+        .module_lint()
+        .lint_named("logical_module_not_check")
+        .matching(|m| {
+            m.module("^test_app::logical_module_rules::(must_be_empty|not_bad)$")
+        })
+        .add_rule(ModuleRule::Not(Box::new(
+            ModuleRule::MustNotBeEmpty(Severity::Warn),
+        )))
         .build();
 
     // Trait restrictions

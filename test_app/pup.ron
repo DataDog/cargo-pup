@@ -64,6 +64,27 @@
                 ),
             ],
         )),
+        Module((
+            name: "logical_module_and_check",
+            matches: Module("^test_app::logical_module_rules::and_"),
+            rules: [
+                And(MustBeNamed("^and_good$", Warn), MustNotBeEmpty(Warn)),
+            ],
+        )),
+        Module((
+            name: "logical_module_or_check",
+            matches: Module("^test_app::logical_module_rules::or_"),
+            rules: [
+                Or(MustBeNamed("^or_named$", Warn), MustNotBeEmpty(Warn)),
+            ],
+        )),
+        Module((
+            name: "logical_module_not_check",
+            matches: Module("^test_app::logical_module_rules::(must_be_empty|not_bad)$"),
+            rules: [
+                Not(MustNotBeEmpty(Warn)),
+            ],
+        )),
         Struct((
             name: "trait_restrictions",
             matches: ImplementsTrait("^test_app::trait_impl::MyTrait$"),

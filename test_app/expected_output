@@ -241,6 +241,36 @@ warning: module 'nested' is not allowed in this module
    = help: Consider moving this item to a different module
    = note: Applied by cargo-pup rule 'item_type_restrictions'.
 
+warning: Item does not satisfy the configured logical module rule
+ --> src/logical_module_rules.rs:3:1
+  |
+3 | pub mod and_bad {}
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = help: Satisfy at least the required combination of module constraints
+  = note: Applied by cargo-pup rule 'logical_module_and_check'.
+  = note: `#[warn(module_logical_rule)]` on by default
+
+warning: Item does not satisfy the configured logical module rule
+  --> src/logical_module_rules.rs:15:1
+   |
+15 | pub mod or_bad {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: Satisfy at least the required combination of module constraints
+   = note: Applied by cargo-pup rule 'logical_module_or_check'.
+
+warning: Item does not satisfy the configured logical module rule
+  --> src/logical_module_rules.rs:19:1
+   |
+19 | / pub mod not_bad {
+20 | |     pub const VALUE: usize = 1;
+21 | | }
+   | |_^
+   |
+   = help: Satisfy at least the required combination of module constraints
+   = note: Applied by cargo-pup rule 'logical_module_not_check'.
+
 warning: declarative macro 'forbidden_macro' is not allowed in this module
  --> src/macro_restriction/mod.rs:4:1
   |
@@ -693,5 +723,5 @@ error: Function 'process_unsafe' is forbidden by lint rule
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
 For more information about this error, try `rustc --explain E0133`.
-warning: `test_app` (bin "test_app") generated 56 warnings
-error: could not compile `test_app` (bin "test_app") due to 12 previous errors; 56 warnings emitted
+warning: `test_app` (bin "test_app") generated 59 warnings
+error: could not compile `test_app` (bin "test_app") due to 12 previous errors; 59 warnings emitted

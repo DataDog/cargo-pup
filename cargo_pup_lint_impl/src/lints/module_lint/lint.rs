@@ -16,6 +16,61 @@ pub struct ModuleLint {
     config: ConfigModuleLint,
 }
 
+fn evaluate_module_rule_with(
+    rule: &ModuleRule,
+    evaluate_leaf: &impl Fn(&ModuleRule) -> Option<bool>,
+) -> Option<bool> {
+    let combine =
+        |left: Option<bool>, right: Option<bool>, operation: fn(bool, bool) -> bool| match (
+            left, right,
+        ) {
+            (Some(left), Some(right)) => Some(operation(left, right)),
+            (Some(result), None) | (None, Some(result)) => Some(result),
+            (None, None) => None,
+        };
+
+    match rule {
+        ModuleRule::And(left, right) => combine(
+            evaluate_module_rule_with(left, evaluate_leaf),
+            evaluate_module_rule_with(right, evaluate_leaf),
+            |left, right| left && right,
+        ),
+        ModuleRule::Or(left, right) => combine(
+            evaluate_module_rule_with(left, evaluate_leaf),
+            evaluate_module_rule_with(right, evaluate_leaf),
+            |left, right| left || right,
+        ),
+        ModuleRule::Not(inner) => {
+            evaluate_module_rule_with(inner, evaluate_leaf).map(|value| !value)
+        }
+        leaf => evaluate_leaf(leaf),
+    }
+}
+
+fn module_rule_severity(rule: &ModuleRule) -> Severity {
+    match rule {
+        ModuleRule::MustBeNamed(_, severity)
+        | ModuleRule::MustNotBeNamed(_, severity)
+        | ModuleRule::MustNotBeEmpty(severity)
+        | ModuleRule::MustBeEmpty(severity)
+        | ModuleRule::MustHaveEmptyModFile(severity)
+        | ModuleRule::NoWildcardImports(severity) => *severity,
+        ModuleRule::RestrictImports { severity, .. } | ModuleRule::DeniedItems { severity, .. } => {
+            *severity
+        }
+        ModuleRule::And(left, right) | ModuleRule::Or(left, right) => {
+            if module_rule_severity(left) == Severity::Error
+                || module_rule_severity(right) == Severity::Error
+            {
+                Severity::Error
+            } else {
+                Severity::Warn
+            }
+        }
+        ModuleRule::Not(inner) => module_rule_severity(inner),
+    }
+}
+
 impl ModuleLint {
     #[allow(clippy::new_ret_no_self)]
     pub fn new(config: &ConfiguredLint) -> Box<dyn ArchitectureLintRule + Send> {
@@ -159,6 +214,126 @@ impl ModuleLint {
         None
     }
 
+    fn item_type<'a>(&self, ctx: &LateContext<'_>, item: &'a Item<'_>) -> &'a str {
+        match &item.kind {
+            ItemKind::Enum(..) => "enum",
+            ItemKind::Struct(..) => "struct",
+            ItemKind::Trait(..) => "trait",
+            ItemKind::Impl(..) => "impl",
+            ItemKind::Fn { .. } => self.get_proc_macro_type(ctx, item).unwrap_or("function"),
+            ItemKind::Mod(..) => "module",
+            ItemKind::Static(..) => "static",
+            ItemKind::Const(..) => "const",
+            ItemKind::Union(..) => "union",
+            ItemKind::Macro(..) => "declarative_macro",
+            _ => "",
+        }
+    }
+
+    fn evaluate_module_rule(
+        &self,
+        ctx: &LateContext<'_>,
+        item: &Item<'_>,
+        rule: &ModuleRule,
+    ) -> Option<bool> {
+        evaluate_module_rule_with(rule, &|leaf| {
+            self.evaluate_module_rule_leaf(ctx, item, leaf)
+        })
+    }
+
+    fn evaluate_module_rule_leaf(
+        &self,
+        ctx: &LateContext<'_>,
+        item: &Item<'_>,
+        rule: &ModuleRule,
+    ) -> Option<bool> {
+        match rule {
+            ModuleRule::MustBeNamed(pattern, _) => match item.kind {
+                ItemKind::Mod(..) => Some(
+                    self.string_matches_pattern(
+                        &ctx.tcx
+                            .item_name(item.owner_id.def_id.to_def_id())
+                            .to_string(),
+                        pattern,
+                    ),
+                ),
+                _ => None,
+            },
+            ModuleRule::MustNotBeNamed(pattern, _) => match item.kind {
+                ItemKind::Mod(..) => Some(
+                    !self.string_matches_pattern(
+                        &ctx.tcx
+                            .item_name(item.owner_id.def_id.to_def_id())
+                            .to_string(),
+                        pattern,
+                    ),
+                ),
+                _ => None,
+            },
+            ModuleRule::MustNotBeEmpty(_) => match item.kind {
+                ItemKind::Mod(_, module) => Some(!module.item_ids.is_empty()),
+                _ => None,
+            },
+            ModuleRule::MustBeEmpty(_) => match item.kind {
+                ItemKind::Mod(_, module) => Some(module.item_ids.iter().all(|item_id| {
+                    !self.is_disallowed_in_empty_module(&ctx.tcx.hir_item(*item_id).kind)
+                })),
+                _ => None,
+            },
+            ModuleRule::MustHaveEmptyModFile(_) => match item.kind {
+                ItemKind::Mod(_, module) => Some(module.item_ids.iter().all(|item_id| {
+                    let nested_item = ctx.tcx.hir_item(*item_id);
+                    !self.is_disallowed_in_empty_module(&nested_item.kind)
+                        || !self.is_mod_rs_file(ctx, &nested_item.span)
+                })),
+                _ => None,
+            },
+            ModuleRule::RestrictImports {
+                allowed_only,
+                denied,
+                ..
+            } => match &item.kind {
+                ItemKind::Use(path, _) => {
+                    let import_module = path
+                        .segments
+                        .iter()
+                        .map(|segment| segment.ident.as_str().to_string())
+                        .collect::<Vec<_>>()
+                        .join("::");
+                    let allowed = allowed_only.as_ref().is_none_or(|patterns| {
+                        patterns
+                            .iter()
+                            .any(|pattern| self.string_matches_pattern(&import_module, pattern))
+                    });
+                    let denied = denied.as_ref().is_some_and(|patterns| {
+                        patterns
+                            .iter()
+                            .any(|pattern| self.string_matches_pattern(&import_module, pattern))
+                    });
+                    Some(allowed && !denied)
+                }
+                _ => None,
+            },
+            ModuleRule::NoWildcardImports(_) => match &item.kind {
+                ItemKind::Use(_, use_kind) => Some(!matches!(use_kind, UseKind::Glob)),
+                ItemKind::Mod(_, module) => Some(module.item_ids.iter().all(|item_id| {
+                    !matches!(
+                        ctx.tcx.hir_item(*item_id).kind,
+                        ItemKind::Use(_, UseKind::Glob)
+                    )
+                })),
+                _ => None,
+            },
+            ModuleRule::DeniedItems { items, .. } => {
+                let item_type = self.item_type(ctx, item);
+                (!item_type.is_empty()).then(|| !items.iter().any(|denied| denied == item_type))
+            }
+            ModuleRule::And(_, _) | ModuleRule::Or(_, _) | ModuleRule::Not(_) => {
+                unreachable!("composite rules are evaluated recursively")
+            }
+        }
+    }
+
     // Helper function to check for disallowed items in a module and call the callback when found
     fn check_for_disallowed_items<C>(
         &self,
@@ -260,6 +435,14 @@ declare_variable_severity_lint!(
     "Module's mod.rs file must be empty (only allowed to re-export other modules)"
 );
 
+declare_variable_severity_lint!(
+    pub,
+    MODULE_LOGICAL_RULE,
+    MODULE_LOGICAL_RULE_LINT_DENY,
+    MODULE_LOGICAL_RULE_LINT_WARN,
+    "Module must satisfy its configured logical rule"
+);
+
 impl_lint_pass!(ModuleLint => [
     MODULE_MUST_BE_NAMED_LINT_DENY, MODULE_MUST_BE_NAMED_LINT_WARN,
     MODULE_MUST_NOT_BE_NAMED_LINT_DENY, MODULE_MUST_NOT_BE_NAMED_LINT_WARN,
@@ -268,7 +451,8 @@ impl_lint_pass!(ModuleLint => [
     MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_DENY, MODULE_MUST_HAVE_EMPTY_MOD_FILE_LINT_WARN,
     MODULE_RESTRICT_IMPORTS_LINT_DENY, MODULE_RESTRICT_IMPORTS_LINT_WARN,
     MODULE_WILDCARD_IMPORT_LINT_DENY, MODULE_WILDCARD_IMPORT_LINT_WARN,
-    MODULE_DENIED_ITEMS_LINT_DENY, MODULE_DENIED_ITEMS_LINT_WARN
+    MODULE_DENIED_ITEMS_LINT_DENY, MODULE_DENIED_ITEMS_LINT_WARN,
+    MODULE_LOGICAL_RULE_LINT_DENY, MODULE_LOGICAL_RULE_LINT_WARN
 ]);
 
 impl ArchitectureLintRule for ModuleLint {
@@ -545,9 +729,83 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                         );
                     }
                 }
-                // Skip logical combinations for now (And, Or, Not)
-                ModuleRule::And(_, _) | ModuleRule::Or(_, _) | ModuleRule::Not(_) => {}
+                ModuleRule::And(_, _) | ModuleRule::Or(_, _) | ModuleRule::Not(_) => {
+                    if self.evaluate_module_rule(ctx, item, rule) == Some(false) {
+                        span_lint_and_help(
+                            ctx,
+                            MODULE_LOGICAL_RULE::get_by_severity(module_rule_severity(rule)),
+                            self.name().as_str(),
+                            item.span,
+                            "Item does not satisfy the configured logical module rule",
+                            None,
+                            "Satisfy at least the required combination of module constraints",
+                        );
+                    }
+                }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{evaluate_module_rule_with, module_rule_severity};
+    use cargo_pup_lint_config::{ModuleRule, Severity};
+
+    fn named(name: &str, severity: Severity) -> ModuleRule {
+        ModuleRule::MustBeNamed(name.to_string(), severity)
+    }
+
+    fn leaf_value(rule: &ModuleRule) -> Option<bool> {
+        match rule {
+            ModuleRule::MustBeNamed(name, _) => Some(name == "passes"),
+            ModuleRule::MustNotBeEmpty(_) => None,
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn evaluates_and_or_and_not_rules() {
+        let pass = named("passes", Severity::Warn);
+        let fail = named("fails", Severity::Warn);
+
+        assert_eq!(
+            evaluate_module_rule_with(
+                &ModuleRule::And(Box::new(pass.clone()), Box::new(fail.clone())),
+                &leaf_value,
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            evaluate_module_rule_with(
+                &ModuleRule::Or(Box::new(pass.clone()), Box::new(fail.clone())),
+                &leaf_value,
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            evaluate_module_rule_with(&ModuleRule::Not(Box::new(pass)), &leaf_value),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn ignores_inapplicable_leaves_without_hiding_applicable_results() {
+        let rule = ModuleRule::And(
+            Box::new(named("passes", Severity::Warn)),
+            Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
+        );
+
+        assert_eq!(evaluate_module_rule_with(&rule, &leaf_value), Some(true));
+    }
+
+    #[test]
+    fn logical_rule_uses_strongest_nested_severity() {
+        let rule = ModuleRule::Or(
+            Box::new(named("passes", Severity::Warn)),
+            Box::new(named("fails", Severity::Error)),
+        );
+
+        assert_eq!(module_rule_severity(&rule), Severity::Error);
     }
 }
