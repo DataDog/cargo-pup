@@ -5,7 +5,6 @@ use crate::lints::function_lint::FunctionLint;
 use crate::lints::module_lint::ModuleLint;
 use crate::lints::struct_lint::StructLint;
 use anyhow::Result;
-use cargo_pup_common::project_context::ProjectContext;
 use cargo_pup_lint_config::ConfiguredLint;
 use cargo_pup_lint_config::lint_builder::LintBuilder;
 use ron;
@@ -65,9 +64,5 @@ impl LintConfigurationFactory {
                 ConfiguredLint::Function(_) => FunctionLint::new(l),
             })
             .collect())
-    }
-
-    pub fn generate_file(_context: &ProjectContext) -> Result<String> {
-        panic!("Not implemented!");
     }
 }

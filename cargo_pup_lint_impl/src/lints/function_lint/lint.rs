@@ -17,6 +17,57 @@ use std::sync::Mutex;
 use super::no_allocation::detect_allocation_in_mir;
 use super::no_panic::{PanicCategory, detect_panic_in_mir};
 
+#[derive(Debug, PartialEq, Eq)]
+enum FunctionMatchEvidence {
+    Reason(String),
+    And(Vec<FunctionMatchEvidence>),
+    Or(Vec<FunctionMatchEvidence>),
+    Not(String),
+}
+
+impl FunctionMatchEvidence {
+    fn describe(&self) -> String {
+        match self {
+            Self::Reason(reason) => reason.clone(),
+            Self::And(evidence) => evidence
+                .iter()
+                .map(Self::describe)
+                .collect::<Vec<_>>()
+                .join(" and "),
+            Self::Or(evidence) => evidence
+                .iter()
+                .map(Self::describe)
+                .collect::<Vec<_>>()
+                .join(" or "),
+            Self::Not(requirement) => format!("it does not satisfy {requirement}"),
+        }
+    }
+}
+
+fn describe_matcher_requirement(matcher: &FunctionMatch) -> String {
+    match matcher {
+        FunctionMatch::NameEquals(name) => format!("the name `{name}`"),
+        FunctionMatch::NameRegex(pattern) => format!("the name pattern `{pattern}`"),
+        FunctionMatch::InModule(pattern) => format!("the module pattern `{pattern}`"),
+        FunctionMatch::ReturnsType(pattern) => format!("the return type constraint `{pattern:?}`"),
+        FunctionMatch::IsAsync => "the async constraint".to_string(),
+        FunctionMatch::IsUnsafe => "the unsafe constraint".to_string(),
+        FunctionMatch::AndMatches(left, right) => format!(
+            "both {} and {}",
+            describe_matcher_requirement(left),
+            describe_matcher_requirement(right)
+        ),
+        FunctionMatch::OrMatches(left, right) => format!(
+            "either {} or {}",
+            describe_matcher_requirement(left),
+            describe_matcher_requirement(right)
+        ),
+        FunctionMatch::NotMatch(inner) => {
+            format!("the negation of {}", describe_matcher_requirement(inner))
+        }
+    }
+}
+
 // Helper: retrieve the concrete Self type of the impl the method belongs to, if any
 fn get_self_type<'tcx>(
     ctx: &LateContext<'tcx>,
@@ -50,15 +101,16 @@ impl FunctionLint {
         }
     }
 
-    // Helper method to check if a function in a given module with a given name should be linted
-    fn matches_function(
+    fn matching_evidence(
         &self,
         ctx: &LateContext<'_>,
         module_path: &str,
         function_name: &str,
         fn_def_id: rustc_hir::def_id::DefId,
-    ) -> bool {
-        evaluate_function_match(&self.matches, ctx, module_path, function_name, fn_def_id)
+    ) -> Option<FunctionMatchEvidence> {
+        evaluate_function_match(&self.matches, ctx, module_path, function_name, fn_def_id).then(
+            || explain_function_match(&self.matches, ctx, module_path, function_name, fn_def_id),
+        )
     }
 
     /// Helper method to check a single panic category and emit a lint if found
@@ -279,6 +331,56 @@ fn evaluate_function_match(
     }
 }
 
+fn explain_function_match(
+    matcher: &FunctionMatch,
+    ctx: &LateContext<'_>,
+    module_path: &str,
+    function_name: &str,
+    fn_def_id: rustc_hir::def_id::DefId,
+) -> FunctionMatchEvidence {
+    match matcher {
+        FunctionMatch::NameEquals(name) => {
+            FunctionMatchEvidence::Reason(format!("its name is `{name}`"))
+        }
+        FunctionMatch::NameRegex(pattern) => {
+            FunctionMatchEvidence::Reason(format!("its name `{function_name}` matches `{pattern}`"))
+        }
+        FunctionMatch::InModule(_) => {
+            FunctionMatchEvidence::Reason(format!("it is in module `{module_path}`"))
+        }
+        FunctionMatch::ReturnsType(_) => {
+            let return_type = ctx
+                .tcx
+                .fn_sig(fn_def_id)
+                .skip_binder()
+                .output()
+                .skip_binder();
+            FunctionMatchEvidence::Reason(format!("its return type is `{return_type}`"))
+        }
+        FunctionMatch::IsAsync => FunctionMatchEvidence::Reason("it is async".to_string()),
+        FunctionMatch::IsUnsafe => FunctionMatchEvidence::Reason("it is unsafe".to_string()),
+        FunctionMatch::AndMatches(left, right) => FunctionMatchEvidence::And(vec![
+            explain_function_match(left, ctx, module_path, function_name, fn_def_id),
+            explain_function_match(right, ctx, module_path, function_name, fn_def_id),
+        ]),
+        FunctionMatch::OrMatches(left, right) => {
+            let evidence = [left.as_ref(), right.as_ref()]
+                .into_iter()
+                .filter(|branch| {
+                    evaluate_function_match(branch, ctx, module_path, function_name, fn_def_id)
+                })
+                .map(|branch| {
+                    explain_function_match(branch, ctx, module_path, function_name, fn_def_id)
+                })
+                .collect();
+            FunctionMatchEvidence::Or(evidence)
+        }
+        FunctionMatch::NotMatch(inner) => {
+            FunctionMatchEvidence::Not(describe_matcher_requirement(inner))
+        }
+    }
+}
+
 // Declare the function_lint lint with variable severity
 declare_variable_severity_lint!(
     pub,
@@ -332,10 +434,11 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
             let module_path = get_full_module_name(&ctx.tcx, &parent_item);
             let fn_def_id = item.owner_id.to_def_id();
 
-            // Check if this function matches our patterns
-            if !self.matches_function(ctx, &module_path, &item_name, fn_def_id) {
+            let Some(match_evidence) =
+                self.matching_evidence(ctx, &module_path, &item_name, fn_def_id)
+            else {
                 return;
-            }
+            };
 
             // Apply rules
             for rule in &self.function_rules {
@@ -415,9 +518,12 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                             FUNCTION_LINT::get_by_severity(*severity),
                             self.name().as_str(),
                             sig_span,
-                            format!("Function '{item_name}' is forbidden by lint rule"),
+                            format!(
+                                "Function '{item_name}' is forbidden because {}",
+                                match_evidence.describe()
+                            ),
                             None,
-                            "Remove this function to satisfy the architectural rule",
+                            "Change the matched function properties or remove the function",
                         );
                     }
                     FunctionRule::NoAllocation(severity) => {
@@ -484,10 +590,11 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
             let module_path = get_full_module_name(&ctx.tcx, &module);
             let fn_def_id = impl_item.owner_id.to_def_id();
 
-            // Check if this method matches our patterns
-            if !self.matches_function(ctx, &module_path, &item_name, fn_def_id) {
+            let Some(match_evidence) =
+                self.matching_evidence(ctx, &module_path, &item_name, fn_def_id)
+            else {
                 return;
-            }
+            };
 
             // Apply rules
             for rule in &self.function_rules {
@@ -567,9 +674,12 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                             FUNCTION_LINT::get_by_severity(*severity),
                             self.name().as_str(),
                             sig_span,
-                            format!("Function '{item_name}' is forbidden by lint rule"),
+                            format!(
+                                "Function '{item_name}' is forbidden because {}",
+                                match_evidence.describe()
+                            ),
                             None,
-                            "Remove this function to satisfy the architectural rule",
+                            "Change the matched function properties or remove the function",
                         );
                     }
                     FunctionRule::NoAllocation(severity) => {
@@ -624,5 +734,37 @@ impl<'tcx> LateLintPass<'tcx> for FunctionLint {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FunctionMatchEvidence, describe_matcher_requirement};
+    use cargo_pup_lint_config::FunctionMatch;
+
+    #[test]
+    fn describes_combined_match_evidence() {
+        let evidence = FunctionMatchEvidence::And(vec![
+            FunctionMatchEvidence::Reason(
+                "it is in module `test_app::unsafe_functions`".to_string(),
+            ),
+            FunctionMatchEvidence::Reason("it is unsafe".to_string()),
+        ]);
+
+        assert_eq!(
+            evidence.describe(),
+            "it is in module `test_app::unsafe_functions` and it is unsafe"
+        );
+    }
+
+    #[test]
+    fn describes_negated_matcher_requirement() {
+        let matcher =
+            FunctionMatch::NotMatch(Box::new(FunctionMatch::NameRegex("^allowed_".to_string())));
+
+        assert_eq!(
+            describe_matcher_requirement(&matcher),
+            "the negation of the name pattern `^allowed_`"
+        );
     }
 }

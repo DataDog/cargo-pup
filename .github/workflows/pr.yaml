@@ -17,10 +17,14 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - run: . $HOME/.cargo/env && rustup update
+      - name: Install cargo-nextest
+        run: |
+          . $HOME/.cargo/env
+          curl -LsSf https://get.nexte.st/0.9.145/linux | tar zxf - -C "${CARGO_HOME:-$HOME/.cargo}/bin"
       - run: . $HOME/.cargo/env && cargo build --release --all
-      - run: . $HOME/.cargo/env && cargo test
+      - name: Run tests
+        run: . $HOME/.cargo/env && scripts/test.sh
       - name: Check formatting
         run: . $HOME/.cargo/env && cargo fmt --all -- --check
       - name: Check clippy lints
         run: . $HOME/.cargo/env && cargo clippy --all-targets --all-features -- -D warnings
-      - run: test_app/scripts/validate-against-expected.sh

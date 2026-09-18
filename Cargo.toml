@@ -20,12 +20,12 @@ categories = ["development-tools"]
 readme = "README.md"
 
 [workspace.dependencies]
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-anyhow = "1.0.102"
-regex = "1.12.3"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+anyhow = "1.0.104"
+regex = "1.13.1"
 tempfile = "3.27.0"
-ron = "0.12.1"
+ron = "0.12.2"
 cargo_metadata = "0.23"
 
 [dependencies]
@@ -51,13 +51,13 @@ cargo_pup_lint_config = { path = "cargo_pup_lint_config", version = "=0.1.8" }
 #  rustc_lint = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_lint", optional = true}
 #  rustc_trait_selection = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_trait_selection", optional = true}
 # rustc_errors = {path = "/Users/scott.gerring/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_errors", optional = true}
-toml = "1.1.1"
-which = "8.0.2"
+toml = "1.1.6"
+which = "8.0.6"
 rustup-toolchain = "0.1.10"
 
 [dev-dependencies]
 rustc_version = "0.4"
-ui_test = "0.30.4"
+ui_test = "0.30.7"
 ron = { workspace = true }
 
 [[test]]

@@ -171,11 +171,22 @@ To see this in action, check out [test_app](test_app) which uses this style of c
 ## How It Works 
 cargo_pup uses `rustc`'s interface to bolt custom, dynamically defined lints into the compilation lifecycle. To do this, much like clippy and other tools that extend the compiler in this fashion, it has to compile your code using rust nightly. The output of this build is discrete from your regular build, and gets hidden in `.pup` within the project directory.
 
+### Tests
+
+The complete local test suite uses [cargo-nextest](https://nexte.st/) for standard tests and Cargo's test runner for doctests and the custom UI test harness. Install the pinned Nextest version, then run the same script used by CI:
+
+```bash
+cargo install cargo-nextest --version 0.9.145 --locked
+scripts/test.sh
+```
+
+The script builds the local `cargo-pup` and `pup-driver` binaries, runs all workspace tests, and validates `test_app` against its expected compiler output. It also clears `test_app/.pup` before end-to-end validation so stale compiler output is not reused.
+
 ### UI Tests
 
-Cargo Pup includes UI tests to validate lint behavior. These tests follow the pattern used by Clippy and other Rust compiler components.
+Cargo Pup includes UI tests to validate lint behaviour. These tests follow the pattern used by Clippy and other Rust compiler components. The UI suite uses a custom test harness, so it is run separately from Nextest.
 
-To run the UI tests:
+To run only the UI tests:
 
 ```bash
 cargo test --test ui-test

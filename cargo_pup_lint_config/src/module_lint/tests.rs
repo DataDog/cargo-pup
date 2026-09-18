@@ -142,6 +142,31 @@ mod builder_tests {
     }
     
     #[test]
+    fn test_logical_module_rules_are_stored() {
+        let mut builder = LintBuilder::new();
+
+        builder
+            .module_lint()
+            .lint_named("logical_rules")
+            .matching(|m| m.module("app::core"))
+            .add_rule(ModuleRule::And(
+                Box::new(ModuleRule::MustBeNamed("core".into(), Severity::Warn)),
+                Box::new(ModuleRule::Or(
+                    Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
+                    Box::new(ModuleRule::Not(Box::new(
+                        ModuleRule::NoWildcardImports(Severity::Error),
+                    ))),
+                )),
+            ))
+            .build();
+
+        let ConfiguredLint::Module(lint) = &builder.lints[0] else {
+            panic!("Expected module lint");
+        };
+        assert!(matches!(&lint.rules[0], ModuleRule::And(_, _)));
+    }
+
+    #[test]
     fn test_complex_module_matcher() {
         let mut builder = LintBuilder::new();
 

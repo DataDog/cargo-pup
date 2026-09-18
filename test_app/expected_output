@@ -70,6 +70,99 @@ note: an unsafe function restricts its caller, but its body is safe by default
 68 |     pub unsafe fn mutate_unsafe(&mut self, ptr: *const i32) {
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+warning: Struct must match pattern '^AppReprAllowed', found 'AppReprWrongName'
+ --> src/configured_struct_rules.rs:8:1
+  |
+8 | / pub struct AppReprWrongName;
+9 | |
+  | |_^
+  |
+  = help: Rename this struct to match the pattern '^AppReprAllowed'
+  = note: Applied by cargo-pup rule 'attribute_matcher_check'.
+  = note: `#[warn(struct_lint_must_be_named)]` on by default
+
+warning: Struct must match pattern '^AppReprAllowed', found 'AppReprActiveWrongName'
+  --> src/configured_struct_rules.rs:17:1
+   |
+17 | / pub struct AppReprActiveWrongName;
+18 | |
+   | |_^
+   |
+   = help: Rename this struct to match the pattern '^AppReprAllowed'
+   = note: Applied by cargo-pup rule 'attribute_matcher_check'.
+
+warning: Struct 'AppNeedsTraitMissing' must implement trait matching 'test_app::configured_struct_rules::RequiredTrait'
+  --> src/configured_struct_rules.rs:19:1
+   |
+19 | / pub struct AppNeedsTraitMissing;
+20 | |
+   | |_^
+   |
+   = help: Implement the required trait for this struct
+   = note: Applied by cargo-pup rule 'required_trait_rule_check'.
+   = note: `#[warn(struct_lint_implements_trait)]` on by default
+
+warning: Struct 'AppNeedsGenericTraitMissing' must implement trait matching 'test_app::configured_struct_rules::GenericRequiredTrait'
+  --> src/configured_struct_rules.rs:24:1
+   |
+24 | / pub struct AppNeedsGenericTraitMissing;
+25 | |
+   | |_^
+   |
+   = help: Implement the required trait for this struct
+   = note: Applied by cargo-pup rule 'required_generic_trait_rule_check'.
+
+warning: Struct must match pattern '^AppGenericMatcherAllowed', found 'AppGenericMatcherBad'
+  --> src/configured_struct_rules.rs:29:1
+   |
+29 | / pub struct AppGenericMatcherBad;
+30 | | impl GenericRequiredTrait<u32> for AppGenericMatcherBad {}
+   | |_^
+   |
+   = help: Rename this struct to match the pattern '^AppGenericMatcherAllowed'
+   = note: Applied by cargo-pup rule 'generic_trait_matcher_check'.
+
+warning: Struct 'AppMustAvoidTraitBad' must not implement trait matching 'test_app::configured_struct_rules::ForbiddenTrait'
+  --> src/configured_struct_rules.rs:32:1
+   |
+32 | / pub struct AppMustAvoidTraitBad;
+33 | | impl ForbiddenTrait for AppMustAvoidTraitBad {}
+   | |_^
+   |
+   = help: Remove the forbidden trait implementation
+   = note: Applied by cargo-pup rule 'forbidden_trait_rule_check'.
+
+warning: Struct must match pattern '^AppCompositeOrAllowed', found 'AppCompositeOrBad'
+  --> src/configured_struct_rules.rs:37:1
+   |
+37 | / pub struct AppCompositeOrBad;
+38 | | struct AppCompositeOrPrivate;
+   | |_^
+   |
+   = help: Rename this struct to match the pattern '^AppCompositeOrAllowed'
+   = note: Applied by cargo-pup rule 'or_struct_rule_check'.
+
+warning: Struct 'AppCompositeOrBad' has pub visibility, but must be private
+  --> src/configured_struct_rules.rs:37:1
+   |
+37 | / pub struct AppCompositeOrBad;
+38 | | struct AppCompositeOrPrivate;
+   | |_^
+   |
+   = help: Remove the visibility modifier
+   = note: Applied by cargo-pup rule 'or_struct_rule_check'.
+   = note: `#[warn(struct_lint_must_be_private)]` on by default
+
+warning: Struct must match pattern '^AppMatcherNegationAllowed', found 'AppMatcherNegationBad'
+  --> src/configured_struct_rules.rs:41:1
+   |
+41 | / pub struct AppMatcherNegationBad;
+42 | |
+   | |_^
+   |
+   = help: Rename this struct to match the pattern '^AppMatcherNegationAllowed'
+   = note: Applied by cargo-pup rule 'negated_trait_matcher_check'.
+
 warning: Item 'DisallowedInModRs' disallowed in mod.rs due to empty-mod-file policy
   --> src/empty_mod_file/mod.rs:10:1
    |
@@ -114,14 +207,14 @@ warning: Function exceeds maximum length of 5 lines with 8 lines
    = note: Applied by cargo-pup rule 'function_length_check'.
 
 warning: module 'item_type' is not allowed in this module
- --> src/main.rs:9:1
-  |
-9 | mod item_type;
-  | ^^^^^^^^^^^^^^
-  |
-  = help: Consider moving this item to a different module
-  = note: Applied by cargo-pup rule 'item_type_restrictions'.
-  = note: `#[warn(module_denied_items)]` on by default
+  --> src/main.rs:10:1
+   |
+10 | mod item_type;
+   | ^^^^^^^^^^^^^^
+   |
+   = help: Consider moving this item to a different module
+   = note: Applied by cargo-pup rule 'item_type_restrictions'.
+   = note: `#[warn(module_denied_items)]` on by default
 
 warning: struct 'DeniedStruct' is not allowed in this module
  --> src/item_type/mod.rs:4:1
@@ -168,6 +261,58 @@ warning: module 'nested' is not allowed in this module
    = help: Consider moving this item to a different module
    = note: Applied by cargo-pup rule 'item_type_restrictions'.
 
+error: Module must match pattern '^and_good$', found 'and_bad'
+ --> src/logical_module_rules.rs:3:1
+  |
+3 | pub mod and_bad {}
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = help: Rename this module to match the pattern '^and_good$'
+  = note: Applied by cargo-pup rule 'logical_module_and_check'.
+  = note: `#[deny(module_must_be_named)]` on by default
+
+error: Module must not be empty
+ --> src/logical_module_rules.rs:3:1
+  |
+3 | pub mod and_bad {}
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = help: Add content to this module or remove it
+  = note: Applied by cargo-pup rule 'logical_module_and_check'.
+  = note: `#[deny(module_must_not_be_empty)]` on by default
+
+warning: Module must match pattern '^or_named$', found 'or_bad'
+  --> src/logical_module_rules.rs:15:1
+   |
+15 | pub mod or_bad {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this module to match the pattern '^or_named$'
+   = note: Applied by cargo-pup rule 'logical_module_or_check'.
+   = note: `#[warn(module_must_be_named)]` on by default
+
+warning: Module must not be empty
+  --> src/logical_module_rules.rs:15:1
+   |
+15 | pub mod or_bad {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: Add content to this module or remove it
+   = note: Applied by cargo-pup rule 'logical_module_or_check'.
+   = note: `#[warn(module_must_not_be_empty)]` on by default
+
+warning: Module must be empty
+  --> src/logical_module_rules.rs:19:1
+   |
+19 | / pub mod not_bad {
+20 | |     pub const VALUE: usize = 1;
+21 | | }
+   | |_^
+   |
+   = help: Remove content from this module
+   = note: Applied by cargo-pup rule 'logical_module_not_check'.
+   = note: `#[warn(module_must_be_empty)]` on by default
+
 warning: declarative macro 'forbidden_macro' is not allowed in this module
  --> src/macro_restriction/mod.rs:4:1
   |
@@ -211,7 +356,6 @@ warning: Item 'this_should_not_be_here' not allowed in empty module
   |
   = help: Remove this item from the module, which must be empty
   = note: Applied by cargo-pup rule 'must_be_empty_module'.
-  = note: `#[warn(module_must_be_empty)]` on by default
 
 warning: Item 'ALSO_NOT_ALLOWED' not allowed in empty module
   --> src/must_be_empty.rs:10:1
@@ -257,7 +401,6 @@ warning: Struct must match pattern '.*MyTraitImpl$', found 'MyBadlyNamedThing'
    |
    = help: Rename this struct to match the pattern '.*MyTraitImpl$'
    = note: Applied by cargo-pup rule 'trait_restrictions'.
-   = note: `#[warn(struct_lint_must_be_named)]` on by default
 
 warning: Struct 'MyBadlyNamedThing' has pub visibility, but must be private
   --> src/trait_impl/mod.rs:17:1
@@ -267,61 +410,60 @@ warning: Struct 'MyBadlyNamedThing' has pub visibility, but must be private
    |
    = help: Remove the visibility modifier
    = note: Applied by cargo-pup rule 'trait_restrictions'.
-   = note: `#[warn(struct_lint_must_be_private)]` on by default
 
-error: Function 'with_width' is forbidden by lint rule
+error: Function 'with_width' is forbidden because its name `with_width` matches `^with_.*` and its return type is `builder_style::WidgetBuilder`
  --> src/builder_style/mod.rs:8:5
   |
 8 |     pub fn with_width(self, width: u32) -> Self {
   |     ^^^^^^^^^^^^^^^
   |
-  = help: Remove this function to satisfy the architectural rule
+  = help: Change the matched function properties or remove the function
   = note: Applied by cargo-pup rule 'builder_style_with_consuming_forbidden'.
   = note: `#[deny(function_lint)]` on by default
 
-error: Function 'set_height' is forbidden by lint rule
+error: Function 'set_height' is forbidden because its name `set_height` matches `^set_.*` and its return type is `builder_style::WidgetBuilder`
   --> src/builder_style/mod.rs:13:5
    |
 13 |     pub fn set_height(self, height: u32) -> Self {
    |     ^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'builder_style_set_consuming_forbidden'.
 
-error: Function 'forbidden_async_function' is forbidden by lint rule
+error: Function 'forbidden_async_function' is forbidden because it is in module `test_app::async_functions` and it is async
  --> src/async_functions/mod.rs:8:1
   |
 8 | pub async fn forbidden_async_function() -> String {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = help: Remove this function to satisfy the architectural rule
+  = help: Change the matched function properties or remove the function
   = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
-error: Function 'async_result_function' is forbidden by lint rule
+error: Function 'async_result_function' is forbidden because it is in module `test_app::async_functions` and it is async
   --> src/async_functions/mod.rs:13:1
    |
 13 | pub async fn async_result_function() -> Result<i32, String> {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
-error: Function 'process_async' is forbidden by lint rule
+error: Function 'process_async' is forbidden because it is in module `test_app::async_functions` and it is async
   --> src/async_functions/mod.rs:33:5
    |
 33 |     pub async fn process_async(&self) -> Result<String, String> {
    |     ^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
-error: Function 'process_item' is forbidden by lint rule
+error: Function 'process_item' is forbidden because it is in module `test_app::async_functions` and it is async
   --> src/async_functions/mod.rs:55:5
    |
 55 |     async fn process_item(&self, item: String) -> Result<String, String> {
    |     ^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'async_functions_forbidden'.
 
 warning: Function allocates heap memory: calls allocating function: std::boxed::Box::<T>::new
@@ -567,60 +709,60 @@ warning: Function may panic: index bounds check may panic
     = help: Remove panic paths to satisfy the NoIndexPanic rule
     = note: Applied by cargo-pup rule 'no_panic_check'.
 
-error: Function 'forbidden_unsafe_function' is forbidden by lint rule
+error: Function 'forbidden_unsafe_function' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:29:1
    |
 29 | pub unsafe fn forbidden_unsafe_function() {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'forbidden_unsafe_with_return' is forbidden by lint rule
+error: Function 'forbidden_unsafe_with_return' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:34:1
    |
 34 | pub unsafe fn forbidden_unsafe_with_return() -> i32 {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'forbidden_unsafe_with_params' is forbidden by lint rule
+error: Function 'forbidden_unsafe_with_params' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:39:1
    |
 39 | pub unsafe fn forbidden_unsafe_with_params(ptr: *const i32) -> i32 {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'get_data_unsafe' is forbidden by lint rule
+error: Function 'get_data_unsafe' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:63:5
    |
 63 |     pub unsafe fn get_data_unsafe(&self) -> i32 {
    |     ^^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'mutate_unsafe' is forbidden by lint rule
+error: Function 'mutate_unsafe' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:68:5
    |
 68 |     pub unsafe fn mutate_unsafe(&mut self, ptr: *const i32) {
    |     ^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
-error: Function 'process_unsafe' is forbidden by lint rule
+error: Function 'process_unsafe' is forbidden because it is in module `test_app::unsafe_functions` and it is unsafe
   --> src/unsafe_functions.rs:91:5
    |
 91 |     unsafe fn process_unsafe(&self) -> i32 {
    |     ^^^^^^^^^^^^^^^^^^^
    |
-   = help: Remove this function to satisfy the architectural rule
+   = help: Change the matched function properties or remove the function
    = note: Applied by cargo-pup rule 'unsafe_functions_forbidden'.
 
 For more information about this error, try `rustc --explain E0133`.
-warning: `test_app` (bin "test_app") generated 49 warnings
-error: could not compile `test_app` (bin "test_app") due to 12 previous errors; 49 warnings emitted
+warning: `test_app` (bin "test_app") generated 61 warnings
+error: could not compile `test_app` (bin "test_app") due to 14 previous errors; 61 warnings emitted

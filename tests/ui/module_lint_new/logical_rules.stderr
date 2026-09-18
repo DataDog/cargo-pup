@@ -1,0 +1,52 @@
+error: Module must match pattern '^and_good$', found 'and_bad'
+  --> tests/ui/module_lint_new/logical_rules.rs:6:1
+   |
+LL | pub mod and_bad {}
+   | ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this module to match the pattern '^and_good$'
+   = note: Applied by cargo-pup rule 'logical_and_test'.
+   = note: `#[deny(module_must_be_named)]` on by default
+
+error: Module must not be empty
+  --> tests/ui/module_lint_new/logical_rules.rs:6:1
+   |
+LL | pub mod and_bad {}
+   | ^^^^^^^^^^^^^^^^^^
+   |
+   = help: Add content to this module or remove it
+   = note: Applied by cargo-pup rule 'logical_and_test'.
+   = note: `#[deny(module_must_not_be_empty)]` on by default
+
+error: Module must match pattern '^or_named$', found 'or_bad'
+  --> tests/ui/module_lint_new/logical_rules.rs:19:1
+   |
+LL | pub mod or_bad {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this module to match the pattern '^or_named$'
+   = note: Applied by cargo-pup rule 'logical_or_test'.
+
+error: Module must not be empty
+  --> tests/ui/module_lint_new/logical_rules.rs:19:1
+   |
+LL | pub mod or_bad {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: Add content to this module or remove it
+   = note: Applied by cargo-pup rule 'logical_or_test'.
+
+error: Module must be empty
+  --> tests/ui/module_lint_new/logical_rules.rs:24:1
+   |
+LL | / pub mod not_bad {
+LL | |     pub const VALUE: usize = 1;
+LL | | }
+   | |_^
+   |
+   = help: Remove content from this module
+   = note: Applied by cargo-pup rule 'logical_not_test'.
+   = note: `#[deny(module_must_be_empty)]` on by default
+
+error: aborting due to 5 previous errors
+

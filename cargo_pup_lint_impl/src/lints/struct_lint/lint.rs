@@ -9,11 +9,150 @@ use rustc_hir::{Item, ItemKind, def_id::DefId};
 use rustc_lint::{LateContext, LateLintPass, LintStore};
 use rustc_session::impl_lint_pass;
 use rustc_span::BytePos;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
 pub struct StructLint {
     name: String,
     matches: StructMatch,
     struct_rules: Vec<StructRule>,
+    // Cache trait metadata and compiled regexes for this lint pass.
+    trait_cache: OnceLock<Vec<(DefId, String)>>,
+    regex_cache: Mutex<HashMap<String, Regex>>,
+}
+
+fn attribute_matches(regex: &Regex, attribute: &str) -> bool {
+    regex
+        .find(attribute)
+        .is_some_and(|matched| matched.start() == 0 && matched.end() == attribute.len())
+}
+
+fn hir_attribute_name(attribute: &rustc_hir::Attribute) -> Option<String> {
+    use rustc_hir::attrs::AttributeKind;
+
+    match attribute {
+        rustc_hir::Attribute::Unparsed(attribute) => Some(attribute.path.to_string()),
+        rustc_hir::Attribute::Parsed(kind) => match kind {
+            AttributeKind::Deprecation { .. } => Some("deprecated".into()),
+            AttributeKind::Doc(_) | AttributeKind::DocComment { .. } => Some("doc".into()),
+            AttributeKind::MustUse { .. } => Some("must_use".into()),
+            AttributeKind::NonExhaustive(_) => Some("non_exhaustive".into()),
+            AttributeKind::Repr { .. } => Some("repr".into()),
+            _ => None,
+        },
+    }
+}
+
+// Report referenced traits in print-traits regardless of matcher polarity.
+fn trait_pattern_matches(pattern: &str, trait_path: &str) -> bool {
+    Regex::new(pattern)
+        .map(|regex| regex.is_match(trait_path))
+        .unwrap_or(false)
+}
+
+fn matcher_references_trait(matcher: &StructMatch, trait_path: &str) -> bool {
+    match matcher {
+        StructMatch::ImplementsTrait(pattern) => trait_pattern_matches(pattern, trait_path),
+        StructMatch::AndMatches(left, right) | StructMatch::OrMatches(left, right) => {
+            matcher_references_trait(left, trait_path)
+                || matcher_references_trait(right, trait_path)
+        }
+        StructMatch::NotMatch(inner) => matcher_references_trait(inner, trait_path),
+        StructMatch::Name(_) | StructMatch::HasAttribute(_) => false,
+    }
+}
+
+fn rule_references_trait(rule: &StructRule, trait_path: &str) -> bool {
+    match rule {
+        StructRule::ImplementsTrait(pattern, _) => trait_pattern_matches(pattern, trait_path),
+        StructRule::And(left, right) | StructRule::Or(left, right) => {
+            rule_references_trait(left, trait_path) || rule_references_trait(right, trait_path)
+        }
+        StructRule::Not(inner) => rule_references_trait(inner, trait_path),
+        StructRule::MustBeNamed(_, _)
+        | StructRule::MustNotBeNamed(_, _)
+        | StructRule::MustBePrivate(_)
+        | StructRule::MustBePublic(_)
+        | StructRule::MustBePubCrate(_) => false,
+    }
+}
+
+#[cfg(test)]
+fn evaluate_rule_with(rule: &StructRule, evaluate_leaf: &impl Fn(&StructRule) -> bool) -> bool {
+    match rule {
+        StructRule::And(left, right) => {
+            evaluate_rule_with(left, evaluate_leaf) && evaluate_rule_with(right, evaluate_leaf)
+        }
+        StructRule::Or(left, right) => {
+            evaluate_rule_with(left, evaluate_leaf) || evaluate_rule_with(right, evaluate_leaf)
+        }
+        StructRule::Not(inner) => !evaluate_rule_with(inner, evaluate_leaf),
+        leaf => evaluate_leaf(leaf),
+    }
+}
+
+// Cache subtree results because violation collection revisits them.
+fn evaluate_rule_cached(
+    rule: &StructRule,
+    evaluate_leaf: &impl Fn(&StructRule) -> bool,
+    cache: &mut HashMap<*const StructRule, bool>,
+) -> bool {
+    let key = rule as *const StructRule;
+    if let Some(&value) = cache.get(&key) {
+        return value;
+    }
+
+    let value = match rule {
+        StructRule::And(left, right) => {
+            evaluate_rule_cached(left, evaluate_leaf, cache)
+                && evaluate_rule_cached(right, evaluate_leaf, cache)
+        }
+        StructRule::Or(left, right) => {
+            evaluate_rule_cached(left, evaluate_leaf, cache)
+                || evaluate_rule_cached(right, evaluate_leaf, cache)
+        }
+        StructRule::Not(inner) => !evaluate_rule_cached(inner, evaluate_leaf, cache),
+        leaf => evaluate_leaf(leaf),
+    };
+
+    cache.insert(key, value);
+    value
+}
+
+fn collect_rule_violations<'a>(
+    rule: &'a StructRule,
+    expected: bool,
+    evaluate_leaf: &impl Fn(&StructRule) -> bool,
+    cache: &mut HashMap<*const StructRule, bool>,
+    violations: &mut Vec<(&'a StructRule, bool)>,
+) {
+    if evaluate_rule_cached(rule, evaluate_leaf, cache) == expected {
+        return;
+    }
+
+    match rule {
+        StructRule::And(left, right) if expected => {
+            collect_rule_violations(left, true, evaluate_leaf, cache, violations);
+            collect_rule_violations(right, true, evaluate_leaf, cache, violations);
+        }
+        StructRule::And(left, _right) => {
+            // Negating A && B requires only one operand to become false.
+            collect_rule_violations(left, false, evaluate_leaf, cache, violations);
+        }
+        StructRule::Or(left, right) if expected => {
+            // Both alternatives failed, so report both leaf requirements.
+            collect_rule_violations(left, true, evaluate_leaf, cache, violations);
+            collect_rule_violations(right, true, evaluate_leaf, cache, violations);
+        }
+        StructRule::Or(left, right) => {
+            collect_rule_violations(left, false, evaluate_leaf, cache, violations);
+            collect_rule_violations(right, false, evaluate_leaf, cache, violations);
+        }
+        StructRule::Not(inner) => {
+            collect_rule_violations(inner, !expected, evaluate_leaf, cache, violations);
+        }
+        leaf => violations.push((leaf, expected)),
+    }
 }
 
 impl StructLint {
@@ -24,55 +163,55 @@ impl StructLint {
                 name: s.name.clone(),
                 matches: s.matches.clone(),
                 struct_rules: s.rules.to_vec(),
+                trait_cache: OnceLock::new(),
+                regex_cache: Mutex::new(HashMap::new()),
             })
         } else {
             panic!("Expected a Struct lint configuration")
         }
     }
 
-    // Helper method to check if a struct in a given crate should be linted
-    fn matches_struct(&self, crate_name: &str, struct_name: &str) -> bool {
-        self.evaluate_struct_match(&self.matches, crate_name, struct_name)
+    fn matches_struct<'tcx>(
+        &self,
+        ctx: &LateContext<'tcx>,
+        item: &'tcx Item<'tcx>,
+        crate_name: &str,
+        struct_name: &str,
+    ) -> bool {
+        self.evaluate_struct_match(&self.matches, ctx, item, crate_name, struct_name)
     }
 
-    // Evaluates the complex matcher structure to determine if a struct matches
-    fn evaluate_struct_match(
+    fn evaluate_struct_match<'tcx>(
         &self,
         matcher: &StructMatch,
+        ctx: &LateContext<'tcx>,
+        item: &'tcx Item<'tcx>,
         crate_name: &str,
         struct_name: &str,
     ) -> bool {
         match matcher {
             StructMatch::Name(pattern) => {
-                // Try to match both the crate name and the struct name
-                // If it's a crate name starting with "test_", prefer that match
+                // For compatibility, Name patterns beginning with `test_` match the crate name.
                 if pattern.starts_with("test_") {
-                    // This is likely a crate name pattern
                     self.string_matches_pattern(crate_name, pattern)
                 } else {
-                    // This is likely a struct name pattern
                     self.string_matches_pattern(struct_name, pattern)
                 }
             }
-            StructMatch::HasAttribute(_) => {
-                // Attribute matching not yet implemented
-                false
-            }
-            StructMatch::ImplementsTrait(_) => {
-                // Implementation will be handled in check_item
-                // Always return true here and do the filtering there
-                true
+            StructMatch::HasAttribute(pattern) => self.has_matching_attribute(ctx, item, pattern),
+            StructMatch::ImplementsTrait(pattern) => {
+                self.implements_matching_trait(ctx, item.owner_id.to_def_id(), pattern)
             }
             StructMatch::AndMatches(left, right) => {
-                self.evaluate_struct_match(left, crate_name, struct_name)
-                    && self.evaluate_struct_match(right, crate_name, struct_name)
+                self.evaluate_struct_match(left, ctx, item, crate_name, struct_name)
+                    && self.evaluate_struct_match(right, ctx, item, crate_name, struct_name)
             }
             StructMatch::OrMatches(left, right) => {
-                self.evaluate_struct_match(left, crate_name, struct_name)
-                    || self.evaluate_struct_match(right, crate_name, struct_name)
+                self.evaluate_struct_match(left, ctx, item, crate_name, struct_name)
+                    || self.evaluate_struct_match(right, ctx, item, crate_name, struct_name)
             }
             StructMatch::NotMatch(inner) => {
-                !self.evaluate_struct_match(inner, crate_name, struct_name)
+                !self.evaluate_struct_match(inner, ctx, item, crate_name, struct_name)
             }
         }
     }
@@ -86,71 +225,69 @@ impl StructLint {
     }
 
     fn describe_pattern(&self, pattern: &str) -> &'static str {
-        if pattern.contains(|c: char| {
-            c == '*' || c == '.' || c == '+' || c == '[' || c == '(' || c == '|'
-        }) {
+        if pattern.contains(['*', '.', '+', '[', '(', '|', '^', '$', '\\']) {
             "pattern"
         } else {
             "name"
         }
     }
 
-    // Check if this struct has any trait implementations that match our patterns
-    fn has_matching_trait_impl(&self, ctx: &LateContext<'_>, def_id: DefId) -> bool {
+    fn has_matching_attribute(
+        &self,
+        ctx: &LateContext<'_>,
+        item: &Item<'_>,
+        pattern: &str,
+    ) -> bool {
+        let Ok(regex) = Regex::new(pattern) else {
+            return false;
+        };
+        ctx.tcx.hir_attrs(item.hir_id()).iter().any(|attribute| {
+            hir_attribute_name(attribute)
+                .is_some_and(|attribute| attribute_matches(&regex, &attribute))
+        })
+    }
+
+    fn cached_regex(&self, pattern: &str) -> Option<Regex> {
+        if let Some(regex) = self.regex_cache.lock().unwrap().get(pattern) {
+            return Some(regex.clone());
+        }
+        let regex = Regex::new(pattern).ok()?;
+        self.regex_cache
+            .lock()
+            .unwrap()
+            .insert(pattern.to_string(), regex.clone());
+        Some(regex)
+    }
+
+    fn implements_matching_trait(
+        &self,
+        ctx: &LateContext<'_>,
+        def_id: DefId,
+        trait_pattern: &str,
+    ) -> bool {
         use crate::helpers::queries;
 
-        // Extract trait pattern if one exists in the matcher
-        fn needs_trait_check(matcher: &StructMatch) -> Option<String> {
-            match matcher {
-                StructMatch::ImplementsTrait(pattern) => Some(pattern.clone()),
-                StructMatch::AndMatches(left, right) => {
-                    needs_trait_check(left).or_else(|| needs_trait_check(right))
-                }
-                StructMatch::OrMatches(left, right) => {
-                    needs_trait_check(left).or_else(|| needs_trait_check(right))
-                }
-                StructMatch::NotMatch(inner) => needs_trait_check(inner),
-                _ => None,
-            }
-        }
-
-        // Check if we have any trait matchers
-        if let Some(trait_pattern) = needs_trait_check(&self.matches) {
-            // Create a regex from the trait pattern
-            let trait_regex = match Regex::new(&trait_pattern) {
-                Ok(regex) => regex,
-                Err(_) => return false, // If regex is invalid, consider no match
-            };
-
-            // Get the type for the struct
-            let ty = ctx.tcx.type_of(def_id).skip_binder();
-
-            // Get parameter environment for the struct
-            let param_env = ctx.param_env;
-
-            // For each trait in all crates, check if:
-            // 1. The trait name matches our pattern
-            // 2. The struct implements the trait
-            for trait_def_id in ctx.tcx.all_traits_including_private() {
-                // Get the full canonical trait name
-                let full_trait_name =
-                    queries::get_full_canonical_trait_name_from_def_id(&ctx.tcx, trait_def_id);
-
-                // Check if the trait name matches our pattern
-                if trait_regex.is_match(&full_trait_name) {
-                    // If the trait name matches, check if our type implements this trait
-                    if queries::implements_trait(ctx.tcx, param_env, ty, trait_def_id) {
-                        return true;
-                    }
-                }
-            }
-
-            // If we get here, no matching trait implementations were found
+        let Some(trait_regex) = self.cached_regex(trait_pattern) else {
             return false;
-        }
+        };
+        let ty = ctx.tcx.type_of(def_id).skip_binder();
 
-        // If no trait patterns found, no trait constraints to enforce
-        true
+        let candidates = self.trait_cache.get_or_init(|| {
+            ctx.tcx
+                .all_traits_including_private()
+                .map(|trait_def_id| {
+                    (
+                        trait_def_id,
+                        queries::get_full_canonical_trait_name_from_def_id(&ctx.tcx, trait_def_id),
+                    )
+                })
+                .collect()
+        });
+
+        candidates.iter().any(|(trait_def_id, full_trait_name)| {
+            trait_regex.is_match(full_trait_name)
+                && queries::implements_trait(ctx.tcx, ctx.param_env, ty, *trait_def_id)
+        })
     }
 }
 
@@ -194,6 +331,14 @@ declare_variable_severity_lint!(
     "Struct must have pub(crate) visibility"
 );
 
+declare_variable_severity_lint!(
+    pub,
+    STRUCT_LINT_IMPLEMENTS_TRAIT,
+    STRUCT_LINT_IMPLEMENTS_TRAIT_DENY,
+    STRUCT_LINT_IMPLEMENTS_TRAIT_WARN,
+    "Struct trait implementation rules"
+);
+
 impl_lint_pass!(StructLint => [
     STRUCT_LINT_MUST_BE_NAMED_DENY,
     STRUCT_LINT_MUST_BE_NAMED_WARN,
@@ -204,7 +349,9 @@ impl_lint_pass!(StructLint => [
     STRUCT_LINT_MUST_BE_PUBLIC_DENY,
     STRUCT_LINT_MUST_BE_PUBLIC_WARN,
     STRUCT_LINT_MUST_BE_PUB_CRATE_DENY,
-    STRUCT_LINT_MUST_BE_PUB_CRATE_WARN
+    STRUCT_LINT_MUST_BE_PUB_CRATE_WARN,
+    STRUCT_LINT_IMPLEMENTS_TRAIT_DENY,
+    STRUCT_LINT_IMPLEMENTS_TRAIT_WARN
 ]);
 
 impl ArchitectureLintRule for StructLint {
@@ -216,8 +363,12 @@ impl ArchitectureLintRule for StructLint {
         false
     }
 
-    fn applies_to_trait(&self, _trait_path: &str) -> bool {
-        false
+    fn applies_to_trait(&self, trait_path: &str) -> bool {
+        matcher_references_trait(&self.matches, trait_path)
+            || self
+                .struct_rules
+                .iter()
+                .any(|rule| rule_references_trait(rule, trait_path))
     }
 
     fn register_late_pass(&self, lint_store: &mut LintStore) {
@@ -230,6 +381,8 @@ impl ArchitectureLintRule for StructLint {
                 name: name.clone(),
                 matches: matches.clone(),
                 struct_rules: struct_rules.clone(),
+                trait_cache: OnceLock::new(),
+                regex_cache: Mutex::new(HashMap::new()),
             })
         });
     }
@@ -248,16 +401,11 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                 .crate_name(rustc_hir::def_id::LOCAL_CRATE)
                 .to_string();
 
-            // Check if this struct matches our patterns
-            if !self.matches_struct(&crate_name, &item_name) {
+            if !self.matches_struct(ctx, item, &crate_name, &item_name) {
                 return;
             }
 
-            // Check trait implementations if needed
             let def_id = item.owner_id.def_id.to_def_id();
-            if !self.has_matching_trait_impl(ctx, def_id) {
-                return;
-            }
 
             // Create a span that only covers the struct definition line
             // This includes "pub struct Name {" but not the struct fields or closing brace
@@ -292,25 +440,69 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
             // Truly private means no visibility keyword at all (inherited visibility)
             let is_private = !has_visibility_keyword;
 
-            // Apply rules
-            for rule in &self.struct_rules {
-                match rule {
-                    StructRule::MustBeNamed(pattern, severity) => {
-                        if !self.string_matches_pattern(&item_name, pattern) {
+            let evaluate_leaf = |rule: &StructRule| match rule {
+                StructRule::MustBeNamed(pattern, _) => {
+                    self.string_matches_pattern(&item_name, pattern)
+                }
+                StructRule::MustNotBeNamed(pattern, _) => {
+                    !self.string_matches_pattern(&item_name, pattern)
+                }
+                StructRule::MustBePrivate(_) => is_private,
+                StructRule::MustBePublic(_) => is_public,
+                StructRule::MustBePubCrate(_) => is_pub_crate,
+                StructRule::ImplementsTrait(pattern, _) => {
+                    self.implements_matching_trait(ctx, def_id, pattern)
+                }
+                StructRule::And(_, _) | StructRule::Or(_, _) | StructRule::Not(_) => {
+                    unreachable!("composite rules are evaluated recursively")
+                }
+            };
+
+            for configured_rule in &self.struct_rules {
+                let mut violations = Vec::new();
+                let mut cache = HashMap::new();
+                collect_rule_violations(
+                    configured_rule,
+                    true,
+                    &evaluate_leaf,
+                    &mut cache,
+                    &mut violations,
+                );
+
+                for (rule, expected) in violations {
+                    match rule {
+                        StructRule::MustBeNamed(pattern, severity)
+                        | StructRule::MustNotBeNamed(pattern, severity) => {
+                            let must_match =
+                                matches!(rule, StructRule::MustBeNamed(..)) == expected;
                             let pattern_type = self.describe_pattern(pattern);
-                            let message = format!(
-                                "Struct must match {pattern_type} '{pattern}', found '{item_name}'"
-                            );
-
-                            let help = if pattern_type == "pattern" {
-                                format!("Rename this struct to match the pattern '{pattern}'")
+                            let (lint, message, help) = if must_match {
+                                let help = if pattern_type == "pattern" {
+                                    format!("Rename this struct to match the pattern '{pattern}'")
+                                } else {
+                                    format!("Rename this struct to '{pattern}'")
+                                };
+                                (
+                                    STRUCT_LINT_MUST_BE_NAMED::get_by_severity(*severity),
+                                    format!(
+                                        "Struct must match {pattern_type} '{pattern}', found '{item_name}'"
+                                    ),
+                                    help,
+                                )
                             } else {
-                                format!("Rename this struct to '{pattern}'")
+                                (
+                                    STRUCT_LINT_MUST_NOT_BE_NAMED::get_by_severity(*severity),
+                                    format!("Struct must not match {pattern_type} '{pattern}'"),
+                                    if pattern_type == "name" {
+                                        "Choose a different name for this struct".to_string()
+                                    } else {
+                                        "Choose a name that doesn't match this pattern".to_string()
+                                    },
+                                )
                             };
-
                             span_lint_and_help(
                                 ctx,
-                                STRUCT_LINT_MUST_BE_NAMED::get_by_severity(*severity),
+                                lint,
                                 self.name().as_str(),
                                 definition_span,
                                 message,
@@ -318,91 +510,282 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
                                 help,
                             );
                         }
-                    }
-                    StructRule::MustNotBeNamed(pattern, severity) => {
-                        if self.string_matches_pattern(&item_name, pattern) {
-                            let pattern_type = self.describe_pattern(pattern);
-                            let message =
-                                format!("Struct must not match {pattern_type} '{pattern}'");
-
-                            let help = if pattern_type == "pattern" {
-                                "Choose a name that doesn't match this pattern"
-                            } else {
-                                "Choose a different name for this struct"
-                            };
-
-                            span_lint_and_help(
-                                ctx,
-                                STRUCT_LINT_MUST_NOT_BE_NAMED::get_by_severity(*severity),
-                                self.name().as_str(),
-                                definition_span,
-                                message,
-                                None,
-                                help,
-                            );
-                        }
-                    }
-                    StructRule::MustBePrivate(severity) => {
-                        if !is_private {
+                        StructRule::MustBePrivate(severity) => {
                             let visibility_desc = if is_public {
                                 "pub"
                             } else if is_pub_crate {
                                 "pub(crate)"
                             } else {
-                                "restricted" // pub(super) or pub(in path)
+                                "restricted"
+                            };
+                            let (message, help) = if expected {
+                                (
+                                    format!(
+                                        "Struct '{item_name}' has {visibility_desc} visibility, but must be private"
+                                    ),
+                                    "Remove the visibility modifier",
+                                )
+                            } else {
+                                (
+                                    format!("Struct '{item_name}' must not be private"),
+                                    "Add an explicit visibility modifier",
+                                )
                             };
                             span_lint_and_help(
                                 ctx,
                                 STRUCT_LINT_MUST_BE_PRIVATE::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
-                                format!(
-                                    "Struct '{item_name}' has {visibility_desc} visibility, but must be private"
-                                ),
+                                message,
                                 None,
-                                "Remove the visibility modifier",
+                                help,
                             );
                         }
-                    }
-                    StructRule::MustBePublic(severity) => {
-                        if !is_public {
+                        StructRule::MustBePublic(severity) => {
                             let visibility_desc = if is_pub_crate {
                                 "pub(crate)"
                             } else {
                                 "private"
+                            };
+                            let (message, help) = if expected {
+                                (
+                                    format!(
+                                        "Struct '{item_name}' has {visibility_desc} visibility, but must be pub"
+                                    ),
+                                    "Change the visibility to 'pub'",
+                                )
+                            } else {
+                                (
+                                    format!("Struct '{item_name}' must not be pub"),
+                                    "Restrict this struct's visibility",
+                                )
                             };
                             span_lint_and_help(
                                 ctx,
                                 STRUCT_LINT_MUST_BE_PUBLIC::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
-                                format!(
-                                    "Struct '{item_name}' has {visibility_desc} visibility, but must be pub"
-                                ),
+                                message,
                                 None,
-                                "Change the visibility to 'pub'",
+                                help,
                             );
                         }
-                    }
-                    StructRule::MustBePubCrate(severity) => {
-                        if !is_pub_crate {
+                        StructRule::MustBePubCrate(severity) => {
                             let visibility_desc = if is_public { "pub" } else { "private" };
+                            let (message, help) = if expected {
+                                (
+                                    format!(
+                                        "Struct '{item_name}' has {visibility_desc} visibility, but must be pub(crate)"
+                                    ),
+                                    "Change the visibility to 'pub(crate)'",
+                                )
+                            } else {
+                                (
+                                    format!("Struct '{item_name}' must not be pub(crate)"),
+                                    "Change this struct's visibility",
+                                )
+                            };
                             span_lint_and_help(
                                 ctx,
                                 STRUCT_LINT_MUST_BE_PUB_CRATE::get_by_severity(*severity),
                                 self.name().as_str(),
                                 definition_span,
-                                format!(
-                                    "Struct '{item_name}' has {visibility_desc} visibility, but must be pub(crate)"
-                                ),
+                                message,
                                 None,
-                                "Change the visibility to 'pub(crate)'",
+                                help,
                             );
                         }
+                        StructRule::ImplementsTrait(pattern, severity) => {
+                            let (message, help) = if expected {
+                                (
+                                    format!(
+                                        "Struct '{item_name}' must implement trait matching '{pattern}'"
+                                    ),
+                                    "Implement the required trait for this struct",
+                                )
+                            } else {
+                                (
+                                    format!(
+                                        "Struct '{item_name}' must not implement trait matching '{pattern}'"
+                                    ),
+                                    "Remove the forbidden trait implementation",
+                                )
+                            };
+                            span_lint_and_help(
+                                ctx,
+                                STRUCT_LINT_IMPLEMENTS_TRAIT::get_by_severity(*severity),
+                                self.name().as_str(),
+                                definition_span,
+                                message,
+                                None,
+                                help,
+                            );
+                        }
+                        StructRule::And(_, _) | StructRule::Or(_, _) | StructRule::Not(_) => {
+                            unreachable!("only leaf rule violations are reported")
+                        }
                     }
-                    _ => {} // Ignore other rule types for now
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        attribute_matches, collect_rule_violations, evaluate_rule_with, matcher_references_trait,
+        rule_references_trait,
+    };
+    use cargo_pup_lint_config::{ConfiguredLint, Severity, StructMatch, StructRule};
+    use regex::Regex;
+    use std::collections::HashMap;
+
+    fn named(pattern: &str) -> StructRule {
+        StructRule::MustBeNamed(pattern.to_string(), Severity::Warn)
+    }
+
+    fn leaf_value(rule: &StructRule) -> bool {
+        match rule {
+            StructRule::MustBeNamed(pattern, _) => pattern == "passes",
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn attribute_patterns_match_the_complete_name() {
+        let regex = Regex::new("repr").unwrap();
+
+        assert!(attribute_matches(&regex, "repr"));
+        assert!(!attribute_matches(&regex, "other_repr"));
+    }
+
+    #[test]
+    fn identifies_traits_referenced_by_complex_matchers() {
+        let matcher = StructMatch::AndMatches(
+            Box::new(StructMatch::Name("Service".into())),
+            Box::new(StructMatch::NotMatch(Box::new(
+                StructMatch::ImplementsTrait("^crate::RequiredTrait$".into()),
+            ))),
+        );
+
+        assert!(matcher_references_trait(&matcher, "crate::RequiredTrait"));
+        assert!(!matcher_references_trait(&matcher, "crate::OtherTrait"));
+    }
+
+    #[test]
+    fn identifies_traits_referenced_by_complex_rules() {
+        let rule = StructRule::And(
+            Box::new(named("Service")),
+            Box::new(StructRule::Not(Box::new(StructRule::Or(
+                Box::new(StructRule::MustBePrivate(Severity::Warn)),
+                Box::new(StructRule::ImplementsTrait(
+                    "^crate::RequiredTrait$".into(),
+                    Severity::Warn,
+                )),
+            )))),
+        );
+
+        assert!(rule_references_trait(&rule, "crate::RequiredTrait"));
+        assert!(!rule_references_trait(&rule, "crate::OtherTrait"));
+    }
+
+    #[test]
+    fn trait_applicability_includes_matchers_and_rules() {
+        let config = ConfiguredLint::Struct(cargo_pup_lint_config::struct_lint::StructLint {
+            name: "trait_check".into(),
+            matches: StructMatch::ImplementsTrait("^crate::MatchedTrait$".into()),
+            rules: vec![StructRule::Not(Box::new(StructRule::ImplementsTrait(
+                "^crate::RuledTrait$".into(),
+                Severity::Warn,
+            )))],
+        });
+        let lint = super::StructLint::new(&config);
+
+        assert!(lint.applies_to_trait("crate::MatchedTrait"));
+        assert!(lint.applies_to_trait("crate::RuledTrait"));
+        assert!(!lint.applies_to_trait("crate::OtherTrait"));
+    }
+
+    #[test]
+    fn evaluates_logical_rule_combinations() {
+        let pass = named("passes");
+        let fail = named("fails");
+
+        assert!(evaluate_rule_with(
+            &StructRule::And(Box::new(pass.clone()), Box::new(pass.clone())),
+            &leaf_value,
+        ));
+        assert!(evaluate_rule_with(
+            &StructRule::Or(Box::new(fail.clone()), Box::new(pass.clone())),
+            &leaf_value,
+        ));
+        assert!(evaluate_rule_with(
+            &StructRule::Not(Box::new(fail)),
+            &leaf_value,
+        ));
+    }
+
+    fn pattern_of(rule: &StructRule) -> &str {
+        match rule {
+            StructRule::MustBeNamed(pattern, _) => pattern,
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn reports_both_failed_or_alternatives() {
+        let rule = StructRule::Or(Box::new(named("first")), Box::new(named("second")));
+        let mut violations = Vec::new();
+        let mut cache = HashMap::new();
+
+        collect_rule_violations(&rule, true, &leaf_value, &mut cache, &mut violations);
+
+        assert_eq!(violations.len(), 2);
+        assert!(violations.iter().all(|(_, expected)| *expected));
+        let mut reported: Vec<&str> = violations
+            .iter()
+            .map(|(rule, _)| pattern_of(rule))
+            .collect();
+        reported.sort();
+        assert_eq!(reported, vec!["first", "second"]);
+    }
+
+    #[test]
+    fn reports_single_operand_for_negated_and() {
+        let rule = StructRule::And(Box::new(named("passes")), Box::new(named("passes")));
+        let mut violations = Vec::new();
+        let mut cache = HashMap::new();
+
+        collect_rule_violations(&rule, false, &leaf_value, &mut cache, &mut violations);
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(pattern_of(violations[0].0), "passes");
+        assert!(!violations[0].1);
+    }
+
+    #[test]
+    fn reports_only_failing_operand_of_required_and() {
+        let rule = StructRule::And(Box::new(named("passes")), Box::new(named("second")));
+        let mut violations = Vec::new();
+        let mut cache = HashMap::new();
+
+        collect_rule_violations(&rule, true, &leaf_value, &mut cache, &mut violations);
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(pattern_of(violations[0].0), "second");
+        assert!(violations[0].1);
+    }
+
+    #[test]
+    fn inverts_not_rule_expectation() {
+        let rule = StructRule::Not(Box::new(named("passes")));
+        let mut violations = Vec::new();
+        let mut cache = HashMap::new();
+
+        collect_rule_violations(&rule, true, &leaf_value, &mut cache, &mut violations);
+
+        assert_eq!(violations.len(), 1);
+        assert!(!violations[0].1);
     }
 }
