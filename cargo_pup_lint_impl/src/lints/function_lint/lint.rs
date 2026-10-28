@@ -26,21 +26,40 @@ enum FunctionMatchEvidence {
 }
 
 impl FunctionMatchEvidence {
-    fn describe(&self) -> String {
+    fn precedence(&self) -> u8 {
         match self {
+            Self::Or(evidence) if evidence.len() > 1 => 1,
+            Self::And(evidence) if evidence.len() > 1 => 2,
+            _ => 3,
+        }
+    }
+
+    fn describe_with_precedence(&self, parent_precedence: u8) -> String {
+        let precedence = self.precedence();
+        let description = match self {
             Self::Reason(reason) => reason.clone(),
             Self::And(evidence) => evidence
                 .iter()
-                .map(Self::describe)
+                .map(|child| child.describe_with_precedence(precedence))
                 .collect::<Vec<_>>()
                 .join(" and "),
             Self::Or(evidence) => evidence
                 .iter()
-                .map(Self::describe)
+                .map(|child| child.describe_with_precedence(precedence))
                 .collect::<Vec<_>>()
                 .join(" or "),
             Self::Not(requirement) => format!("it does not satisfy {requirement}"),
+        };
+
+        if precedence < parent_precedence {
+            format!("({description})")
+        } else {
+            description
         }
+    }
+
+    fn describe(&self) -> String {
+        self.describe_with_precedence(0)
     }
 }
 
@@ -754,6 +773,22 @@ mod tests {
         assert_eq!(
             evidence.describe(),
             "it is in module `test_app::unsafe_functions` and it is unsafe"
+        );
+    }
+
+    #[test]
+    fn parenthesizes_or_evidence_nested_within_and_evidence() {
+        let evidence = FunctionMatchEvidence::And(vec![
+            FunctionMatchEvidence::Or(vec![
+                FunctionMatchEvidence::Reason("it is async".to_string()),
+                FunctionMatchEvidence::Reason("it is unsafe".to_string()),
+            ]),
+            FunctionMatchEvidence::Reason("its name is `blocked`".to_string()),
+        ]);
+
+        assert_eq!(
+            evidence.describe(),
+            "(it is async or it is unsafe) and its name is `blocked`"
         );
     }
 

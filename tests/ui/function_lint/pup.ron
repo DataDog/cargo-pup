@@ -88,6 +88,23 @@
             )
         ),
         
+        // Nested OR within AND should retain grouping in match evidence.
+        Function(
+            (
+                name: "grouped_match_evidence_test",
+                matches: AndMatches(
+                    OrMatches(
+                        NameRegex("^blocked"),
+                        NameRegex("grouped$"),
+                    ),
+                    NameEquals("blocked_grouped"),
+                ),
+                rules: [
+                    MustNotExist(Error),
+                ],
+            )
+        ),
+
         // NOT rule test - all functions except those with "exempt" in the name
         Function(
             (

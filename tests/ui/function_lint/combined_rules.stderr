@@ -26,5 +26,14 @@ LL | fn short_function_with_suffix() {
    = help: Consider breaking this function into smaller parts
    = note: Applied by cargo-pup rule 'or_rule_test'.
 
-error: aborting due to 3 previous errors
+error: Function 'blocked_grouped' is forbidden because (its name `blocked_grouped` matches `^blocked` or its name `blocked_grouped` matches `grouped$`) and its name is `blocked_grouped`
+  --> tests/ui/function_lint/combined_rules.rs:48:1
+   |
+LL | fn blocked_grouped() {}
+   | ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Change the matched function properties or remove the function
+   = note: Applied by cargo-pup rule 'grouped_match_evidence_test'.
+
+error: aborting due to 4 previous errors
 
