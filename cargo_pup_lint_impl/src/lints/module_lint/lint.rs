@@ -546,8 +546,14 @@ impl ModuleLint {
             let def_id = nested_item.owner_id.to_def_id();
             let item_name = if let Some(name) = ctx.tcx.opt_item_name(def_id) {
                 name.to_ident_string()
+            } else if let ItemKind::Impl(..) = nested_item.kind {
+                let self_ty = ctx.tcx.type_of(nested_item.owner_id).skip_binder();
+                let self_ty_name = self_ty.ty_adt_def().map_or_else(
+                    || self_ty.to_string(),
+                    |adt| ctx.tcx.item_name(adt.did()).to_ident_string(),
+                );
+                format!("impl {self_ty_name}")
             } else {
-                // Fallback for items without names (like impl blocks)
                 format!("<unnamed item at {:?}>", nested_item.span)
             };
 
