@@ -18,9 +18,18 @@ if ! grep -q "$NEXTEST_PINNED_VERSION" <<<"$NEXTEST_VERSION_OUTPUT"; then
     echo "Warning: installed cargo-nextest ($NEXTEST_VERSION_OUTPUT) does not match the CI-pinned version ${NEXTEST_PINNED_VERSION}; local results may diverge from CI." >&2
 fi
 
-# Build the binaries explicitly because integration tests and test_app resolve
-# cargo-pup and pup-driver from target/debug rather than Cargo's test artefacts.
+# Build the binaries explicitly because integration tests and test_app need
+# cargo-pup and pup-driver rather than Cargo's test artefacts.
 cargo build --bins
+
+# Cargo configuration and CARGO_TARGET_DIR can move build output away from
+# target/. Resolve the directory Cargo actually used so the end-to-end
+# validators cannot select stale or globally installed binaries.
+CARGO_TARGET_DIRECTORY="$(
+    cargo metadata --format-version 1 --no-deps \
+        | python3 -c 'import json, sys; print(json.load(sys.stdin)["target_directory"])'
+)"
+export CARGO_PUP_BIN_DIR="${CARGO_TARGET_DIRECTORY}/debug"
 
 # Exclude only the custom UI harness so future standard tests remain included.
 cargo nextest run --workspace -E 'not binary(ui-test)'

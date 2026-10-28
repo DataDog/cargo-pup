@@ -27,6 +27,9 @@ pub struct ReprActiveWrongName; //~ ERROR: Struct must match pattern '^ReprAllow
 #[repr(C)]
 pub struct ReprAllowedArgumentsUnavailable;
 
+#[repr(C)]
+pub struct ReprAllowedAlternative; //~ ERROR: Struct must match pattern '^AlternativeNeverMatches$', found 'ReprAllowedAlternative'
+
 #[deprecated]
 pub struct DeprecatedWrongName; //~ ERROR: Struct must match pattern '^DeprecatedAllowed', found 'DeprecatedWrongName'
 

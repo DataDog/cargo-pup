@@ -229,6 +229,17 @@
         )),
 
         Struct((
+            name: "attribute_alternative_matcher_test",
+            matches: AndMatches(
+                Name("^ReprAllowedAlternative$"),
+                HasAttribute("r|repr"),
+            ),
+            rules: [
+                MustBeNamed("^AlternativeNeverMatches$", Error),
+            ],
+        )),
+
+        Struct((
             name: "attribute_arguments_unavailable_test",
             matches: AndMatches(
                 Name("test_attributes_and_configured_rules"),

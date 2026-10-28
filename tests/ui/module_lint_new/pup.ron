@@ -175,6 +175,22 @@
             ],
         )),
 
+        Module((
+            name: "negated_empty_mod_file_help",
+            matches: Module("^test_logical_module_rules::needs_nonempty_mod_file$"),
+            rules: [
+                Not(MustHaveEmptyModFile(Error)),
+            ],
+        )),
+
+        Module((
+            name: "negated_wildcard_help",
+            matches: Module("^test_logical_module_rules::needs_wildcard_import$"),
+            rules: [
+                Not(NoWildcardImports(Error)),
+            ],
+        )),
+
         // Replace RestrictFunctions with Function lint
         Function(
             (

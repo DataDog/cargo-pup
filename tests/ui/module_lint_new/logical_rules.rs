@@ -24,3 +24,9 @@ pub mod must_be_empty {}
 pub mod not_bad { //~ ERROR: Module must be empty
     pub const VALUE: usize = 1;
 }
+
+pub mod needs_nonempty_mod_file {} //~ ERROR: Module's mod.rs file must not be empty
+
+pub mod needs_wildcard_import { //~ ERROR: Wildcard imports are required here
+    pub use std::fmt; //~ ERROR: Wildcard imports are required here
+}

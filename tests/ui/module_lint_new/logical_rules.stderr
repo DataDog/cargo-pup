@@ -48,5 +48,36 @@ LL | | }
    = note: Applied by cargo-pup rule 'logical_not_test'.
    = note: `#[deny(module_must_be_empty)]` on by default
 
-error: aborting due to 5 previous errors
+error: Module's mod.rs file must not be empty
+  --> tests/ui/module_lint_new/logical_rules.rs:28:1
+   |
+LL | pub mod needs_nonempty_mod_file {}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Add an item such as a function, type, or constant to the mod.rs file
+   = note: Applied by cargo-pup rule 'negated_empty_mod_file_help'.
+   = note: `#[deny(module_must_have_empty_mod_file)]` on by default
+
+error: Wildcard imports are required here
+  --> tests/ui/module_lint_new/logical_rules.rs:30:1
+   |
+LL | / pub mod needs_wildcard_import {
+LL | |     pub use std::fmt;
+LL | | }
+   | |_^
+   |
+   = help: Import all items from a module with a wildcard import
+   = note: Applied by cargo-pup rule 'negated_wildcard_help'.
+   = note: `#[deny(module_wildcard_import)]` on by default
+
+error: Wildcard imports are required here
+  --> tests/ui/module_lint_new/logical_rules.rs:31:5
+   |
+LL |     pub use std::fmt;
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = help: Import all items from a module with a wildcard import
+   = note: Applied by cargo-pup rule 'negated_wildcard_help'.
+
+error: aborting due to 8 previous errors
 

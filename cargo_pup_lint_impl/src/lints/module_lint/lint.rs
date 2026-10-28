@@ -456,10 +456,16 @@ impl ModuleLint {
                 }
             }
             ModuleRule::MustHaveEmptyModFile(_) => {
-                let message = if expected {
-                    "Module's mod.rs file must be empty (only allowed to re-export other modules)"
+                let (message, help) = if expected {
+                    (
+                        "Module's mod.rs file must be empty (only allowed to re-export other modules)",
+                        "Remove disallowed items from the mod.rs file or move them to a submodule",
+                    )
                 } else {
-                    "Module's mod.rs file must not be empty"
+                    (
+                        "Module's mod.rs file must not be empty",
+                        "Add an item such as a function, type, or constant to the mod.rs file",
+                    )
                 };
                 span_lint_and_help(
                     ctx,
@@ -468,7 +474,7 @@ impl ModuleLint {
                     item.span,
                     message,
                     None,
-                    "Remove disallowed items from the mod.rs file or move them to a submodule",
+                    help,
                 );
             }
             ModuleRule::RestrictImports { .. } => {
@@ -488,10 +494,16 @@ impl ModuleLint {
                 );
             }
             ModuleRule::NoWildcardImports(_) => {
-                let message = if expected {
-                    "Wildcard imports are not allowed"
+                let (message, help) = if expected {
+                    (
+                        "Wildcard imports are not allowed",
+                        "Import specific items instead of using a wildcard",
+                    )
                 } else {
-                    "Wildcard imports are required here"
+                    (
+                        "Wildcard imports are required here",
+                        "Import all items from a module with a wildcard import",
+                    )
                 };
                 span_lint_and_help(
                     ctx,
@@ -500,7 +512,7 @@ impl ModuleLint {
                     item.span,
                     message,
                     None,
-                    "Import specific items instead of using a wildcard",
+                    help,
                 );
             }
             ModuleRule::DeniedItems { .. } => {

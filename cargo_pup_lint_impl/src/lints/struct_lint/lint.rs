@@ -21,10 +21,12 @@ pub struct StructLint {
     regex_cache: Mutex<HashMap<String, Regex>>,
 }
 
+fn complete_attribute_regex(pattern: &str) -> Result<Regex, regex::Error> {
+    Regex::new(&format!(r"\A(?:{pattern})\z"))
+}
+
 fn attribute_matches(regex: &Regex, attribute: &str) -> bool {
-    regex
-        .find(attribute)
-        .is_some_and(|matched| matched.start() == 0 && matched.end() == attribute.len())
+    regex.is_match(attribute)
 }
 
 fn hir_attribute_name(attribute: &rustc_hir::Attribute) -> Option<String> {
@@ -238,7 +240,7 @@ impl StructLint {
         item: &Item<'_>,
         pattern: &str,
     ) -> bool {
-        let Ok(regex) = Regex::new(pattern) else {
+        let Ok(regex) = complete_attribute_regex(pattern) else {
             return false;
         };
         ctx.tcx.hir_attrs(item.hir_id()).iter().any(|attribute| {
@@ -634,11 +636,10 @@ impl<'tcx> LateLintPass<'tcx> for StructLint {
 #[cfg(test)]
 mod tests {
     use super::{
-        attribute_matches, collect_rule_violations, evaluate_rule_with, matcher_references_trait,
-        rule_references_trait,
+        attribute_matches, collect_rule_violations, complete_attribute_regex, evaluate_rule_with,
+        matcher_references_trait, rule_references_trait,
     };
     use cargo_pup_lint_config::{ConfiguredLint, Severity, StructMatch, StructRule};
-    use regex::Regex;
     use std::collections::HashMap;
 
     fn named(pattern: &str) -> StructRule {
@@ -654,10 +655,19 @@ mod tests {
 
     #[test]
     fn attribute_patterns_match_the_complete_name() {
-        let regex = Regex::new("repr").unwrap();
+        let regex = complete_attribute_regex("repr").unwrap();
 
         assert!(attribute_matches(&regex, "repr"));
         assert!(!attribute_matches(&regex, "other_repr"));
+    }
+
+    #[test]
+    fn attribute_patterns_consider_full_alternatives_and_lazy_matches() {
+        let alternatives = complete_attribute_regex("r|repr").unwrap();
+        let lazy = complete_attribute_regex("r.*?|repr").unwrap();
+
+        assert!(attribute_matches(&alternatives, "repr"));
+        assert!(attribute_matches(&lazy, "repr"));
     }
 
     #[test]

@@ -17,8 +17,17 @@ LL | pub struct ReprActiveWrongName;
    = help: Rename this struct to match the pattern '^ReprAllowed'
    = note: Applied by cargo-pup rule 'attribute_matcher_test'.
 
-error: Struct must match pattern '^DeprecatedAllowed', found 'DeprecatedWrongName'
+error: Struct must match pattern '^AlternativeNeverMatches$', found 'ReprAllowedAlternative'
   --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:31:1
+   |
+LL | pub struct ReprAllowedAlternative;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern '^AlternativeNeverMatches$'
+   = note: Applied by cargo-pup rule 'attribute_alternative_matcher_test'.
+
+error: Struct must match pattern '^DeprecatedAllowed', found 'DeprecatedWrongName'
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:34:1
    |
 LL | pub struct DeprecatedWrongName;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -27,7 +36,7 @@ LL | pub struct DeprecatedWrongName;
    = note: Applied by cargo-pup rule 'deprecated_attribute_matcher_test'.
 
 error: Struct must match pattern '^DocAllowed', found 'DocWrongName'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:34:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:37:1
    |
 LL | pub struct DocWrongName;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -36,7 +45,7 @@ LL | pub struct DocWrongName;
    = note: Applied by cargo-pup rule 'doc_attribute_matcher_test'.
 
 error: Struct must match pattern '^MustUseAllowed', found 'MustUseWrongName'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:37:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:40:1
    |
 LL | pub struct MustUseWrongName;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -45,7 +54,7 @@ LL | pub struct MustUseWrongName;
    = note: Applied by cargo-pup rule 'must_use_attribute_matcher_test'.
 
 error: Struct must match pattern '^NonExhaustiveAllowed', found 'NonExhaustiveWrongName'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:40:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:43:1
    |
 LL | pub struct NonExhaustiveWrongName;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -54,7 +63,7 @@ LL | pub struct NonExhaustiveWrongName;
    = note: Applied by cargo-pup rule 'non_exhaustive_attribute_matcher_test'.
 
 error: Struct must match pattern '^ToolAttributeAllowed', found 'ToolAttributeWrongName'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:43:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:46:1
    |
 LL | pub struct ToolAttributeWrongName;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -63,7 +72,7 @@ LL | pub struct ToolAttributeWrongName;
    = note: Applied by cargo-pup rule 'tool_attribute_matcher_test'.
 
 error: Struct 'NeedsTraitMissing' must implement trait matching 'test_attributes_and_configured_rules::RequiredTrait'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:46:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:49:1
    |
 LL | pub struct NeedsTraitMissing;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -73,7 +82,7 @@ LL | pub struct NeedsTraitMissing;
    = note: `#[deny(struct_lint_implements_trait)]` on by default
 
 error: Struct 'NeedsGenericTraitMissing' must implement trait matching 'test_attributes_and_configured_rules::GenericRequiredTrait'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:52:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:55:1
    |
 LL | pub struct NeedsGenericTraitMissing;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -82,7 +91,7 @@ LL | pub struct NeedsGenericTraitMissing;
    = note: Applied by cargo-pup rule 'required_generic_trait_rule_test'.
 
 error: Struct 'MustAvoidGenericTraitBad' must not implement trait matching 'test_attributes_and_configured_rules::GenericRequiredTrait'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:58:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:61:1
    |
 LL | pub struct MustAvoidGenericTraitBad;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -91,7 +100,7 @@ LL | pub struct MustAvoidGenericTraitBad;
    = note: Applied by cargo-pup rule 'forbidden_generic_trait_rule_test'.
 
 error: Struct 'MustAvoidTraitBad' must not implement trait matching 'test_attributes_and_configured_rules::ForbiddenTrait'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:64:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:67:1
    |
 LL | pub struct MustAvoidTraitBad;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -100,7 +109,7 @@ LL | pub struct MustAvoidTraitBad;
    = note: Applied by cargo-pup rule 'forbidden_trait_rule_test'.
 
 error: Struct must match pattern '^AllowedComposite', found 'CompositeOrBad'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:70:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:73:1
    |
 LL | pub struct CompositeOrBad;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -109,7 +118,7 @@ LL | pub struct CompositeOrBad;
    = note: Applied by cargo-pup rule 'or_rule_test'.
 
 error: Struct 'CompositeOrBad' has pub visibility, but must be private
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:70:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:73:1
    |
 LL | pub struct CompositeOrBad;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -119,7 +128,7 @@ LL | pub struct CompositeOrBad;
    = note: `#[deny(struct_lint_must_be_private)]` on by default
 
 error: Struct must match pattern '^MatcherNegationAllowed', found 'MatcherNegationBad'
-  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:77:1
+  --> tests/ui/struct_lint_new/attributes_and_configured_rules.rs:80:1
    |
 LL | pub struct MatcherNegationBad;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -127,5 +136,5 @@ LL | pub struct MatcherNegationBad;
    = help: Rename this struct to match the pattern '^MatcherNegationAllowed'
    = note: Applied by cargo-pup rule 'negated_trait_matcher_test'.
 
-error: aborting due to 14 previous errors
+error: aborting due to 15 previous errors
 
