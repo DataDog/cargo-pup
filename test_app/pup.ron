@@ -102,6 +102,20 @@
             ],
         )),
         Struct((
+            name: "attribute_arguments_unavailable_check",
+            matches: AndMatches(Name("^AppReprAllowedArgumentsUnavailable$"), HasAttribute("repr\\(C\\)")),
+            rules: [
+                MustBeNamed("^NeverMatches$", Warn),
+            ],
+        )),
+        Struct((
+            name: "supported_attribute_matcher_check",
+            matches: AndMatches(Name("^AppSupportedAttribute"), OrMatches(OrMatches(OrMatches(HasAttribute("deprecated"), HasAttribute("doc")), HasAttribute("must_use")), HasAttribute("non_exhaustive"))),
+            rules: [
+                MustBeNamed("^AppSupportedAttributeAllowed", Warn),
+            ],
+        )),
+        Struct((
             name: "required_trait_rule_check",
             matches: Name("^AppNeedsTrait"),
             rules: [

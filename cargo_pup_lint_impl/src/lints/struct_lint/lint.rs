@@ -733,6 +733,109 @@ mod tests {
         }
     }
 
+    fn logical_rule_templates() -> Vec<StructRule> {
+        let leaf = |name: &str| named(name);
+        vec![
+            StructRule::And(Box::new(leaf("a")), Box::new(leaf("b"))),
+            StructRule::Or(Box::new(leaf("a")), Box::new(leaf("b"))),
+            StructRule::Not(Box::new(leaf("a"))),
+            StructRule::Not(Box::new(StructRule::And(
+                Box::new(leaf("a")),
+                Box::new(leaf("b")),
+            ))),
+            StructRule::Not(Box::new(StructRule::Or(
+                Box::new(leaf("a")),
+                Box::new(leaf("b")),
+            ))),
+            StructRule::And(
+                Box::new(StructRule::Or(Box::new(leaf("a")), Box::new(leaf("b")))),
+                Box::new(StructRule::Not(Box::new(leaf("c")))),
+            ),
+            StructRule::Or(
+                Box::new(StructRule::And(Box::new(leaf("a")), Box::new(leaf("b")))),
+                Box::new(StructRule::Not(Box::new(leaf("c")))),
+            ),
+        ]
+    }
+
+    fn evaluate_with_values(rule: &StructRule, values: &HashMap<&str, bool>) -> bool {
+        evaluate_rule_with(rule, &|leaf| values[pattern_of(leaf)])
+    }
+
+    #[test]
+    fn logical_rules_obey_boolean_identities_for_all_leaf_values() {
+        let leaf = |name: &str| named(name);
+        let de_morgan_left = StructRule::Not(Box::new(StructRule::And(
+            Box::new(leaf("a")),
+            Box::new(leaf("b")),
+        )));
+        let de_morgan_right = StructRule::Or(
+            Box::new(StructRule::Not(Box::new(leaf("a")))),
+            Box::new(StructRule::Not(Box::new(leaf("b")))),
+        );
+        let distributive_left = StructRule::And(
+            Box::new(leaf("a")),
+            Box::new(StructRule::Or(Box::new(leaf("b")), Box::new(leaf("c")))),
+        );
+        let distributive_right = StructRule::Or(
+            Box::new(StructRule::And(Box::new(leaf("a")), Box::new(leaf("b")))),
+            Box::new(StructRule::And(Box::new(leaf("a")), Box::new(leaf("c")))),
+        );
+
+        for mask in 0..8 {
+            let values = HashMap::from([
+                ("a", mask & 1 != 0),
+                ("b", mask & 2 != 0),
+                ("c", mask & 4 != 0),
+            ]);
+            assert_eq!(
+                evaluate_with_values(&de_morgan_left, &values),
+                evaluate_with_values(&de_morgan_right, &values)
+            );
+            assert_eq!(
+                evaluate_with_values(&distributive_left, &values),
+                evaluate_with_values(&distributive_right, &values)
+            );
+        }
+    }
+
+    #[test]
+    fn reported_violations_repair_generated_logical_rules() {
+        for rule in logical_rule_templates() {
+            for mask in 0..8 {
+                let values = HashMap::from([
+                    ("a", mask & 1 != 0),
+                    ("b", mask & 2 != 0),
+                    ("c", mask & 4 != 0),
+                ]);
+
+                for expected in [false, true] {
+                    if evaluate_with_values(&rule, &values) == expected {
+                        continue;
+                    }
+
+                    let evaluate_leaf = |leaf: &StructRule| values[pattern_of(leaf)];
+                    let mut cache = HashMap::new();
+                    let mut violations = Vec::new();
+                    collect_rule_violations(
+                        &rule,
+                        expected,
+                        &evaluate_leaf,
+                        &mut cache,
+                        &mut violations,
+                    );
+                    assert!(!violations.is_empty());
+
+                    let mut repaired = values.clone();
+                    for (leaf, required) in violations {
+                        repaired.insert(pattern_of(leaf), required);
+                    }
+                    assert_eq!(evaluate_with_values(&rule, &repaired), expected);
+                }
+            }
+        }
+    }
+
     #[test]
     fn reports_both_failed_or_alternatives() {
         let rule = StructRule::Or(Box::new(named("first")), Box::new(named("second")));

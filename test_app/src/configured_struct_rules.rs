@@ -16,6 +16,21 @@ pub struct AppReprInactiveWrongName;
 #[cfg_attr(all(), repr(C))]
 pub struct AppReprActiveWrongName;
 
+#[repr(C)]
+pub struct AppReprAllowedArgumentsUnavailable;
+
+#[deprecated]
+pub struct AppSupportedAttributeDeprecated;
+
+#[doc = "documented struct"]
+pub struct AppSupportedAttributeDoc;
+
+#[must_use]
+pub struct AppSupportedAttributeMustUse;
+
+#[non_exhaustive]
+pub struct AppSupportedAttributeNonExhaustive;
+
 pub struct AppNeedsTraitMissing;
 
 pub struct AppNeedsTraitPresent;

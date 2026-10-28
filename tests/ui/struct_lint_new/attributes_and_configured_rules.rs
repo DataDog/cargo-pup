@@ -3,6 +3,9 @@
 //@compile-flags: --crate-name test_attributes_and_configured_rules
 //@compile-flags: --crate-type lib
 
+#![feature(register_tool)]
+#![register_tool(pup_test)]
+
 pub trait RequiredTrait {}
 pub trait GenericRequiredTrait<T> {}
 pub trait ForbiddenTrait {}
@@ -20,6 +23,24 @@ pub struct ReprInactiveWrongName;
 
 #[cfg_attr(all(), repr(C))]
 pub struct ReprActiveWrongName; //~ ERROR: Struct must match pattern '^ReprAllowed', found 'ReprActiveWrongName'
+
+#[repr(C)]
+pub struct ReprAllowedArgumentsUnavailable;
+
+#[deprecated]
+pub struct DeprecatedWrongName; //~ ERROR: Struct must match pattern '^DeprecatedAllowed', found 'DeprecatedWrongName'
+
+#[doc = "documented struct"]
+pub struct DocWrongName; //~ ERROR: Struct must match pattern '^DocAllowed', found 'DocWrongName'
+
+#[must_use]
+pub struct MustUseWrongName; //~ ERROR: Struct must match pattern '^MustUseAllowed', found 'MustUseWrongName'
+
+#[non_exhaustive]
+pub struct NonExhaustiveWrongName; //~ ERROR: Struct must match pattern '^NonExhaustiveAllowed', found 'NonExhaustiveWrongName'
+
+#[pup_test::marker]
+pub struct ToolAttributeWrongName; //~ ERROR: Struct must match pattern '^ToolAttributeAllowed', found 'ToolAttributeWrongName'
 
 // Requires a trait.
 pub struct NeedsTraitMissing; //~ ERROR: Struct 'NeedsTraitMissing' must implement trait matching 'test_attributes_and_configured_rules::RequiredTrait'

@@ -144,6 +144,32 @@ fn test_lint_config() {
 
     builder
         .struct_lint()
+        .lint_named("attribute_arguments_unavailable_check")
+        .matching(|m| {
+            m.name("^AppReprAllowedArgumentsUnavailable$")
+                .and(m.has_attribute(r"repr\(C\)"))
+        })
+        .with_severity(Severity::Warn)
+        .must_be_named("^NeverMatches$".into())
+        .build();
+
+    builder
+        .struct_lint()
+        .lint_named("supported_attribute_matcher_check")
+        .matching(|m| {
+            m.name("^AppSupportedAttribute").and(
+                m.has_attribute("deprecated")
+                    .or(m.has_attribute("doc"))
+                    .or(m.has_attribute("must_use"))
+                    .or(m.has_attribute("non_exhaustive")),
+            )
+        })
+        .with_severity(Severity::Warn)
+        .must_be_named("^AppSupportedAttributeAllowed".into())
+        .build();
+
+    builder
+        .struct_lint()
         .lint_named("required_trait_rule_check")
         .matching(|m| m.name("^AppNeedsTrait"))
         .with_severity(Severity::Warn)

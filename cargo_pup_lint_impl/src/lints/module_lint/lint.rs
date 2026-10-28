@@ -930,8 +930,9 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
 #[cfg(test)]
 mod tests {
-    use super::{evaluate_module_rule_with, module_rule_severity};
+    use super::{collect_module_rule_violations, evaluate_module_rule_with, module_rule_severity};
     use cargo_pup_lint_config::{ModuleRule, Severity};
+    use std::collections::HashMap;
 
     fn named(name: &str, severity: Severity) -> ModuleRule {
         ModuleRule::MustBeNamed(name.to_string(), severity)
@@ -943,6 +944,42 @@ mod tests {
             ModuleRule::MustNotBeEmpty(_) => None,
             _ => unreachable!(),
         }
+    }
+
+    fn pattern_of(rule: &ModuleRule) -> &str {
+        match rule {
+            ModuleRule::MustBeNamed(pattern, _) => pattern,
+            _ => unreachable!(),
+        }
+    }
+
+    fn logical_rule_templates() -> Vec<ModuleRule> {
+        let leaf = |name: &str| named(name, Severity::Warn);
+        vec![
+            ModuleRule::And(Box::new(leaf("a")), Box::new(leaf("b"))),
+            ModuleRule::Or(Box::new(leaf("a")), Box::new(leaf("b"))),
+            ModuleRule::Not(Box::new(leaf("a"))),
+            ModuleRule::Not(Box::new(ModuleRule::And(
+                Box::new(leaf("a")),
+                Box::new(leaf("b")),
+            ))),
+            ModuleRule::Not(Box::new(ModuleRule::Or(
+                Box::new(leaf("a")),
+                Box::new(leaf("b")),
+            ))),
+            ModuleRule::And(
+                Box::new(ModuleRule::Or(Box::new(leaf("a")), Box::new(leaf("b")))),
+                Box::new(ModuleRule::Not(Box::new(leaf("c")))),
+            ),
+            ModuleRule::Or(
+                Box::new(ModuleRule::And(Box::new(leaf("a")), Box::new(leaf("b")))),
+                Box::new(ModuleRule::Not(Box::new(leaf("c")))),
+            ),
+        ]
+    }
+
+    fn evaluate_with_values(rule: &ModuleRule, values: &HashMap<&str, bool>) -> bool {
+        evaluate_module_rule_with(rule, &|leaf| Some(values[pattern_of(leaf)])).unwrap()
     }
 
     #[test]
@@ -971,13 +1008,102 @@ mod tests {
     }
 
     #[test]
-    fn inapplicable_leaf_makes_composite_inapplicable() {
+    fn logical_rules_obey_boolean_identities_for_all_leaf_values() {
+        let leaf = |name: &str| named(name, Severity::Warn);
+        let de_morgan_left = ModuleRule::Not(Box::new(ModuleRule::And(
+            Box::new(leaf("a")),
+            Box::new(leaf("b")),
+        )));
+        let de_morgan_right = ModuleRule::Or(
+            Box::new(ModuleRule::Not(Box::new(leaf("a")))),
+            Box::new(ModuleRule::Not(Box::new(leaf("b")))),
+        );
+        let distributive_left = ModuleRule::And(
+            Box::new(leaf("a")),
+            Box::new(ModuleRule::Or(Box::new(leaf("b")), Box::new(leaf("c")))),
+        );
+        let distributive_right = ModuleRule::Or(
+            Box::new(ModuleRule::And(Box::new(leaf("a")), Box::new(leaf("b")))),
+            Box::new(ModuleRule::And(Box::new(leaf("a")), Box::new(leaf("c")))),
+        );
+
+        for mask in 0..8 {
+            let values = HashMap::from([
+                ("a", mask & 1 != 0),
+                ("b", mask & 2 != 0),
+                ("c", mask & 4 != 0),
+            ]);
+            assert_eq!(
+                evaluate_with_values(&de_morgan_left, &values),
+                evaluate_with_values(&de_morgan_right, &values)
+            );
+            assert_eq!(
+                evaluate_with_values(&distributive_left, &values),
+                evaluate_with_values(&distributive_right, &values)
+            );
+        }
+    }
+
+    #[test]
+    fn reported_violations_repair_generated_logical_rules() {
+        for rule in logical_rule_templates() {
+            for mask in 0..8 {
+                let values = HashMap::from([
+                    ("a", mask & 1 != 0),
+                    ("b", mask & 2 != 0),
+                    ("c", mask & 4 != 0),
+                ]);
+
+                for expected in [false, true] {
+                    if evaluate_with_values(&rule, &values) == expected {
+                        continue;
+                    }
+
+                    let evaluate_leaf = |leaf: &ModuleRule| Some(values[pattern_of(leaf)]);
+                    let mut violations = Vec::new();
+                    collect_module_rule_violations(
+                        &rule,
+                        expected,
+                        &evaluate_leaf,
+                        &mut violations,
+                    );
+                    assert!(!violations.is_empty());
+
+                    let mut repaired = values.clone();
+                    for (leaf, required) in violations {
+                        repaired.insert(pattern_of(leaf), required);
+                    }
+                    assert_eq!(evaluate_with_values(&rule, &repaired), expected);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn inapplicable_leaf_makes_every_composite_inapplicable() {
         let rule = ModuleRule::And(
             Box::new(named("passes", Severity::Warn)),
             Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
         );
 
         assert_eq!(evaluate_module_rule_with(&rule, &leaf_value), None);
+        assert_eq!(
+            evaluate_module_rule_with(
+                &ModuleRule::Or(
+                    Box::new(named("passes", Severity::Warn)),
+                    Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn)),
+                ),
+                &leaf_value,
+            ),
+            None
+        );
+        assert_eq!(
+            evaluate_module_rule_with(
+                &ModuleRule::Not(Box::new(ModuleRule::MustNotBeEmpty(Severity::Warn))),
+                &leaf_value,
+            ),
+            None
+        );
     }
 
     #[test]
@@ -988,5 +1114,32 @@ mod tests {
         );
 
         assert_eq!(module_rule_severity(&rule), Severity::Error);
+    }
+
+    #[test]
+    fn nested_severity_is_error_exactly_when_any_leaf_is_error() {
+        for mask in 0..8 {
+            let severity = |bit| {
+                if mask & bit == 0 {
+                    Severity::Warn
+                } else {
+                    Severity::Error
+                }
+            };
+            let rule = ModuleRule::Not(Box::new(ModuleRule::And(
+                Box::new(named("a", severity(1))),
+                Box::new(ModuleRule::Or(
+                    Box::new(named("b", severity(2))),
+                    Box::new(named("c", severity(4))),
+                )),
+            )));
+            let expected = if mask == 0 {
+                Severity::Warn
+            } else {
+                Severity::Error
+            };
+
+            assert_eq!(module_rule_severity(&rule), expected);
+        }
     }
 }
