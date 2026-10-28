@@ -10,6 +10,11 @@ set -e
 # Bump versions in Cargo.toml files
 cargo workspaces version --no-git-commit --exact --force '*' patch -y
 
+# test_app is a separate workspace, so refresh its lockfile after bumping the
+# path dependencies above. A normal check updates only the changed path-package
+# versions instead of re-resolving unrelated dependencies.
+cargo check --manifest-path test_app/Cargo.toml
+
 # Get the new version from the root Cargo.toml
 NEW_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
 
