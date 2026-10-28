@@ -85,6 +85,18 @@ fn collect_module_rule_violations<'a>(
     }
 }
 
+fn contains_negated_wildcard_requirement(rule: &ModuleRule, negated: bool) -> bool {
+    match rule {
+        ModuleRule::NoWildcardImports(_) => negated,
+        ModuleRule::And(left, right) | ModuleRule::Or(left, right) => {
+            contains_negated_wildcard_requirement(left, negated)
+                || contains_negated_wildcard_requirement(right, negated)
+        }
+        ModuleRule::Not(inner) => contains_negated_wildcard_requirement(inner, !negated),
+        _ => false,
+    }
+}
+
 fn module_rule_severity(rule: &ModuleRule) -> Severity {
     match rule {
         ModuleRule::MustBeNamed(_, severity)
@@ -930,6 +942,15 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
                     }
                 }
                 ModuleRule::And(_, _) | ModuleRule::Or(_, _) | ModuleRule::Not(_) => {
+                    // A negated NoWildcardImports rule is an aggregate module requirement:
+                    // one wildcard import satisfies the entire module. Evaluating it again for
+                    // each use item would incorrectly reject explicit imports beside that glob.
+                    if matches!(item.kind, ItemKind::Use(..))
+                        && contains_negated_wildcard_requirement(rule, false)
+                    {
+                        continue;
+                    }
+
                     let evaluate_leaf =
                         |leaf: &ModuleRule| self.evaluate_module_rule_leaf(ctx, item, leaf);
                     if self.evaluate_module_rule(ctx, item, rule) == Some(false) {
@@ -948,7 +969,10 @@ impl<'tcx> LateLintPass<'tcx> for ModuleLint {
 
 #[cfg(test)]
 mod tests {
-    use super::{collect_module_rule_violations, evaluate_module_rule_with, module_rule_severity};
+    use super::{
+        collect_module_rule_violations, contains_negated_wildcard_requirement,
+        evaluate_module_rule_with, module_rule_severity,
+    };
     use cargo_pup_lint_config::{ModuleRule, Severity};
     use std::collections::HashMap;
 
@@ -1122,6 +1146,28 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn identifies_wildcard_requirements_negated_at_any_depth() {
+        let wildcard = ModuleRule::NoWildcardImports(Severity::Warn);
+
+        assert!(!contains_negated_wildcard_requirement(&wildcard, false));
+        assert!(contains_negated_wildcard_requirement(
+            &ModuleRule::Not(Box::new(wildcard.clone())),
+            false,
+        ));
+        assert!(!contains_negated_wildcard_requirement(
+            &ModuleRule::Not(Box::new(ModuleRule::Not(Box::new(wildcard.clone())))),
+            false,
+        ));
+        assert!(contains_negated_wildcard_requirement(
+            &ModuleRule::And(
+                Box::new(named("passes", Severity::Warn)),
+                Box::new(ModuleRule::Not(Box::new(wildcard))),
+            ),
+            false,
+        ));
     }
 
     #[test]

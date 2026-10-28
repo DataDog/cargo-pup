@@ -185,9 +185,24 @@
 
         Module((
             name: "negated_wildcard_help",
-            matches: Module("^test_logical_module_rules::needs_wildcard_import$"),
+            matches: Module("^test_logical_module_rules::(needs_wildcard_import|mixed_wildcard_and_explicit_imports)$"),
             rules: [
                 Not(NoWildcardImports(Error)),
+            ],
+        )),
+
+        Module((
+            name: "import_composite_still_checked",
+            matches: Module("^test_logical_module_rules::import_composite_still_checked$"),
+            rules: [
+                And(
+                    NoWildcardImports(Error),
+                    RestrictImports(
+                        allowed_only: None,
+                        denied: Some(["^std::io$"]),
+                        severity: Error,
+                    ),
+                ),
             ],
         )),
 

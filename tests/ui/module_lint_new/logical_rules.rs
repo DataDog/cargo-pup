@@ -28,5 +28,14 @@ pub mod not_bad { //~ ERROR: Module must be empty
 pub mod needs_nonempty_mod_file {} //~ ERROR: Module's mod.rs file must not be empty
 
 pub mod needs_wildcard_import { //~ ERROR: Wildcard imports are required here
-    pub use std::fmt; //~ ERROR: Wildcard imports are required here
+    pub use std::fmt;
+}
+
+pub mod mixed_wildcard_and_explicit_imports {
+    pub use std::fmt::*;
+    pub use std::io;
+}
+
+pub mod import_composite_still_checked {
+    pub use std::io; //~ ERROR: Use of this module is not permitted by the configured import restrictions
 }

@@ -70,14 +70,15 @@ LL | | }
    = note: Applied by cargo-pup rule 'negated_wildcard_help'.
    = note: `#[deny(module_wildcard_import)]` on by default
 
-error: Wildcard imports are required here
-  --> tests/ui/module_lint_new/logical_rules.rs:31:5
+error: Use of this module is not permitted by the configured import restrictions
+  --> tests/ui/module_lint_new/logical_rules.rs:40:5
    |
-LL |     pub use std::fmt;
-   |     ^^^^^^^^^^^^^^^^^
+LL |     pub use std::io;
+   |     ^^^^^^^^^^^^^^^^
    |
-   = help: Import all items from a module with a wildcard import
-   = note: Applied by cargo-pup rule 'negated_wildcard_help'.
+   = help: Adjust this import to satisfy the configured restrictions
+   = note: Applied by cargo-pup rule 'import_composite_still_checked'.
+   = note: `#[deny(module_restrict_imports)]` on by default
 
 error: aborting due to 8 previous errors
 
