@@ -4,7 +4,7 @@ use rustc_hir::OwnerId;
 use rustc_hir::def_id::DefId;
 use rustc_infer::infer::TyCtxtInferExt;
 use rustc_middle::ty::{self, ParamEnv, Ty, TyCtxt, TypingMode};
-use rustc_span::symbol::sym;
+use rustc_span::{DUMMY_SP, symbol::sym};
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
 use rustc_trait_selection::traits::{Obligation, ObligationCause};
 use rustc_type_ir::TypeVisitableExt;
@@ -34,14 +34,11 @@ pub fn implements_trait<'tcx>(
     ty: Ty<'tcx>,
     trait_def_id: DefId,
 ) -> bool {
-    let cause = ObligationCause::dummy();
-    let trait_ref = ty::TraitRef::new(tcx, trait_def_id, [ty]);
-    let obligation = Obligation::new(tcx, cause, param_env, trait_ref);
-
-    // If we have certain complex types, we can't use TypingMode::Coherence
-    // at this point, so fall back to TypingMode::Analysis.
+    // Coherence mode cannot handle complex self types or inferred trait arguments here.
     // The ui-test test projection_type_reproduce.rs covers this.
-    let is_complex = ty.has_infer_types()
+    let has_generic_trait_arguments = tcx.generics_of(trait_def_id).own_params.len() > 1;
+    let is_complex = has_generic_trait_arguments
+        || ty.has_infer_types()
         || ty.has_opaque_types()
         || ty.walk().any(|t| {
             if let Some(ty) = t.as_type() {
@@ -62,6 +59,14 @@ pub fn implements_trait<'tcx>(
     } else {
         tcx.infer_ctxt().build(TypingMode::Coherence)
     };
+
+    // Arguments after Self are inferred, so any valid generic instantiation counts.
+    // Associated type bindings are intentionally unconstrained.
+    let fresh_args = infcx.fresh_args_for_item(DUMMY_SP, trait_def_id);
+    let trait_args =
+        tcx.mk_args_from_iter(std::iter::once(ty.into()).chain(fresh_args.iter().skip(1)));
+    let trait_ref = ty::TraitRef::new(tcx, trait_def_id, trait_args);
+    let obligation = Obligation::new(tcx, ObligationCause::dummy(), param_env, trait_ref);
 
     infcx.predicate_may_hold(&obligation)
 }

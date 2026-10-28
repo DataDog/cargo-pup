@@ -6,11 +6,11 @@
 // This test verifies that the FunctionLint's IsAsync matcher works correctly
 
 // Async function that should trigger the lint
-async fn async_function() { //~ ERROR: Function 'async_function' is forbidden by lint rule
+async fn async_function() { //~ ERROR: Function 'async_function' is forbidden because
 }
 
 // Async function with return type
-async fn async_with_return() -> String { //~ ERROR: Function 'async_with_return' is forbidden by lint rule
+async fn async_with_return() -> String { //~ ERROR: Function 'async_with_return' is forbidden because
     "hello".to_string()
 }
 
@@ -27,7 +27,7 @@ fn sync_with_return() -> String {
 struct TestStruct;
 
 impl TestStruct {
-    async fn async_method(&self) { //~ ERROR: Function 'async_method' is forbidden by lint rule
+    async fn async_method(&self) { //~ ERROR: Function 'async_method' is forbidden because
     }
     
     fn sync_method(&self) {
@@ -42,7 +42,7 @@ trait AsyncTrait {
 }
 
 impl AsyncTrait for TestStruct {
-    async fn trait_async_method(&self) { //~ ERROR: Function 'trait_async_method' is forbidden by lint rule
+    async fn trait_async_method(&self) { //~ ERROR: Function 'trait_async_method' is forbidden because
     }
     
     fn trait_sync_method(&self) {

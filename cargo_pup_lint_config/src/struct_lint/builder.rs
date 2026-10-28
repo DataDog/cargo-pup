@@ -127,7 +127,10 @@ impl<'a> StructConstraintBuilder<'a> {
         self
     }
 
-    /// Add a rule requiring the struct to implement a given trait
+    /// Add a rule requiring the struct to implement a given trait.
+    ///
+    /// For a generic trait, any valid set of generic arguments satisfies the rule. Associated
+    /// type values cannot be constrained by this rule.
     pub fn must_implement_trait(mut self, trait_path: impl Into<String>) -> Self {
         self.add_rule_internal(StructRule::ImplementsTrait(
             trait_path.into(),
@@ -136,7 +139,10 @@ impl<'a> StructConstraintBuilder<'a> {
         self
     }
 
-    /// Add a rule requiring the struct NOT to implement a given trait
+    /// Add a rule requiring the struct not to implement a given trait.
+    ///
+    /// For a generic trait, an implementation for any generic arguments violates the rule.
+    /// Associated type values cannot be constrained by this rule.
     pub fn must_not_implement_trait(mut self, trait_path: impl Into<String>) -> Self {
         let inner = StructRule::ImplementsTrait(trait_path.into(), self.current_severity);
         self.add_rule_internal(StructRule::Not(Box::new(inner)));

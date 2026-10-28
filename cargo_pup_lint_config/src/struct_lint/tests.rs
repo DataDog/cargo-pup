@@ -19,10 +19,7 @@ mod tests {
         builder
             .struct_lint()
             .lint_named("struct_lint")
-            .matching(|m| {
-                m.name("^[A-Z][a-z]+Model$")
-                    .and(m.has_attribute("derive\\\\(.*Debug.*\\\\)"))
-            })
+            .matching(|m| m.name("^[A-Z][a-z]+Model$").and(m.has_attribute("repr")))
             .with_severity(Severity::Error)
             .must_be_named("EntityModel".into())
             .build();
@@ -38,7 +35,7 @@ mod tests {
                 }
 
                 if let StructMatch::HasAttribute(pattern) = &**right {
-                    assert_eq!(pattern, "derive\\\\(.*Debug.*\\\\)");
+                    assert_eq!(pattern, "repr");
                 } else {
                     panic!("Expected HasAttribute");
                 }
@@ -115,7 +112,7 @@ mod tests {
             .matching(|m| {
                 m.name("User")
                     .or(m.name("Account"))
-                    .and(m.has_attribute("derive(Debug)").not())
+                    .and(m.has_attribute("repr").not())
             })
             .must_be_named("Entity".into())
             .build();
@@ -129,6 +126,41 @@ mod tests {
         } else {
             panic!("Expected ConfiguredLint::Struct");
         }
+    }
+
+    #[test]
+    fn test_trait_and_logical_rule_builders() {
+        let mut builder = LintBuilder::new();
+
+        builder
+            .struct_lint()
+            .lint_named("trait_rules")
+            .matching(|m| m.name("Service"))
+            .with_severity(Severity::Error)
+            .must_implement_trait("crate::Required")
+            .must_not_implement_trait("crate::Forbidden")
+            .add_rule(StructRule::Or(
+                Box::new(StructRule::MustBePrivate(Severity::Warn)),
+                Box::new(StructRule::MustBeNamed(
+                    "PublicService".into(),
+                    Severity::Warn,
+                )),
+            ))
+            .build();
+
+        let ConfiguredLint::Struct(lint) = &builder.lints[0] else {
+            panic!("Expected struct lint");
+        };
+        assert!(matches!(
+            &lint.rules[0],
+            StructRule::ImplementsTrait(path, Severity::Error) if path == "crate::Required"
+        ));
+        assert!(matches!(
+            &lint.rules[1],
+            StructRule::Not(inner)
+                if matches!(inner.as_ref(), StructRule::ImplementsTrait(path, Severity::Error) if path == "crate::Forbidden")
+        ));
+        assert!(matches!(&lint.rules[2], StructRule::Or(_, _)));
     }
 
     #[test]

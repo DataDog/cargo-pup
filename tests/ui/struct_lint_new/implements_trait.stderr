@@ -1,5 +1,5 @@
 error: Struct must match pattern 'Compliant*', found 'ImplementsTestTrait'
-  --> tests/ui/struct_lint_new/implements_trait.rs:20:1
+  --> tests/ui/struct_lint_new/implements_trait.rs:31:1
    |
 LL | pub struct ImplementsTestTrait {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -9,7 +9,7 @@ LL | pub struct ImplementsTestTrait {
    = note: `#[deny(struct_lint_must_be_named)]` on by default
 
 error: Struct must match pattern 'Compliant*', found 'ImplementsMultipleTraits'
-  --> tests/ui/struct_lint_new/implements_trait.rs:31:1
+  --> tests/ui/struct_lint_new/implements_trait.rs:42:1
    |
 LL | pub struct ImplementsMultipleTraits {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17,5 +17,86 @@ LL | pub struct ImplementsMultipleTraits {
    = help: Rename this struct to match the pattern 'Compliant*'
    = note: Applied by cargo-pup rule 'implements_trait_test'.
 
-error: aborting due to 2 previous errors
+error: Struct must match pattern 'GenericCompliant*', found 'ImplementsGenericTrait'
+  --> tests/ui/struct_lint_new/implements_trait.rs:81:1
+   |
+LL | pub struct ImplementsGenericTrait;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'GenericCompliant*'
+   = note: Applied by cargo-pup rule 'generic_implements_trait_test'.
+
+error: Struct must match pattern 'GenericCompliant*', found 'GenericContainer'
+  --> tests/ui/struct_lint_new/implements_trait.rs:87:1
+   |
+LL | pub struct GenericContainer<T>(T);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'GenericCompliant*'
+   = note: Applied by cargo-pup rule 'generic_implements_trait_test'.
+
+error: Struct must match pattern 'BlanketCompliant*', found 'BlanketImplementor'
+  --> tests/ui/struct_lint_new/implements_trait.rs:94:1
+   |
+LL | pub struct BlanketImplementor;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'BlanketCompliant*'
+   = note: Applied by cargo-pup rule 'blanket_generic_implements_trait_test'.
+
+error: Struct must match pattern 'ConditionalCompliant*', found 'ConditionalImplementor'
+  --> tests/ui/struct_lint_new/implements_trait.rs:100:1
+   |
+LL | pub struct ConditionalImplementor;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'ConditionalCompliant*'
+   = note: Applied by cargo-pup rule 'conditional_generic_implements_trait_test'.
+
+error: Struct must match pattern 'MultipleCompliant*', found 'MultipleImplementor'
+  --> tests/ui/struct_lint_new/implements_trait.rs:103:1
+   |
+LL | pub struct MultipleImplementor;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'MultipleCompliant*'
+   = note: Applied by cargo-pup rule 'multiple_generic_implements_trait_test'.
+
+error: Struct must match pattern 'BroadCompliant*', found 'BroadRegexImplementor'
+  --> tests/ui/struct_lint_new/implements_trait.rs:107:1
+   |
+LL | pub struct BroadRegexImplementor;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'BroadCompliant*'
+   = note: Applied by cargo-pup rule 'broad_trait_regex_test'.
+
+error: Struct must match pattern 'AsRefCompliant*', found 'ImplementsAsRefStr'
+  --> tests/ui/struct_lint_new/implements_trait.rs:114:1
+   |
+LL | pub struct ImplementsAsRefStr;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'AsRefCompliant*'
+   = note: Applied by cargo-pup rule 'standard_generic_implements_trait_test'.
+
+error: Struct must match pattern 'LifetimeCompliant*', found 'ImplementsLifetimeTrait'
+  --> tests/ui/struct_lint_new/implements_trait.rs:122:1
+   |
+LL | pub struct ImplementsLifetimeTrait;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'LifetimeCompliant*'
+   = note: Applied by cargo-pup rule 'lifetime_implements_trait_test'.
+
+error: Struct must match pattern 'ConstCompliant*', found 'ImplementsConstTrait'
+  --> tests/ui/struct_lint_new/implements_trait.rs:125:1
+   |
+LL | pub struct ImplementsConstTrait;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Rename this struct to match the pattern 'ConstCompliant*'
+   = note: Applied by cargo-pup rule 'const_implements_trait_test'.
+
+error: aborting due to 11 previous errors
 

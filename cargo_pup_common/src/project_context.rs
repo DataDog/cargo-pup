@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 
@@ -284,13 +285,52 @@ impl ProjectContext {
         self.traits.extend(other.traits.clone());
     }
 
-    /// Sorts modules and traits for consistent ordering
+    /// Merge duplicate modules and traits while preserving all discovered metadata.
     fn deduplicate(&mut self) {
-        // Sort modules by name
-        self.modules.sort_by(|a, b| a.name.cmp(&b.name));
+        let mut modules = BTreeMap::<String, ModuleInfo>::new();
+        for module in self.modules.drain(..) {
+            modules
+                .entry(module.name.clone())
+                .and_modify(|existing| {
+                    existing
+                        .applicable_lints
+                        .extend(module.applicable_lints.clone());
+                })
+                .or_insert(module);
+        }
+        self.modules = modules
+            .into_values()
+            .map(|mut module| {
+                module.applicable_lints.sort();
+                module.applicable_lints.dedup();
+                module
+            })
+            .collect();
 
-        // Sort traits by name
-        self.traits.sort_by(|a, b| a.name.cmp(&b.name));
+        let mut traits = BTreeMap::<String, TraitInfo>::new();
+        for trait_info in self.traits.drain(..) {
+            traits
+                .entry(trait_info.name.clone())
+                .and_modify(|existing| {
+                    existing
+                        .implementors
+                        .extend(trait_info.implementors.clone());
+                    existing
+                        .applicable_lints
+                        .extend(trait_info.applicable_lints.clone());
+                })
+                .or_insert(trait_info);
+        }
+        self.traits = traits
+            .into_values()
+            .map(|mut trait_info| {
+                trait_info.implementors.sort();
+                trait_info.implementors.dedup();
+                trait_info.applicable_lints.sort();
+                trait_info.applicable_lints.dedup();
+                trait_info
+            })
+            .collect();
     }
 }
 
@@ -391,6 +431,47 @@ mod tests {
         assert_eq!(context.modules[1].name, modules[1]);
         assert!(context.modules[0].applicable_lints.is_empty());
         assert!(context.modules[1].applicable_lints.is_empty());
+    }
+
+    #[test]
+    fn deduplicate_merges_context_metadata() {
+        let mut context = ProjectContext::new();
+        context.modules = vec![
+            ModuleInfo {
+                name: "crate::module".into(),
+                applicable_lints: vec!["lint_b".into(), "lint_a".into()],
+            },
+            ModuleInfo {
+                name: "crate::module".into(),
+                applicable_lints: vec!["lint_a".into(), "lint_c".into()],
+            },
+        ];
+        context.traits = vec![
+            TraitInfo {
+                name: "crate::Trait".into(),
+                implementors: vec!["TypeB".into(), "TypeA".into()],
+                applicable_lints: vec!["lint_b".into()],
+            },
+            TraitInfo {
+                name: "crate::Trait".into(),
+                implementors: vec!["TypeA".into(), "TypeC".into()],
+                applicable_lints: vec!["lint_a".into(), "lint_b".into()],
+            },
+        ];
+
+        context.deduplicate();
+
+        assert_eq!(context.modules.len(), 1);
+        assert_eq!(
+            context.modules[0].applicable_lints,
+            vec!["lint_a", "lint_b", "lint_c"]
+        );
+        assert_eq!(context.traits.len(), 1);
+        assert_eq!(
+            context.traits[0].implementors,
+            vec!["TypeA", "TypeB", "TypeC"]
+        );
+        assert_eq!(context.traits[0].applicable_lints, vec!["lint_a", "lint_b"]);
     }
 
     #[test]

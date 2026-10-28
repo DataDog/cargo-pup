@@ -43,6 +43,10 @@ fn short_function_with_suffix() {  //~ ERROR: Function exceeds maximum length of
     println!("This is short but triggers the second condition of OR");
 }
 
+// ====== Nested OR within AND diagnostic evidence ======
+
+fn blocked_grouped() {} //~ ERROR: Function 'blocked_grouped' is forbidden because (its name `blocked_grouped` matches `^blocked` or its name `blocked_grouped` matches `grouped$`) and its name is `blocked_grouped`
+
 // ====== NOT Matching Tests ======
 
 // Function that matches the NOT condition in pup.ron

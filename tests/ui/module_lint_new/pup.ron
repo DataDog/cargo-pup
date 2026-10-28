@@ -144,6 +144,68 @@
             )
         ),
                 
+        // Logical module rule combinations
+        Module((
+            name: "logical_and_test",
+            matches: Module("^test_logical_module_rules::and_"),
+            rules: [
+                And(
+                    MustBeNamed("^and_good$", Warn),
+                    MustNotBeEmpty(Error),
+                ),
+            ],
+        )),
+
+        Module((
+            name: "logical_or_test",
+            matches: Module("^test_logical_module_rules::or_"),
+            rules: [
+                Or(
+                    MustBeNamed("^or_named$", Error),
+                    MustNotBeEmpty(Error),
+                ),
+            ],
+        )),
+
+        Module((
+            name: "logical_not_test",
+            matches: Module("^test_logical_module_rules::(must_be_empty|not_bad)$"),
+            rules: [
+                Not(MustNotBeEmpty(Error)),
+            ],
+        )),
+
+        Module((
+            name: "negated_empty_mod_file_help",
+            matches: Module("^test_logical_module_rules::needs_nonempty_mod_file$"),
+            rules: [
+                Not(MustHaveEmptyModFile(Error)),
+            ],
+        )),
+
+        Module((
+            name: "negated_wildcard_help",
+            matches: Module("^test_logical_module_rules::(needs_wildcard_import|mixed_wildcard_and_explicit_imports)$"),
+            rules: [
+                Not(NoWildcardImports(Error)),
+            ],
+        )),
+
+        Module((
+            name: "import_composite_still_checked",
+            matches: Module("^test_logical_module_rules::import_composite_still_checked$"),
+            rules: [
+                And(
+                    NoWildcardImports(Error),
+                    RestrictImports(
+                        allowed_only: None,
+                        denied: Some(["^std::io$"]),
+                        severity: Error,
+                    ),
+                ),
+            ],
+        )),
+
         // Replace RestrictFunctions with Function lint
         Function(
             (

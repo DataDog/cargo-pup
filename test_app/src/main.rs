@@ -3,10 +3,12 @@
 
 #![allow(dead_code)]
 
+mod configured_struct_rules;
 mod empty_mod;
 mod empty_mod_file;
 mod function_length;
 mod item_type;
+mod logical_module_rules;
 mod macro_restriction;
 mod module_usage;
 mod must_be_empty;

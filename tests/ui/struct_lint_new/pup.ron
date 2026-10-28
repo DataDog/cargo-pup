@@ -66,6 +66,100 @@
                 ]
             )
         ),
+
+        Struct((
+            name: "generic_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::GenericTrait"),
+            ),
+            rules: [
+                MustBeNamed("GenericCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "blanket_generic_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::BlanketTrait"),
+            ),
+            rules: [
+                MustBeNamed("BlanketCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "conditional_generic_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::ConditionalTrait"),
+            ),
+            rules: [
+                MustBeNamed("ConditionalCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "multiple_generic_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::MultipleTrait"),
+            ),
+            rules: [
+                MustBeNamed("MultipleCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "broad_trait_regex_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                AndMatches(
+                    Name("^BroadRegexImplementor$"),
+                    ImplementsTrait("Trait$"),
+                ),
+            ),
+            rules: [
+                MustBeNamed("BroadCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "standard_generic_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                AndMatches(
+                    Name("^ImplementsAsRefStr$"),
+                    ImplementsTrait("AsRef$"),
+                ),
+            ),
+            rules: [
+                MustBeNamed("AsRefCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "lifetime_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::LifetimeTrait"),
+            ),
+            rules: [
+                MustBeNamed("LifetimeCompliant*", Error),
+            ],
+        )),
+
+        Struct((
+            name: "const_implements_trait_test",
+            matches: AndMatches(
+                Name("test_implements_trait"),
+                ImplementsTrait("test_implements_trait::ConstTrait"),
+            ),
+            rules: [
+                MustBeNamed("ConstCompliant*", Error),
+            ],
+        )),
         
         // Test MustBePrivate rule - only apply to test_visibility_rules crate
         Struct(
@@ -121,6 +215,169 @@
                     MustBePubCrate(Error), // Struct must be pub(crate)
                 ]
             )
-        )
+        ),
+
+        Struct((
+            name: "attribute_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                HasAttribute("repr"),
+            ),
+            rules: [
+                MustBeNamed("^ReprAllowed", Error),
+            ],
+        )),
+
+        Struct((
+            name: "attribute_alternative_matcher_test",
+            matches: AndMatches(
+                Name("^ReprAllowedAlternative$"),
+                HasAttribute("r|repr"),
+            ),
+            rules: [
+                MustBeNamed("^AlternativeNeverMatches$", Error),
+            ],
+        )),
+
+        Struct((
+            name: "attribute_arguments_unavailable_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                AndMatches(
+                    Name("^ReprAllowedArgumentsUnavailable$"),
+                    HasAttribute("repr\\(C\\)"),
+                ),
+            ),
+            rules: [
+                MustBeNamed("^NeverMatches$", Error),
+            ],
+        )),
+
+        Struct((
+            name: "deprecated_attribute_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                HasAttribute("deprecated"),
+            ),
+            rules: [
+                MustBeNamed("^DeprecatedAllowed", Error),
+            ],
+        )),
+
+        Struct((
+            name: "doc_attribute_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                HasAttribute("doc"),
+            ),
+            rules: [
+                MustBeNamed("^DocAllowed", Error),
+            ],
+        )),
+
+        Struct((
+            name: "must_use_attribute_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                HasAttribute("must_use"),
+            ),
+            rules: [
+                MustBeNamed("^MustUseAllowed", Error),
+            ],
+        )),
+
+        Struct((
+            name: "non_exhaustive_attribute_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                HasAttribute("non_exhaustive"),
+            ),
+            rules: [
+                MustBeNamed("^NonExhaustiveAllowed", Error),
+            ],
+        )),
+
+        Struct((
+            name: "tool_attribute_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                HasAttribute("pup_test::marker"),
+            ),
+            rules: [
+                MustBeNamed("^ToolAttributeAllowed", Error),
+            ],
+        )),
+
+        Struct((
+            name: "required_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^NeedsTrait"),
+            ),
+            rules: [
+                ImplementsTrait("test_attributes_and_configured_rules::RequiredTrait", Error),
+            ],
+        )),
+
+        Struct((
+            name: "required_generic_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^NeedsGenericTrait"),
+            ),
+            rules: [
+                ImplementsTrait("test_attributes_and_configured_rules::GenericRequiredTrait", Error),
+            ],
+        )),
+
+        Struct((
+            name: "forbidden_generic_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^MustAvoidGenericTrait"),
+            ),
+            rules: [
+                Not(ImplementsTrait("test_attributes_and_configured_rules::GenericRequiredTrait", Error)),
+            ],
+        )),
+
+        Struct((
+            name: "forbidden_trait_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("^MustAvoidTrait"),
+            ),
+            rules: [
+                Not(ImplementsTrait("test_attributes_and_configured_rules::ForbiddenTrait", Error)),
+            ],
+        )),
+
+        Struct((
+            name: "or_rule_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                Name("CompositeOr"),
+            ),
+            rules: [
+                Or(
+                    MustBeNamed("^AllowedComposite", Error),
+                    MustBePrivate(Error),
+                ),
+            ],
+        )),
+
+        Struct((
+            name: "negated_trait_matcher_test",
+            matches: AndMatches(
+                Name("test_attributes_and_configured_rules"),
+                AndMatches(
+                    Name("^MatcherNegation"),
+                    NotMatch(ImplementsTrait("test_attributes_and_configured_rules::RequiredTrait")),
+                ),
+            ),
+            rules: [
+                MustBeNamed("^MatcherNegationAllowed", Error),
+            ],
+        ))
     ]
 ) 

@@ -17,8 +17,9 @@ use anyhow::Result;
 use cargo_pup_common::cli::{PupCli, PupCommand};
 use cargo_pup_common::workspace::find_workspace_pup_ron;
 
-use cargo_pup_lint_impl::lints::configuration_factory::LintConfigurationFactory;
-use cargo_pup_lint_impl::{ArchitectureLintCollection, ArchitectureLintRunner, Mode};
+use cargo_pup_lint_impl::{
+    ArchitectureLintCollection, ArchitectureLintRunner, LintConfigurationFactory, Mode,
+};
 use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use std::{
     env,

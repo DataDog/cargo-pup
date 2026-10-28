@@ -13,8 +13,12 @@ pub mod another_empty_module {
     // This module is also intentionally empty
 }
 
+pub struct TypeWithImpl;
+
 // Non-empty module (should trigger an error)
 pub mod non_empty_module {
+    impl super::TypeWithImpl {} //~ ERROR: Item 'impl TypeWithImpl' not allowed in empty module
+
     pub fn invalid_function() { //~ ERROR: Item 'invalid_function' not allowed in empty module
         println!("This module should be empty");
     }
